@@ -1,0 +1,703 @@
+{
+  "name": "VIMIMO",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "TelegramBot",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 800],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      }
+    },
+
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "id": "is-start",
+                    "leftValue": "={{ $json.message.text || '' }}",
+                    "rightValue": "/start",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "id": "is-styles",
+                    "leftValue": "={{ $json.message.text || '' }}",
+                    "rightValue": "/styles",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "styles"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "id": "is-exemples",
+                    "leftValue": "={{ $json.message.text || '' }}",
+                    "rightValue": "/exemples",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "exemples"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  {
+                    "id": "is-aide",
+                    "leftValue": "={{ $json.message.text || '' }}",
+                    "rightValue": "/aide",
+                    "operator": { "type": "string", "operation": "startsWith" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "aide"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "id": "has-media",
+                    "leftValue": "={{ $json.message.photo || $json.message.video ? 'yes' : 'no' }}",
+                    "rightValue": "yes",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "media"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false },
+                "conditions": [
+                  { "id": "style-scandinave", "leftValue": "={{ $json.message.text || '' }}", "rightValue": "Scandinave", "operator": { "type": "string", "operation": "contains" } },
+                  { "id": "style-industriel", "leftValue": "={{ $json.message.text || '' }}", "rightValue": "Industriel", "operator": { "type": "string", "operation": "contains" } },
+                  { "id": "style-moderne", "leftValue": "={{ $json.message.text || '' }}", "rightValue": "Moderne", "operator": { "type": "string", "operation": "contains" } },
+                  { "id": "style-classique", "leftValue": "={{ $json.message.text || '' }}", "rightValue": "Classique", "operator": { "type": "string", "operation": "contains" } },
+                  { "id": "style-boheme", "leftValue": "={{ $json.message.text || '' }}", "rightValue": "Boh", "operator": { "type": "string", "operation": "contains" } }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "style_choice"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "command-router",
+      "name": "Command Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [300, 800],
+      "notes": "Routes: /start, /styles, /exemples, /aide, photo/video, style choice, fallback"
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "🏠 *Bienvenue chez VIMIMO — Votre Studio de Virtual Staging IA*\n\nTransformez vos espaces vides en intérieurs de magazine en moins de 3 minutes.\n\n*Pourquoi utiliser VIMIMO ?*\n✅ *Immersion totale* : Une vidéo cinématographique plutôt qu'une simple photo.\n✅ *Projection client* : Aide les acheteurs à visualiser leur futur chez-soi.\n✅ *Qualité Premium* : Rendu 4K avec effets de vitesse professionnels.\n\n🚀 *COMMENT DÉMARRER ?*\n\n1️⃣ Envoyez-moi une vidéo (mouvement lent) ou une photo d'une pièce vide.\n2️⃣ Choisissez un style (Scandinave, Industriel, Moderne...).\n3️⃣ Laissez l'IA travailler : 5 étapes de transformation + montage Speed Ramp pro.\n\n💡 *Conseils pour un rendu parfait :*\n• Avancez lentement vers le centre de la pièce.\n• Évitez les mouvements brusques.\n• Assurez-vous que la pièce est bien éclairée.\n\n👇 *Prêt ? Envoyez votre première image ou vidéo maintenant !*",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-welcome",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [650, 0],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      }
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.message.chat.id, text: '🎨 *Catalogue des Styles VIMIMO*\\n\\n🖼️ *Scandinave* — Bois clair, lignes épurées, tons neutres et chaleureux.\\n🧱 *Industriel* — Métal brut, briques, mobilier vintage.\\n✨ *Moderne* — Minimaliste, design épuré, touches de couleur.\\n🏛️ *Classique* — Élégance intemporelle, moulures, dorures subtiles.\\n🌿 *Bohème* — Textures naturelles, plantes, atmosphère décontractée.\\n\\n👇 Envoyez d\\'abord votre photo/vidéo, puis choisissez votre style !', parse_mode: 'Markdown', reply_markup: { keyboard: [[{text:'🖼️ Scandinave'},{text:'🧱 Industriel'}],[{text:'✨ Moderne'},{text:'🏛️ Classique'}],[{text:'🌿 Bohème'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
+        "options": {}
+      },
+      "id": "send-styles",
+      "name": "Send Styles Catalog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 200],
+      "notes": "HTTP Request car le noeud Telegram n8n ne supporte pas reply_markup nativement"
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "🎬 *Nos Meilleures Réalisations*\n\nVoici quelques exemples de transformations réalisées par VIMIMO :\n\n🔗 _Les exemples vidéo seront ajoutés ici une fois vos premières réalisations terminées._\n\n💡 Envoyez-moi votre première photo pour créer votre propre avant/après !",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-examples",
+      "name": "Send Examples",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [650, 400],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      },
+      "notes": "Remplacer par sendMediaGroup avec vos 3 meilleures vidéos une fois disponibles"
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "📸 *Conseils pour un Rendu Parfait*\n\n*Pour une vidéo :*\n• Filmez à hauteur d'homme (1m50-1m70).\n• Avancez *très lentement* vers le centre de la pièce.\n• Durée idéale : 5 à 10 secondes.\n• Gardez le téléphone stable (pas de mouvements brusques).\n\n*Pour une photo :*\n• Placez-vous dans un coin de la pièce.\n• Cadrez le plus large possible.\n• Assurez un bon éclairage (ouvrez les volets !).\n\n*Évitez :*\n❌ Les pièces encombrées (videz au maximum).\n❌ Les contre-jours forts.\n❌ Les rotations de caméra.\n\n👇 Prêt ? Envoyez votre média !",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-tips",
+      "name": "Send Tips",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [650, 600],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Sauvegarde le media reçu dans le staticData (persistant entre exécutions)\nconst staticData = $getWorkflowStaticData('global');\nconst msg = $input.first().json.message;\nconst chatId = String(msg.chat.id);\n\nconst fileId = msg.video\n  ? msg.video.file_id\n  : msg.photo.slice(-1)[0].file_id;\n\nconst mediaType = msg.video ? 'video' : 'photo';\n\nstaticData[`pending_${chatId}`] = {\n  fileId,\n  mediaType,\n  timestamp: Date.now()\n};\n\nreturn [{ json: { chatId, fileId, mediaType } }];"
+      },
+      "id": "save-media",
+      "name": "Save Media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 850],
+      "notes": "Sauvegarde file_id en attendant le choix de style"
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '✅ Média reçu !\\n\\n🎨 Choisissez maintenant votre style de décoration :', reply_markup: { keyboard: [[{text:'🖼️ Scandinave'},{text:'🧱 Industriel'}],[{text:'✨ Moderne'},{text:'🏛️ Classique'}],[{text:'🌿 Bohème'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
+        "options": {}
+      },
+      "id": "send-ack-keyboard",
+      "name": "Ack + Style Keyboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [950, 850]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Charge le media sauvegardé et extrait le style choisi\nconst staticData = $getWorkflowStaticData('global');\nconst msg = $input.first().json.message;\nconst chatId = String(msg.chat.id);\nconst text = msg.text || '';\n\n// Map bouton → style interne\nconst styleMap = {\n  'Scandinave': 'scandinavian',\n  'Industriel': 'industrial',\n  'Moderne': 'modern_minimalist',\n  'Classique': 'classic_french',\n  'Bohème': 'bohemian'\n};\n\nlet chosenStyle = 'modern_minimalist';\nlet chosenLabel = 'Moderne';\nfor (const [label, value] of Object.entries(styleMap)) {\n  if (text.includes(label)) {\n    chosenStyle = value;\n    chosenLabel = label;\n    break;\n  }\n}\n\nconst pending = staticData[`pending_${chatId}`];\nif (!pending) {\n  return [{ json: { chatId, fileId: '', mediaType: '', chosenStyle, chosenLabel, error: true } }];\n}\n\nconst result = {\n  chatId,\n  fileId: pending.fileId,\n  mediaType: pending.mediaType,\n  chosenStyle,\n  chosenLabel,\n  error: false\n};\n\n// Nettoyage\ndelete staticData[`pending_${chatId}`];\n\nreturn [{ json: result }];"
+      },
+      "id": "load-media",
+      "name": "Load Media + Style",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 1100],
+      "notes": "Récupère le file_id sauvegardé + extrait le style du texte du bouton"
+    },
+
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "has-pending",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "check-pending",
+      "name": "Has Pending Media?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [950, 1100]
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "⚠️ Aucun média en attente. Envoyez d'abord une photo ou vidéo de votre pièce vide, puis choisissez un style.",
+        "additionalFields": {}
+      },
+      "id": "send-no-media",
+      "name": "No Pending Media",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1250, 1300],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      }
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '🚀 Style *' + $json.chosenLabel + '* sélectionné !\\n\\n⏳ Analyse de votre espace en cours... Cela prendra environ 2-3 minutes.\\n\\nJe vais :\\n1. Analyser votre pièce 🔍\\n2. Générer 5 étapes de transformation 🎨\\n3. Créer une vidéo cinématique 🎬', parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }) }}",
+        "options": {}
+      },
+      "id": "send-processing",
+      "name": "Send Processing + Remove Keyboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 1050],
+      "notes": "Confirme le style choisi et retire le clavier personnalisé"
+    },
+
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/getFile?file_id={{ $('Load Media + Style').first().json.fileId }}",
+        "options": {}
+      },
+      "id": "download-media",
+      "name": "Download Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1550, 1100],
+      "notes": "Appelle Telegram getFile API"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Extract file URL from Telegram download\n// Works for both photos and videos (uses thumbnail for video)\nconst input = $input.first().json;\nconst mediaType = $('Load Media + Style').first().json.mediaType;\n\n// Telegram getFile returns a file_path\n// Build the full URL for GPT-4o Vision\nconst filePath = input.file_path || input.filePath || '';\nconst botToken = '8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU';\nconst fileUrl = filePath.startsWith('http') ? filePath : `https://api.telegram.org/file/bot${botToken}/${filePath}`;\n\nreturn [{ json: { frameUrl: fileUrl, lastFrameUrl: fileUrl, mediaType, fileUrl } }];"
+      },
+      "id": "extract-frames",
+      "name": "Extract Frames",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 1100],
+      "notes": "Construit l'URL du fichier Telegram pour GPT-4o Vision (remplace ffmpeg)"
+    },
+
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "sendMessage",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Tu es un expert en analyse immobilière et architecture intérieure. Tu analyses des photos de pièces vides pour préparer un Virtual Staging IA. Analyse l'image fournie et produis un rapport JSON structuré avec: roomType (living_room/bedroom/kitchen/bathroom/dining_room/office/studio), dimensions {estimatedArea, ceilingHeight, shape}, existingMaterials {flooring, walls, ceiling}, lighting {naturalLight, windowCount, lightDirection}, cameraAngle {perspective, height, orientation}, style (le style recommandé), et notes. Réponds UNIQUEMENT en JSON valide."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Analyse cette pièce pour un virtual staging professionnel."
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "={{ $json.frameUrl }}"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 1500
+        }
+      },
+      "id": "vision-analysis",
+      "name": "GPT-4o Vision Analysis",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.6,
+      "position": [2050, 1100],
+      "credentials": {
+        "openAiApi": { "id": "rkQ1tfCNQOOSMIye", "name": "VIMIMO OpenAI" }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// Auto-Upsell : génère un message contextuel basé sur l'analyse\nconst analysis = JSON.parse($input.first().json.choices[0].message.content);\nconst chatId = $('Load Media + Style').first().json.chatId;\nconst chosenLabel = $('Load Media + Style').first().json.chosenLabel;\n\nconst roomLabels = {\n  living_room: 'salon', bedroom: 'chambre', kitchen: 'cuisine',\n  bathroom: 'salle de bain', dining_room: 'salle à manger',\n  office: 'bureau', studio: 'studio'\n};\n\nconst suggestions = {\n  living_room: 'ajouter un éclairage d\\'ambiance tamisé et une disposition de canapé qui maximise la perception d\\'espace',\n  bedroom: 'intégrer du textile chaleureux et un éclairage cocooning pour créer une atmosphère intime',\n  kitchen: 'ajouter des accessoires de cuisine haut de gamme et un plan de travail épuré',\n  bathroom: 'intégrer des plantes vertes et un éclairage spa pour une ambiance zen',\n  dining_room: 'ajouter un luminaire suspendu comme point focal et un set de table élégant',\n  office: 'intégrer un setup ergonomique avec des étagères décoratives',\n  studio: 'optimiser chaque zone avec du mobilier multifonction'\n};\n\nconst roomType = analysis.roomType || 'living_room';\nconst roomLabel = roomLabels[roomType] || 'pièce';\nconst suggestion = suggestions[roomType] || suggestions.living_room;\nconst lightInfo = analysis.lighting?.naturalLight || 'modérée';\nconst area = analysis.dimensions?.estimatedArea || '';\n\nlet upsell = `🔍 *Analyse terminée !*\\n\\n`;\nupsell += `J'ai détecté un(e) *${roomLabel}*`;\nif (area) upsell += ` d'environ *${area}*`;\nupsell += ` avec une luminosité *${lightInfo}*.\\n\\n`;\nupsell += `💡 En style *${chosenLabel}*, je vais ${suggestion}.\\n\\n`;\nupsell += `_(Option incluse dans votre rendu)_\\n\\n`;\nupsell += `⏳ Génération des 5 étapes de transformation en cours...`;\n\nreturn [{ json: { chatId, upsellText: upsell, analysis } }];"
+      },
+      "id": "upsell-builder",
+      "name": "Upsell Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2350, 950],
+      "notes": "Génère un message contextuel 'Wow' basé sur l'analyse de la pièce"
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.upsellText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-upsell",
+      "name": "Send Upsell",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2650, 950],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      },
+      "notes": "Message contextuel envoyé pendant que le pipeline continue en parallèle"
+    },
+
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "sendMessage",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Tu es un directeur artistique spécialisé en Virtual Staging immobilier et en prompt engineering pour Stable Diffusion XL avec ControlNet. À partir du rapport d'analyse JSON et du style choisi par le client, génère exactement 5 prompts de transformation progressive. Chaque prompt DOIT contenir: 'proportional', 'fixed camera angle', 'photorealistic', 'interior photography'. Les 5 étapes: 1) original_clean, 2) surface_renovation, 3) large_furniture, 4) full_furnishing, 5) final_decoration. CHAQUE prompt doit mentionner TOUS les éléments des étapes précédentes. Réponds en JSON: {style, negativePrompt, frames:[{step, label, prompt}], controlnet:{model, strength, guidanceScale}}."
+            },
+            {
+              "role": "user",
+              "content": "Style choisi par le client : {{ $('Load Media + Style').first().json.chosenStyle }}.\n\nAnalyse de la pièce :\n{{ $json.choices[0].message.content }}\n\nGénère les 5 prompts dans le style demandé."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 3000
+        }
+      },
+      "id": "staging-prompts",
+      "name": "Generate 5 Staging Prompts",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.6,
+      "position": [2350, 1100],
+      "credentials": {
+        "openAiApi": { "id": "rkQ1tfCNQOOSMIye", "name": "VIMIMO OpenAI" }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const promptsData = JSON.parse($input.first().json.choices[0].message.content);\nconst frames = promptsData.frames;\nconst controlnet = promptsData.controlnet;\n\nreturn frames.map(frame => ({\n  json: {\n    ...frame,\n    negativePrompt: promptsData.negativePrompt,\n    controlnetStrength: controlnet.strength,\n    guidanceScale: controlnet.guidanceScale,\n    model: controlnet.model\n  }\n}));"
+      },
+      "id": "split-frames",
+      "name": "Split Into 5 Frames",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2600, 1100]
+    },
+
+    {
+      "parameters": {
+        "url": "https://api.replicate.com/v1/predictions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "version",
+              "value": "SDXL_CONTROLNET_CANNY_VERSION_ID"
+            },
+            {
+              "name": "input",
+              "value": "={{ JSON.stringify({ prompt: $json.prompt, negative_prompt: $json.negativePrompt, image: $('Extract Frames').first().json.frameUrl, controlnet_conditioning_scale: $json.controlnetStrength, guidance_scale: $json.guidanceScale, prompt_strength: 0.6, num_inference_steps: 30, width: 1344, height: 768, seed: 42 + $json.step }) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "replicate-generate",
+      "name": "Replicate SDXL + ControlNet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2850, 1100],
+      "credentials": {
+        "httpHeaderAuth": { "id": "bGeZ2M0KiCK1DBEs", "name": "VIMIMO Replicate" }
+      }
+    },
+
+    {
+      "parameters": {
+        "url": "=https://api.replicate.com/v1/predictions/{{ $json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "timeout": 120000 }
+      },
+      "id": "replicate-poll",
+      "name": "Poll Replicate Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3100, 1100],
+      "credentials": {
+        "httpHeaderAuth": { "id": "bGeZ2M0KiCK1DBEs", "name": "VIMIMO Replicate" }
+      },
+      "notes": "En production, ajouter un noeud Wait + Loop until status='succeeded'"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst images = items.map((item, i) => ({\n  url: item.json.output[0],\n  step: i + 1,\n  label: ['original_clean','surface_renovation','large_furniture','full_furnishing','final_decoration'][i]\n}));\n\nreturn [{ json: { images } }];"
+      },
+      "id": "aggregate-images",
+      "name": "Aggregate 5 Images",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3350, 1100]
+    },
+
+    {
+      "parameters": {
+        "url": "https://api.higsfield.com/v1/generate",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "start_image", "value": "={{ $json.images[0].url }}" },
+            { "name": "end_image", "value": "={{ $json.images[4].url }}" },
+            { "name": "prompt", "value": "Furniture items appear and settle into place one by one, cinematic lighting, smooth subtle forward camera dolly motion, photorealistic interior, professional real estate showcase video, 4K quality, steady camera, no flickering" },
+            { "name": "negative_prompt", "value": "shaky camera, distortion, morphing artifacts, blurry, low quality, cartoon" },
+            { "name": "duration", "value": "6" },
+            { "name": "fps", "value": "24" },
+            { "name": "motion_strength", "value": "0.7" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "higsfield-generate",
+      "name": "Higsfield Video Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3600, 1100],
+      "credentials": {
+        "httpHeaderAuth": { "id": "gQwlIi65Wr6txoFg", "name": "VIMIMO Higsfield" }
+      }
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const chatId = $('Load Media + Style').first().json.chatId;\nconst chosenStyle = $('Load Media + Style').first().json.chosenStyle;\nconst images = $('Aggregate 5 Images').first().json.images;\nconst aiVideoUrl = $input.first().json.video_url;\nconst roomAnalysis = JSON.parse($('GPT-4o Vision Analysis').first().json.choices[0].message.content);\n\nconst remotionPayload = {\n  originalVideoUrl: $('Download Media').first().json.fileUrl,\n  aiVideoUrl: aiVideoUrl,\n  images: images,\n  metadata: {\n    roomAnalysis: roomAnalysis,\n    chosenStyle: chosenStyle,\n    generationConfig: {\n      model: 'stability-ai/sdxl',\n      controlnetModel: 'canny',\n      controlnetStrength: 0.85,\n      guidanceScale: 7.5,\n      promptStrength: 0.6,\n      negativePrompt: 'blurry, distorted, deformed, low quality, watermark, text, unrealistic proportions, floating furniture, mismatched perspective, cartoon, anime, illustration',\n      width: 1344,\n      height: 768,\n      baseSeed: 42\n    }\n  },\n  videoConfig: {\n    fps: 30,\n    durationInSeconds: 10,\n    width: 1920,\n    height: 1080,\n    speedRamp: {\n      introSpeed: 2.0,\n      stagingSpeed: 0.5,\n      outroSpeed: 2.0,\n      introRatio: 0.2,\n      stagingRatio: 0.6,\n      outroRatio: 0.2\n    },\n    transitions: { durationInFrames: 16, smoothCutBlur: 4 },\n    upscaling: { enabled: true, contrast: 1.1, saturation: 1.05 }\n  },\n  telegram: { chatId: chatId }\n};\n\nreturn [{ json: remotionPayload }];"
+      },
+      "id": "build-payload",
+      "name": "Build Remotion Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3850, 1100]
+    },
+
+    {
+      "parameters": {
+        "url": "={{ $env.REMOTION_RENDER_URL || 'http://localhost:8000/api/render' }}",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "remotion-render",
+      "name": "Trigger Remotion Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4100, 1100]
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $('Load Media + Style').first().json.chatId }}",
+        "operation": "sendVideo",
+        "videoFile": "={{ $json.videoUrl }}",
+        "caption": "🎬 *Votre Virtual Staging est prêt !*\n\nVotre espace transformé en intérieur de magazine.\n\n🔄 Envoyez une nouvelle photo pour un autre rendu !\n💬 Tapez /styles pour changer de style.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-result",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [4350, 1100],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      }
+    },
+
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "👋 Je n'ai pas compris votre message.\n\nVoici ce que je peux faire :\n📸 Envoyez-moi une *photo* ou *vidéo* d'une pièce vide.\n/start — Relancer l'assistant\n/styles — Voir les styles disponibles\n/aide — Conseils pour filmer",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-default",
+      "name": "Send Default",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [650, 1500],
+      "credentials": {
+        "telegramApi": { "id": "r3or1rCFrz8TM9ri", "name": "VIMIMO Telegram Bot" }
+      }
+    }
+  ],
+
+  "connections": {
+    "TelegramBot": {
+      "main": [
+        [{ "node": "Command Router", "type": "main", "index": 0 }]
+      ]
+    },
+    "Command Router": {
+      "main": [
+        [{ "node": "Send Welcome", "type": "main", "index": 0 }],
+        [{ "node": "Send Styles Catalog", "type": "main", "index": 0 }],
+        [{ "node": "Send Examples", "type": "main", "index": 0 }],
+        [{ "node": "Send Tips", "type": "main", "index": 0 }],
+        [{ "node": "Save Media", "type": "main", "index": 0 }],
+        [{ "node": "Load Media + Style", "type": "main", "index": 0 }],
+        [{ "node": "Send Default", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save Media": {
+      "main": [
+        [{ "node": "Ack + Style Keyboard", "type": "main", "index": 0 }]
+      ]
+    },
+    "Load Media + Style": {
+      "main": [
+        [{ "node": "Has Pending Media?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Pending Media?": {
+      "main": [
+        [
+          { "node": "Send Processing + Remove Keyboard", "type": "main", "index": 0 },
+          { "node": "Download Media", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "No Pending Media", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Download Media": {
+      "main": [
+        [{ "node": "Extract Frames", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Frames": {
+      "main": [
+        [{ "node": "GPT-4o Vision Analysis", "type": "main", "index": 0 }]
+      ]
+    },
+    "GPT-4o Vision Analysis": {
+      "main": [
+        [
+          { "node": "Upsell Builder", "type": "main", "index": 0 },
+          { "node": "Generate 5 Staging Prompts", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Upsell Builder": {
+      "main": [
+        [{ "node": "Send Upsell", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate 5 Staging Prompts": {
+      "main": [
+        [{ "node": "Split Into 5 Frames", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Into 5 Frames": {
+      "main": [
+        [{ "node": "Replicate SDXL + ControlNet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Replicate SDXL + ControlNet": {
+      "main": [
+        [{ "node": "Poll Replicate Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "Poll Replicate Result": {
+      "main": [
+        [{ "node": "Aggregate 5 Images", "type": "main", "index": 0 }]
+      ]
+    },
+    "Aggregate 5 Images": {
+      "main": [
+        [{ "node": "Higsfield Video Generation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Higsfield Video Generation": {
+      "main": [
+        [{ "node": "Build Remotion Payload", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Remotion Payload": {
+      "main": [
+        [{ "node": "Trigger Remotion Render", "type": "main", "index": 0 }]
+      ]
+    },
+    "Trigger Remotion Render": {
+      "main": [
+        [{ "node": "Send Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

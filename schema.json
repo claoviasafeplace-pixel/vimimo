@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VIMIMO Virtual Staging Pipeline",
+  "description": "Data contract between n8n workflow and Remotion composition",
+  "type": "object",
+  "required": ["originalVideoUrl", "aiVideoUrl", "images", "metadata"],
+  "properties": {
+    "originalVideoUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the original empty room video received via Telegram"
+    },
+    "aiVideoUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the AI-generated video from Higsfield (frame1 -> frame5 animation)"
+    },
+    "images": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "description": "5 keyframe images representing the progressive staging transformation",
+      "items": {
+        "type": "object",
+        "required": ["url", "step", "label"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the generated keyframe image"
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "Step number in the transformation sequence"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "original_clean",
+              "surface_renovation",
+              "large_furniture",
+              "full_furnishing",
+              "final_decoration"
+            ],
+            "description": "Semantic label for this transformation stage"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The exact prompt used to generate this image via Replicate"
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Seed used for generation reproducibility"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["roomAnalysis", "generationConfig"],
+      "properties": {
+        "roomAnalysis": {
+          "type": "object",
+          "description": "GPT-4o Vision analysis of the original room",
+          "properties": {
+            "roomType": {
+              "type": "string",
+              "enum": ["living_room", "bedroom", "kitchen", "bathroom", "dining_room", "office", "studio", "other"],
+              "description": "Detected room type"
+            },
+            "dimensions": {
+              "type": "object",
+              "properties": {
+                "estimatedArea": { "type": "string", "description": "Estimated area (e.g., '25m²')" },
+                "ceilingHeight": { "type": "string", "description": "Estimated ceiling height (e.g., '2.5m')" },
+                "shape": { "type": "string", "enum": ["rectangular", "L-shaped", "irregular", "square"] }
+              }
+            },
+            "existingMaterials": {
+              "type": "object",
+              "properties": {
+                "flooring": { "type": "string", "description": "Current floor material (e.g., 'concrete', 'tile', 'hardwood')" },
+                "walls": { "type": "string", "description": "Current wall finish (e.g., 'white plaster', 'bare concrete')" },
+                "ceiling": { "type": "string", "description": "Current ceiling type" }
+              }
+            },
+            "lighting": {
+              "type": "object",
+              "properties": {
+                "naturalLight": { "type": "string", "enum": ["abundant", "moderate", "limited", "none"] },
+                "windowCount": { "type": "integer" },
+                "lightDirection": { "type": "string", "description": "Primary light direction (e.g., 'north-facing', 'south-facing')" }
+              }
+            },
+            "cameraAngle": {
+              "type": "object",
+              "description": "Detected camera perspective to maintain consistency",
+              "properties": {
+                "perspective": { "type": "string", "enum": ["wide_angle", "standard", "telephoto"] },
+                "height": { "type": "string", "enum": ["eye_level", "low", "high"] },
+                "orientation": { "type": "string", "description": "Approximate camera orientation description" }
+              }
+            },
+            "style": {
+              "type": "string",
+              "description": "Recommended interior design style based on room character",
+              "enum": ["modern_minimalist", "scandinavian", "industrial", "classic_french", "contemporary", "bohemian", "luxury", "mid_century_modern"]
+            }
+          }
+        },
+        "generationConfig": {
+          "type": "object",
+          "description": "Configuration for Replicate/SDXL generation",
+          "properties": {
+            "model": {
+              "type": "string",
+              "default": "stability-ai/sdxl",
+              "description": "Replicate model identifier"
+            },
+            "controlnetModel": {
+              "type": "string",
+              "default": "canny",
+              "description": "ControlNet conditioning type"
+            },
+            "controlnetStrength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.85,
+              "description": "ControlNet conditioning scale (higher = more structural fidelity)"
+            },
+            "guidanceScale": {
+              "type": "number",
+              "default": 7.5,
+              "description": "Classifier-free guidance scale"
+            },
+            "negativePrompt": {
+              "type": "string",
+              "default": "blurry, distorted, deformed, low quality, watermark, text, unrealistic proportions, floating furniture, mismatched perspective, cartoon, anime, illustration",
+              "description": "Shared negative prompt for all 5 frames"
+            },
+            "width": { "type": "integer", "default": 1344 },
+            "height": { "type": "integer", "default": 768 },
+            "baseSeed": {
+              "type": "integer",
+              "description": "Base seed for reproducible generation (each frame uses baseSeed + step)"
+            }
+          }
+        }
+      }
+    },
+    "videoConfig": {
+      "type": "object",
+      "description": "Remotion composition rendering configuration",
+      "properties": {
+        "fps": { "type": "integer", "default": 30 },
+        "durationInSeconds": { "type": "number", "default": 12 },
+        "width": { "type": "integer", "default": 1920 },
+        "height": { "type": "integer", "default": 1080 },
+        "speedRamp": {
+          "type": "object",
+          "description": "Speed ramp configuration for the final video",
+          "properties": {
+            "introSpeed": { "type": "number", "default": 2.0, "description": "Speed multiplier for the intro (original video)" },
+            "stagingSpeed": { "type": "number", "default": 0.5, "description": "Speed multiplier during furniture animation" },
+            "outroSpeed": { "type": "number", "default": 2.0, "description": "Speed multiplier for the outro" },
+            "introRatio": { "type": "number", "default": 0.2, "description": "Proportion of timeline for intro (0-1)" },
+            "stagingRatio": { "type": "number", "default": 0.6, "description": "Proportion of timeline for staging animation (0-1)" },
+            "outroRatio": { "type": "number", "default": 0.2, "description": "Proportion of timeline for outro (0-1)" }
+          }
+        },
+        "transitions": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["crossfade", "morph", "wipe"], "default": "crossfade" },
+            "durationInFrames": { "type": "integer", "default": 15 },
+            "motionBlurSamples": { "type": "integer", "default": 4, "description": "Number of samples for motion blur simulation" }
+          }
+        },
+        "upscaling": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "sharpness": { "type": "number", "default": 1.2, "description": "CSS filter contrast/sharpness boost factor" }
+          }
+        }
+      }
+    },
+    "higsfield": {
+      "type": "object",
+      "description": "Higsfield API generation parameters",
+      "properties": {
+        "startImageUrl": { "type": "string", "format": "uri", "description": "Frame 1 (empty room)" },
+        "endImageUrl": { "type": "string", "format": "uri", "description": "Frame 5 (fully decorated)" },
+        "animationPrompt": {
+          "type": "string",
+          "default": "Furniture items pop in and fall into place one by one, cinematic lighting, smooth forward camera motion, photorealistic interior, professional real estate video"
+        },
+        "duration": { "type": "number", "default": 6, "description": "Duration of the AI-generated clip in seconds" }
+      }
+    },
+    "telegram": {
+      "type": "object",
+      "description": "Telegram bot context for response delivery",
+      "properties": {
+        "chatId": { "type": "string" },
+        "messageId": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    }
+  }
+}

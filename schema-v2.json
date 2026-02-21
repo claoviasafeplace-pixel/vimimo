@@ -1,0 +1,316 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VIMIMO v2 Multi-Room Pipeline",
+  "description": "Data contract for multi-photo property staging pipeline with anti-hallucination",
+  "type": "object",
+  "required": ["property", "rooms"],
+  "properties": {
+    "property": {
+      "type": "object",
+      "required": ["title", "style"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Property title or name"
+        },
+        "address": {
+          "type": "string",
+          "description": "Property address"
+        },
+        "style": {
+          "type": "string",
+          "enum": ["scandinavian", "industrial", "modern_minimalist", "classic_french", "bohemian"],
+          "description": "Chosen interior design style for the entire property"
+        },
+        "estimatedType": {
+          "type": "string",
+          "enum": ["apartment", "house", "loft", "studio"],
+          "description": "Type of property detected from photos"
+        },
+        "totalRooms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Total number of rooms in the property"
+        },
+        "notes": {
+          "type": "string",
+          "description": "General notes about the property (era, condition, character)"
+        }
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "description": "Array of rooms, one entry per photo/room",
+      "items": {
+        "type": "object",
+        "required": ["index", "roomType", "roomLabel", "originalPhotoUrl"],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sequential room index (matches photoIndex)"
+          },
+          "roomType": {
+            "type": "string",
+            "enum": ["living_room", "bedroom", "kitchen", "bathroom", "dining_room", "office", "studio", "hallway", "balcony", "other"],
+            "description": "Detected room type"
+          },
+          "roomLabel": {
+            "type": "string",
+            "description": "Human-readable room label in French (e.g., Salon, Chambre 1)"
+          },
+          "originalPhotoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the original empty room photo"
+          },
+          "stagedPhotoUrl": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "URL of the AI-staged room photo (filled after staging step)"
+          },
+          "videoUrl": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "URL of the animated room video (filled after video step)"
+          },
+          "structuralInventory": {
+            "type": "object",
+            "description": "Exhaustive inventory of structural elements — preservation anchor for anti-hallucination",
+            "required": ["windows", "doors", "walls", "floor", "fixedElements"],
+            "properties": {
+              "windows": {
+                "type": "array",
+                "description": "All visible windows",
+                "items": {
+                  "type": "object",
+                  "required": ["position", "size", "type"],
+                  "properties": {
+                    "position": {
+                      "type": "string",
+                      "description": "Wall and placement (e.g., 'south wall, center')"
+                    },
+                    "size": {
+                      "type": "string",
+                      "enum": ["small", "medium", "large", "bay"],
+                      "description": "Approximate window size"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["single", "double", "bay", "velux", "porthole", "french_door"],
+                      "description": "Window type"
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": ["full", "partial"],
+                      "default": "full",
+                      "description": "Whether the window is fully or partially visible"
+                    }
+                  }
+                }
+              },
+              "doors": {
+                "type": "array",
+                "description": "All visible doors",
+                "items": {
+                  "type": "object",
+                  "required": ["position", "type"],
+                  "properties": {
+                    "position": {
+                      "type": "string",
+                      "description": "Wall and placement (e.g., 'east wall, left')"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["standard", "sliding", "double", "glass", "french_door"],
+                      "description": "Door type"
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": ["full", "partial"],
+                      "default": "full",
+                      "description": "Whether the door is fully or partially visible"
+                    }
+                  }
+                }
+              },
+              "walls": {
+                "type": "object",
+                "required": ["color", "material"],
+                "properties": {
+                  "color": {
+                    "type": "string",
+                    "description": "Dominant wall color"
+                  },
+                  "material": {
+                    "type": "string",
+                    "description": "Wall material (plaster, concrete, brick, wood paneling, wallpaper)"
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": ["good", "fair", "needs_renovation"],
+                    "description": "Wall condition"
+                  },
+                  "accentWall": {
+                    "type": ["string", "null"],
+                    "description": "Description of accent wall if present, null otherwise"
+                  }
+                }
+              },
+              "floor": {
+                "type": "object",
+                "required": ["material", "color"],
+                "properties": {
+                  "material": {
+                    "type": "string",
+                    "description": "Floor material (parquet, tile, concrete, carpet, vinyl)"
+                  },
+                  "color": {
+                    "type": "string",
+                    "description": "Floor color or wood species"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "description": "Floor pattern if applicable (herringbone, chevron, straight, etc.)"
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": ["good", "fair", "needs_renovation"],
+                    "description": "Floor condition"
+                  }
+                }
+              },
+              "fixedElements": {
+                "type": "array",
+                "description": "All non-movable structural elements (radiators, outlets, fireplace, beams, moldings, etc.)",
+                "items": {
+                  "type": "string",
+                  "description": "Description with position (e.g., 'radiator under south window')"
+                }
+              }
+            }
+          },
+          "lighting": {
+            "type": "object",
+            "properties": {
+              "naturalLight": {
+                "type": "string",
+                "enum": ["abundant", "moderate", "limited", "none"],
+                "description": "Amount of natural light"
+              },
+              "direction": {
+                "type": "string",
+                "description": "Primary light direction (e.g., 'south', 'north-east')"
+              }
+            }
+          },
+          "cameraAngle": {
+            "type": "object",
+            "properties": {
+              "perspective": {
+                "type": "string",
+                "enum": ["wide_angle", "standard", "telephoto"],
+                "description": "Lens type"
+              },
+              "height": {
+                "type": "string",
+                "enum": ["eye_level", "low", "high"],
+                "description": "Camera height"
+              },
+              "orientation": {
+                "type": "string",
+                "description": "Camera orientation description"
+              }
+            }
+          },
+          "dimensions": {
+            "type": "object",
+            "properties": {
+              "estimatedArea": {
+                "type": "string",
+                "description": "Estimated floor area (e.g., '25m2')"
+              },
+              "ceilingHeight": {
+                "type": "string",
+                "description": "Estimated ceiling height (e.g., '2.6m')"
+              }
+            }
+          },
+          "stagingPrompt": {
+            "type": ["string", "null"],
+            "description": "Generated Flux Kontext Pro prompt for staging this room (filled after staging-prompter step)"
+          },
+          "furnitureList": {
+            "type": "array",
+            "description": "List of furniture items added during staging",
+            "items": {
+              "type": "string"
+            }
+          },
+          "videoPrompt": {
+            "type": ["string", "null"],
+            "description": "Generated Minimax video-01-live prompt for animating this room (filled after video-animator step)"
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Rendering and output configuration",
+      "properties": {
+        "fps": {
+          "type": "integer",
+          "default": 30,
+          "description": "Frames per second for final compiled video"
+        },
+        "width": {
+          "type": "integer",
+          "default": 1920,
+          "description": "Output video width in pixels"
+        },
+        "height": {
+          "type": "integer",
+          "default": 1080,
+          "description": "Output video height in pixels"
+        },
+        "videoDurationPerRoom": {
+          "type": "number",
+          "default": 5,
+          "description": "Duration in seconds for each room's animated clip"
+        },
+        "transitionDuration": {
+          "type": "number",
+          "default": 1,
+          "description": "Duration in seconds for transitions between rooms"
+        },
+        "transitionType": {
+          "type": "string",
+          "enum": ["crossfade", "wipe", "cut"],
+          "default": "crossfade",
+          "description": "Transition type between room clips"
+        }
+      }
+    },
+    "telegram": {
+      "type": "object",
+      "description": "Telegram bot context for response delivery",
+      "properties": {
+        "chatId": {
+          "type": "string",
+          "description": "Telegram chat ID"
+        },
+        "messageId": {
+          "type": "string",
+          "description": "Original message ID for reply context"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Telegram user ID"
+        }
+      }
+    }
+  }
+}
