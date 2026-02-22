@@ -23,6 +23,7 @@ export const TextReveal3D: React.FC<{
 		<AbsoluteFill
 			style={{
 				perspective: "1200px",
+				display: "flex",
 				justifyContent: "center",
 				alignItems: "center",
 			}}

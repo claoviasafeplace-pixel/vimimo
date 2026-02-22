@@ -188,7 +188,7 @@ export const StudioRoomSegment: React.FC<StudioRoomSegmentProps> = ({
 			<Sequence from={58} durationInFrames={78} layout="none">
 				<AbsoluteFill
 					style={{
-						opacity: Math.min(videoInOpacity, videoOutOpacity),
+						opacity: Math.min(Math.max(0, videoInOpacity), Math.max(0, videoOutOpacity)),
 					}}
 				>
 					<AbsoluteFill

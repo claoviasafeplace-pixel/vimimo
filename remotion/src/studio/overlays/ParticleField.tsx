@@ -23,14 +23,13 @@ const generateParticles = (): Particle[] => {
 	}));
 };
 
-const particles = generateParticles();
-
 export const ParticleField: React.FC<{
 	introEnd?: number;
 	outroStart?: number;
 }> = ({ introEnd = 120, outroStart: outroStartProp }) => {
 	const frame = useCurrentFrame();
 	const { durationInFrames } = useVideoConfig();
+	const particles = React.useMemo(() => generateParticles(), []);
 
 	const outroStart = outroStartProp ?? durationInFrames - 90;
 
