@@ -3,8 +3,10 @@ import { Composition } from "remotion";
 import { z } from "zod";
 import { VirtualStaging } from "./Composition";
 import { PropertyShowcase, calculateDuration } from "./PropertyShowcase";
-import { propertyShowcaseSchema } from "./schemas";
-import type { PropertyShowcaseProps } from "./schemas";
+import { StudioMontage } from "./StudioMontage";
+import { propertyShowcaseSchema, studioMontageSchema } from "./schemas";
+import type { PropertyShowcaseProps, StudioMontageProps } from "./schemas";
+import { calculateStudioDuration } from "./studio/utils/timeline";
 
 // ─── Zod Schema (contrat n8n → Remotion) ──────────────────────────
 
@@ -136,6 +138,55 @@ export const RemotionRoot: React.FC = () => {
             beforePhotoUrl: "https://placehold.co/1920x1080/5a3a3a/ffffff?text=Cuisine+-+AVANT",
             originalPhotoUrl: "https://placehold.co/1920x1080/4a4a4a/ffffff?text=Cuisine+-+Photo+Vide",
             stagedPhotoUrl: "https://placehold.co/1920x1080/5a3d2d/ffffff?text=Cuisine+-+Stag%C3%A9e",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            roomType: "kitchen",
+            roomLabel: "Cuisine",
+          },
+        ],
+      }}
+    />
+    <Composition
+      id="StudioMontage"
+      component={StudioMontage}
+      fps={FPS}
+      width={1920}
+      height={1080}
+      durationInFrames={calculateStudioDuration(3)}
+      schema={studioMontageSchema}
+      calculateMetadata={({ props }) => {
+        return {
+          durationInFrames: calculateStudioDuration(props.rooms.length),
+        };
+      }}
+      defaultProps={{
+        propertyInfo: {
+          title: "Appartement 3 pièces lumineux",
+          city: "Lyon",
+          neighborhood: "Presqu'île",
+          price: "450 000 €",
+          surface: "85 m²",
+          rooms: "3 pièces",
+          highlights: ["Balcon", "Parking", "Cave"],
+          agencyName: "Immo Lyon",
+        },
+        rooms: [
+          {
+            beforePhotoUrl: "https://placehold.co/1920x1080/5a3a3a/ffffff?text=Salon+-+AVANT",
+            stagedPhotoUrl: "https://placehold.co/1920x1080/2d5a3d/ffffff?text=Salon+-+Staged",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            roomType: "living_room",
+            roomLabel: "Salon",
+          },
+          {
+            beforePhotoUrl: "https://placehold.co/1920x1080/5a3a3a/ffffff?text=Chambre+-+AVANT",
+            stagedPhotoUrl: "https://placehold.co/1920x1080/3d2d5a/ffffff?text=Chambre+-+Staged",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            roomType: "bedroom",
+            roomLabel: "Chambre 1",
+          },
+          {
+            beforePhotoUrl: "https://placehold.co/1920x1080/5a3a3a/ffffff?text=Cuisine+-+AVANT",
+            stagedPhotoUrl: "https://placehold.co/1920x1080/5a3d2d/ffffff?text=Cuisine+-+Staged",
             videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
             roomType: "kitchen",
             roomLabel: "Cuisine",

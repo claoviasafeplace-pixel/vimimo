@@ -1,0 +1,129 @@
+import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
+import { getStripe } from "@/lib/stripe";
+import { getUserById, updateUser } from "@/lib/store";
+import { CREDIT_PACKS, SUBSCRIPTION_PLANS } from "@/lib/types";
+
+export async function POST(request: Request) {
+  try {
+    const result = await requireAuth();
+    if (result.error) return result.error;
+
+    const body = await request.json();
+    const { packId, planId } = body as { packId?: string; planId?: string };
+
+    if (!packId && !planId) {
+      return NextResponse.json({ error: "Pack ou plan requis" }, { status: 400 });
+    }
+
+    const stripe = getStripe();
+    const userId = result.session.user.id;
+    const user = await getUserById(userId);
+
+    if (!user) {
+      return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+    }
+
+    // Get or create Stripe customer
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name || undefined,
+        metadata: { userId: user.id },
+      });
+      customerId = customer.id;
+      await updateUser(userId, { stripe_customer_id: customerId });
+    }
+
+    const origin = new URL(request.url).origin;
+
+    // --- One-time credit pack ---
+    if (packId) {
+      const pack = CREDIT_PACKS.find((p) => p.id === packId);
+      if (!pack) {
+        return NextResponse.json({ error: "Pack invalide" }, { status: 400 });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "eur",
+              product_data: {
+                name: `VIMIMO — Pack ${pack.name}`,
+                description: `${pack.credits} crédits de staging IA`,
+              },
+              unit_amount: Math.round(pack.priceEur * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          userId: user.id,
+          type: "pack",
+          packId: pack.id,
+          credits: String(pack.credits),
+        },
+        success_url: `${origin}/?checkout=success`,
+        cancel_url: `${origin}/pricing`,
+      });
+
+      return NextResponse.json({ url: session.url });
+    }
+
+    // --- Monthly subscription ---
+    if (planId) {
+      const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+      if (!plan) {
+        return NextResponse.json({ error: "Plan invalide" }, { status: 400 });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "subscription",
+        line_items: [
+          {
+            price_data: {
+              currency: "eur",
+              product_data: {
+                name: `VIMIMO — ${plan.name}`,
+                description: `${plan.creditsPerMonth} crédits / mois`,
+              },
+              unit_amount: Math.round(plan.priceEur * 100),
+              recurring: { interval: "month" },
+            },
+            quantity: 1,
+          },
+        ],
+        subscription_data: {
+          metadata: {
+            userId: user.id,
+            type: "subscription",
+            planId: plan.id,
+            creditsPerMonth: String(plan.creditsPerMonth),
+          },
+        },
+        metadata: {
+          userId: user.id,
+          type: "subscription",
+          planId: plan.id,
+        },
+        success_url: `${origin}/?checkout=success`,
+        cancel_url: `${origin}/pricing`,
+      });
+
+      return NextResponse.json({ url: session.url });
+    }
+
+    return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });
+  } catch (error) {
+    console.error("Checkout error:", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la création du paiement" },
+      { status: 500 }
+    );
+  }
+}
