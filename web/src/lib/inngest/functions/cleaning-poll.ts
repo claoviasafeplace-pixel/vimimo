@@ -31,12 +31,11 @@ export const cleaningPoll = inngest.createFunction(
   async ({ event, step }) => {
     const { projectId } = event.data;
 
-    // Poll cleaning predictions until all done (max 60 attempts = ~5 min)
-    const project = await step.run("poll-cleaning", async () => {
-      const maxAttempts = 60;
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Poll cleaning with step.sleep() between attempts (max 60 = ~5 min)
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const done = await step.run(`check-cleaning-${attempt}`, async () => {
         const proj = await getProject(projectId);
-        if (!proj || proj.phase !== "cleaning") return proj;
+        if (!proj || proj.phase !== "cleaning") return true;
 
         let allDone = true;
         for (const photo of proj.photos) {
@@ -45,7 +44,6 @@ export const cleaningPoll = inngest.createFunction(
             photo.cleanedUrl = photo.originalUrl;
             continue;
           }
-
           try {
             const status = await getPredictionStatus(photo.cleanPredictionId);
             if (status.status === "succeeded") {
@@ -59,30 +57,35 @@ export const cleaningPoll = inngest.createFunction(
             photo.cleanedUrl = photo.originalUrl;
           }
         }
-
-        if (allDone) {
-          await saveProject(proj);
-          return proj;
-        }
-
         await saveProject(proj);
-        await new Promise((r) => setTimeout(r, 5000));
-      }
+        return allDone;
+      });
 
-      // Timeout: force fallback
+      if (done) break;
+      await step.sleep(`wait-cleaning-${attempt}`, "5s");
+    }
+
+    // Force fallback on any remaining
+    await step.run("force-fallback", async () => {
       const proj = await getProject(projectId);
-      if (proj) {
-        for (const photo of proj.photos) {
-          if (!photo.cleanedUrl) photo.cleanedUrl = photo.originalUrl;
+      if (!proj) return;
+      let changed = false;
+      for (const photo of proj.photos) {
+        if (!photo.cleanedUrl) {
+          photo.cleanedUrl = photo.originalUrl;
+          changed = true;
         }
-        await saveProject(proj);
       }
-      return proj;
+      if (changed) await saveProject(proj);
+    });
+
+    // Branch: triage (video_visite) or analyze (staging_piece)
+    const project = await step.run("read-project", async () => {
+      return await getProject(projectId);
     });
 
     if (!project) return { error: "Project not found" };
 
-    // Branch based on mode
     if (project.mode === "video_visite") {
       await step.run("triage-photos", async () => {
         const proj = (await getProject(projectId))!;
@@ -92,12 +95,10 @@ export const cleaningPoll = inngest.createFunction(
             url: p.cleanedUrl || p.originalUrl,
           }));
           const triageResult = await triagePhotos(photoUrls, proj.style);
-
           triageResult.photos = triageResult.photos.map((tp, i) => ({
             ...tp,
             photoId: proj.photos[tp.photoIndex - 1]?.id || proj.photos[i]?.id || `photo-${i}`,
           }));
-
           proj.triageResult = triageResult;
           proj.phase = "reviewing";
         } catch (error) {
@@ -144,7 +145,6 @@ export const cleaningPoll = inngest.createFunction(
 
           proj.phase = "generating_options";
 
-          // Launch staging options for all rooms
           for (const room of proj.rooms) {
             try {
               const result = await generateStagingPrompts(
@@ -179,62 +179,50 @@ export const cleaningPoll = inngest.createFunction(
         }
       });
 
-      // If not error, poll staging options
-      const projAfterAnalysis = await getProject(projectId);
-      if (projAfterAnalysis?.phase === "generating_options") {
-        await step.run("poll-options", async () => {
-          const maxAttempts = 120;
-          for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            const proj = await getProject(projectId);
-            if (!proj || proj.phase !== "generating_options") return;
+      // Poll staging options with step.sleep()
+      for (let attempt = 0; attempt < 120; attempt++) {
+        const done = await step.run(`check-options-${attempt}`, async () => {
+          const proj = await getProject(projectId);
+          if (!proj || proj.phase !== "generating_options") return true;
 
-            let allDone = true;
-            for (const room of proj.rooms) {
-              if (!room.optionPredictionIds?.length) continue;
-              if (room.options.length >= room.optionPredictionIds.length) continue;
+          let allDone = true;
+          for (const room of proj.rooms) {
+            if (!room.optionPredictionIds?.length) continue;
+            if (room.options.length >= room.optionPredictionIds.length) continue;
 
-              const resolvedOptions = room.options.length ? [...room.options] : [];
-
-              for (let i = resolvedOptions.length; i < room.optionPredictionIds.length; i++) {
-                try {
-                  const status = await getPredictionStatus(room.optionPredictionIds[i]);
-                  if (status.status === "succeeded") {
-                    const url = extractOutputUrl(status.output);
-                    if (url) {
-                      resolvedOptions.push({ url, predictionId: room.optionPredictionIds[i] });
-                    }
-                  } else if (status.status === "failed" || status.status === "canceled") {
-                    // Skip failed
-                  } else {
-                    allDone = false;
-                  }
-                } catch {
-                  // Skip errored
+            const resolvedOptions = room.options.length ? [...room.options] : [];
+            for (let i = resolvedOptions.length; i < room.optionPredictionIds.length; i++) {
+              try {
+                const status = await getPredictionStatus(room.optionPredictionIds[i]);
+                if (status.status === "succeeded") {
+                  const url = extractOutputUrl(status.output);
+                  if (url) resolvedOptions.push({ url, predictionId: room.optionPredictionIds[i] });
+                } else if (status.status !== "failed" && status.status !== "canceled") {
+                  allDone = false;
                 }
-              }
-
-              if (resolvedOptions.length !== room.options.length) {
-                room.options = resolvedOptions;
+              } catch {
+                // skip
               }
             }
-
-            if (allDone) {
-              const allRoomsHaveOptions = proj.rooms.every((r) => r.options.length > 0);
-              if (allRoomsHaveOptions) {
-                proj.phase = "selecting";
-              } else {
-                proj.phase = "error";
-                proj.error = "Certaines pièces n'ont aucune option de staging";
-                await autoRefund(proj);
-              }
-              await saveProject(proj);
-              return;
+            if (resolvedOptions.length !== room.options.length) {
+              room.options = resolvedOptions;
             }
-
-            await saveProject(proj);
-            await new Promise((r) => setTimeout(r, 5000));
           }
+
+          if (allDone) {
+            const allRoomsHaveOptions = proj.rooms.every((r) => r.options.length > 0);
+            proj.phase = allRoomsHaveOptions ? "selecting" : "error";
+            if (!allRoomsHaveOptions) {
+              proj.error = "Certaines pièces n'ont aucune option de staging";
+              await autoRefund(proj);
+            }
+          }
+          await saveProject(proj);
+          return allDone;
         });
+
+        if (done) break;
+        await step.sleep(`wait-options-${attempt}`, "5s");
       }
     }
 

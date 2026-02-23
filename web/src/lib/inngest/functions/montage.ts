@@ -9,11 +9,10 @@ export const montagePoll = inngest.createFunction(
   async ({ event, step }) => {
     const { projectId } = event.data;
 
-    await step.run("poll-montage-render", async () => {
-      const maxAttempts = 120; // ~10 min
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
+      const done = await step.run(`check-montage-${attempt}`, async () => {
         const proj = await getProject(projectId);
-        if (!proj || proj.phase !== "rendering_montage" || !proj.studioMontageRenderId) return;
+        if (!proj || proj.phase !== "rendering_montage" || !proj.studioMontageRenderId) return true;
 
         try {
           const renderStatus = await getRenderStatus(proj.studioMontageRenderId);
@@ -21,29 +20,30 @@ export const montagePoll = inngest.createFunction(
             try {
               const videoUrl = await uploadFromUrl(
                 `${process.env.REMOTION_SERVER_URL}/renders/${proj.studioMontageRenderId}/download`,
-                "montages",
-              );
+                "montages");
               proj.studioMontageUrl = videoUrl;
             } catch {
               proj.studioMontageUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.studioMontageRenderId}/download`;
             }
             proj.phase = "done";
             await saveProject(proj);
-            return;
+            return true;
           } else if (renderStatus.status === "error") {
             proj.phase = "done";
             await saveProject(proj);
-            return;
+            return true;
           }
         } catch {
           proj.phase = "done";
           await saveProject(proj);
-          return;
+          return true;
         }
+        return false;
+      });
 
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-    });
+      if (done) break;
+      await step.sleep(`wait-montage-${attempt}`, "5s");
+    }
 
     return { projectId, status: "montage-done" };
   },

@@ -2,6 +2,8 @@ import { inngest } from "../client";
 import { getProject, saveProject, refundCredits } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { startRender } from "@/lib/services/remotion";
+import { uploadFromUrl } from "@/lib/services/storage";
+import { getRenderStatus } from "@/lib/services/remotion";
 
 export const videosPoll = inngest.createFunction(
   { id: "videos-poll", retries: 0 },
@@ -10,20 +12,15 @@ export const videosPoll = inngest.createFunction(
     const { projectId } = event.data;
 
     // Poll video predictions
-    await step.run("poll-videos", async () => {
-      const maxAttempts = 180; // ~15 min
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (let attempt = 0; attempt < 180; attempt++) {
+      const done = await step.run(`check-videos-${attempt}`, async () => {
         const proj = await getProject(projectId);
-        if (!proj || proj.phase !== "generating_videos") return;
+        if (!proj || proj.phase !== "generating_videos") return true;
 
         let allDone = true;
         for (const room of proj.rooms) {
           if (room.videoUrl) continue;
-          if (!room.videoPredictionId) {
-            allDone = false;
-            continue;
-          }
-
+          if (!room.videoPredictionId) { allDone = false; continue; }
           try {
             const status = await getPredictionStatus(room.videoPredictionId);
             if (status.status === "succeeded") {
@@ -33,16 +30,13 @@ export const videosPoll = inngest.createFunction(
             } else {
               allDone = false;
             }
-          } catch {
-            allDone = false;
-          }
+          } catch { allDone = false; }
         }
 
         if (allDone) {
           const hasVideos = proj.rooms.some((r) => r.videoUrl);
           if (hasVideos) {
             proj.phase = "rendering";
-            // Launch Remotion render
             try {
               const renderId = await startRender(proj);
               proj.remotionRenderId = renderId;
@@ -55,67 +49,56 @@ export const videosPoll = inngest.createFunction(
             proj.error = "Aucune vidéo n'a pu être générée";
             if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
               try {
-                await refundCredits(
-                  proj.userId,
-                  proj.creditsUsed,
-                  proj.id,
-                  `Remboursement automatique — projet ${proj.id} en erreur`,
-                );
+                await refundCredits(proj.userId, proj.creditsUsed, proj.id,
+                  `Remboursement automatique — projet ${proj.id} en erreur`);
                 proj.creditsRefunded = true;
-              } catch (e) {
-                console.error("Auto-refund failed:", e);
-              }
+              } catch (e) { console.error("Auto-refund failed:", e); }
             }
           }
-          await saveProject(proj);
-          return;
         }
-
         await saveProject(proj);
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-    });
+        return allDone;
+      });
 
-    // Poll render if needed
-    const projAfterVideos = await getProject(projectId);
-    if (projAfterVideos?.phase === "rendering" && projAfterVideos.remotionRenderId) {
-      await step.run("poll-render", async () => {
-        const maxAttempts = 120; // ~10 min
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const proj = await getProject(projectId);
-          if (!proj || proj.phase !== "rendering" || !proj.remotionRenderId) return;
+      if (done) break;
+      await step.sleep(`wait-videos-${attempt}`, "5s");
+    }
 
-          try {
-            const { getRenderStatus } = await import("@/lib/services/remotion");
-            const renderStatus = await getRenderStatus(proj.remotionRenderId);
-            if (renderStatus.status === "done") {
-              try {
-                const { uploadFromUrl } = await import("@/lib/services/storage");
-                const videoUrl = await uploadFromUrl(
-                  `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`,
-                  "renders",
-                );
-                proj.finalVideoUrl = videoUrl;
-              } catch {
-                proj.finalVideoUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`;
-              }
-              proj.phase = "done";
-              await saveProject(proj);
-              return;
-            } else if (renderStatus.status === "error") {
-              proj.phase = "done";
-              await saveProject(proj);
-              return;
+    // Poll render
+    for (let attempt = 0; attempt < 120; attempt++) {
+      const done = await step.run(`check-render-${attempt}`, async () => {
+        const proj = await getProject(projectId);
+        if (!proj || proj.phase !== "rendering" || !proj.remotionRenderId) return true;
+
+        try {
+          const renderStatus = await getRenderStatus(proj.remotionRenderId);
+          if (renderStatus.status === "done") {
+            try {
+              const videoUrl = await uploadFromUrl(
+                `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`,
+                "renders");
+              proj.finalVideoUrl = videoUrl;
+            } catch {
+              proj.finalVideoUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`;
             }
-          } catch {
             proj.phase = "done";
             await saveProject(proj);
-            return;
+            return true;
+          } else if (renderStatus.status === "error") {
+            proj.phase = "done";
+            await saveProject(proj);
+            return true;
           }
-
-          await new Promise((r) => setTimeout(r, 5000));
+        } catch {
+          proj.phase = "done";
+          await saveProject(proj);
+          return true;
         }
+        return false;
       });
+
+      if (done) break;
+      await step.sleep(`wait-render-${attempt}`, "5s");
     }
 
     return { projectId, status: "videos-done" };

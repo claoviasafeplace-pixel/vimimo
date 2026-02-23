@@ -9,11 +9,10 @@ export const renderPoll = inngest.createFunction(
   async ({ event, step }) => {
     const { projectId } = event.data;
 
-    await step.run("poll-render", async () => {
-      const maxAttempts = 120;
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
+      const done = await step.run(`check-render-${attempt}`, async () => {
         const proj = await getProject(projectId);
-        if (!proj || proj.phase !== "rendering" || !proj.remotionRenderId) return;
+        if (!proj || proj.phase !== "rendering" || !proj.remotionRenderId) return true;
 
         try {
           const renderStatus = await getRenderStatus(proj.remotionRenderId);
@@ -21,29 +20,30 @@ export const renderPoll = inngest.createFunction(
             try {
               const videoUrl = await uploadFromUrl(
                 `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`,
-                "renders",
-              );
+                "renders");
               proj.finalVideoUrl = videoUrl;
             } catch {
               proj.finalVideoUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`;
             }
             proj.phase = "done";
             await saveProject(proj);
-            return;
+            return true;
           } else if (renderStatus.status === "error") {
             proj.phase = "done";
             await saveProject(proj);
-            return;
+            return true;
           }
         } catch {
           proj.phase = "done";
           await saveProject(proj);
-          return;
+          return true;
         }
+        return false;
+      });
 
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-    });
+      if (done) break;
+      await step.sleep(`wait-render-${attempt}`, "5s");
+    }
 
     return { projectId, status: "render-done" };
   },
