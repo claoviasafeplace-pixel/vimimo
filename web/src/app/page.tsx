@@ -153,7 +153,9 @@ export default function Home() {
                   ) : (
                     <>
                       <Sparkles className="mr-2 h-5 w-5" />
-                      {mode === "video_visite" ? "Lancer la Video Visite" : "Lancer le staging"}
+                      {mode === "video_visite"
+                        ? "Lancer la Video Visite (1 crédit)"
+                        : `Lancer le staging (${photos.length} crédit${photos.length > 1 ? "s" : ""})`}
                     </>
                   )}
                 </Button>

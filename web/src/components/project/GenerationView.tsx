@@ -102,20 +102,15 @@ function RoomGenerationCard({ room, index }: { room: Room; index: number }) {
       {/* Preview area */}
       <div className="relative aspect-video">
         {isDone && room.videoUrl ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="h-full w-full"
-          >
-            <video
-              src={room.videoUrl}
-              className="h-full w-full object-cover"
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-          </motion.div>
+          <video
+            src={room.videoUrl}
+            className="h-full w-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+          />
         ) : beforeUrl && afterUrl ? (
           <MorphAnimation before={beforeUrl} after={afterUrl} label={room.roomLabel} />
         ) : afterUrl ? (

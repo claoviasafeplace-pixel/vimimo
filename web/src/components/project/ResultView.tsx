@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Download,
@@ -9,7 +9,6 @@ import {
   Loader2,
   Sparkles,
   Clapperboard,
-  Check,
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
@@ -127,16 +126,13 @@ export default function ResultView({
       )}
 
       {project.finalVideoUrl && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="overflow-hidden rounded-2xl border border-badge-gold-border bg-surface"
-        >
+        <div className="overflow-hidden rounded-2xl border border-badge-gold-border bg-surface">
           <video
             src={project.finalVideoUrl}
             className="aspect-video w-full"
             controls
             playsInline
+            preload="metadata"
           />
           <div className="flex items-center justify-between p-4">
             <div>
@@ -152,7 +148,7 @@ export default function ResultView({
               </Button>
             </a>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Studio Montage section */}
@@ -172,11 +168,7 @@ export default function ResultView({
       )}
 
       {project.studioMontageUrl && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="overflow-hidden rounded-2xl border-2 border-accent-from/40 bg-surface"
-        >
+        <div className="overflow-hidden rounded-2xl border-2 border-accent-from/40 bg-surface">
           <div className="flex items-center gap-2 px-4 py-2 bg-badge-gold-bg border-b border-badge-gold-border">
             <Sparkles className="h-4 w-4 text-icon-accent" />
             <span className="text-xs font-semibold text-badge-gold-text uppercase tracking-wider">
@@ -188,6 +180,7 @@ export default function ResultView({
             className="aspect-video w-full"
             controls
             playsInline
+            preload="metadata"
           />
           <div className="flex items-center justify-between p-4">
             <div>
@@ -205,7 +198,7 @@ export default function ResultView({
               </Button>
             </a>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Studio Montage CTA */}
@@ -307,6 +300,7 @@ export default function ResultView({
                       className="aspect-video w-full object-cover"
                       muted
                       playsInline
+                      preload="metadata"
                     />
                   </div>
                   <div className="flex-1 min-w-0 py-2">
@@ -361,6 +355,7 @@ export default function ResultView({
                       className="aspect-video w-full object-cover"
                       muted
                       playsInline
+                      preload="metadata"
                     />
                   </div>
                   <div className="flex-1 min-w-0 py-2">
@@ -377,10 +372,8 @@ export default function ResultView({
           /* Normal grid view */
           <div className="grid gap-4 sm:grid-cols-2">
             {roomsWithVideo.map((room) => (
-              <motion.div
+              <div
                 key={room.index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
                 className="overflow-hidden rounded-2xl border border-border bg-surface"
               >
                 <video
@@ -388,6 +381,7 @@ export default function ResultView({
                   className="aspect-video w-full"
                   controls
                   playsInline
+                  preload="metadata"
                 />
                 <div className="flex items-center justify-between p-3">
                   <div className="flex items-center gap-2">
@@ -396,7 +390,7 @@ export default function ResultView({
                   </div>
                   <Badge variant="muted">{room.roomType}</Badge>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

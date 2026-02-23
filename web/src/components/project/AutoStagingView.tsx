@@ -118,6 +118,7 @@ function RoomStagingCard({ room, index }: { room: Room; index: number }) {
             loop
             muted
             playsInline
+            preload="metadata"
           />
         ) : afterUrl ? (
           <Image
