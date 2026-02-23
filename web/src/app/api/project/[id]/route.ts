@@ -297,43 +297,41 @@ export async function GET(
           };
         });
         updated = true;
-        // Save and return — let next poll handle staging
         await saveProject(project);
         return NextResponse.json({ project });
       }
 
-      // Step 2: Launch staging — ONE room per poll to avoid timeout
-      // (generateStagingPrompts calls GPT-4o which takes ~5-10s)
+      // Step 2: Launch staging — up to 3 rooms IN PARALLEL per poll
       const needsStaging = project.rooms.filter(
         (r) => !r.optionPredictionIds?.length && r.options.length === 0
       );
       if (needsStaging.length > 0) {
-        const room = needsStaging[0];
-        try {
-          const result = await generateStagingPrompts(
-            room.cleanedPhotoUrl,
-            room.roomType,
-            room.roomLabel,
-            project.style,
-            project.styleLabel,
-            room.visionData
-          );
-          const predictionId = await generateStagingOption(
-            room.cleanedPhotoUrl,
-            result.prompts[0]
-          );
-          room.optionPredictionIds = [predictionId];
-          updated = true;
-        } catch (error) {
-          console.error(`Auto-staging failed for room ${room.index}:`, error);
-          // Mark with empty array so we don't retry forever — use cleaned photo as fallback
-          room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
-          room.selectedOptionIndex = 0;
-          updated = true;
-        }
-        // Save progress and return — don't do more work this cycle
-        await saveProject(project);
-        return NextResponse.json({ project });
+        const batch = needsStaging.slice(0, 3);
+        const results = await Promise.allSettled(
+          batch.map(async (room) => {
+            try {
+              const result = await generateStagingPrompts(
+                room.cleanedPhotoUrl,
+                room.roomType,
+                room.roomLabel,
+                project.style,
+                project.styleLabel,
+                room.visionData
+              );
+              const predictionId = await generateStagingOption(
+                room.cleanedPhotoUrl,
+                result.prompts[0]
+              );
+              room.optionPredictionIds = [predictionId];
+            } catch (error) {
+              console.error(`Auto-staging failed for room ${room.index}:`, error);
+              room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
+              room.selectedOptionIndex = 0;
+            }
+          })
+        );
+        updated = true;
+        // Don't early return — continue to check predictions and launch videos below
       }
 
       // Step 3: Check staging predictions
@@ -360,47 +358,53 @@ export async function GET(
         }
       }
 
-      // Step 4: Launch videos — one at a time to avoid timeout
+      // Step 4: Launch ALL pending videos in parallel (launching a prediction is fast)
       const needsVideo = project.rooms.filter(
         (r) => !r.videoPredictionId && r.options.length > 0
       );
       if (needsVideo.length > 0) {
-        const room = needsVideo[0];
-        try {
-          const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
-          const predictionId = await generateVideo(
-            room.beforePhotoUrl,
-            stagedUrl,
-            project.styleLabel,
-            room.roomType
-          );
-          room.videoPredictionId = predictionId;
-          updated = true;
-        } catch (error) {
-          console.error(`Video generation failed for room ${room.index}:`, error);
-          // Mark as empty so we don't block the pipeline
-          room.videoUrl = "";
-          updated = true;
-        }
+        await Promise.allSettled(
+          needsVideo.map(async (room) => {
+            try {
+              const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
+              const predictionId = await generateVideo(
+                room.beforePhotoUrl,
+                stagedUrl,
+                project.styleLabel,
+                room.roomType
+              );
+              room.videoPredictionId = predictionId;
+              updated = true;
+            } catch (error) {
+              console.error(`Video generation failed for room ${room.index}:`, error);
+              room.videoUrl = "";
+              updated = true;
+            }
+          })
+        );
       }
 
-      // Step 5: Check video predictions
-      for (const room of project.rooms) {
-        if (room.videoUrl !== undefined) continue;
-        if (!room.videoPredictionId) continue;
-
-        try {
-          const status = await getPredictionStatus(room.videoPredictionId);
-          if (status.status === "succeeded") {
-            room.videoUrl = extractOutputUrl(status.output) || undefined;
-            updated = true;
-          } else if (status.status === "failed" || status.status === "canceled") {
-            room.videoUrl = "";
-            updated = true;
-          }
-        } catch {
-          // Will retry next poll
-        }
+      // Step 5: Check ALL video predictions in parallel
+      const pendingVideos = project.rooms.filter(
+        (r) => r.videoUrl === undefined && r.videoPredictionId
+      );
+      if (pendingVideos.length > 0) {
+        await Promise.allSettled(
+          pendingVideos.map(async (room) => {
+            try {
+              const status = await getPredictionStatus(room.videoPredictionId!);
+              if (status.status === "succeeded") {
+                room.videoUrl = extractOutputUrl(status.output) || undefined;
+                updated = true;
+              } else if (status.status === "failed" || status.status === "canceled") {
+                room.videoUrl = "";
+                updated = true;
+              }
+            } catch {
+              // Will retry next poll
+            }
+          })
+        );
       }
 
       // Step 6: All done? Launch montage

@@ -19,10 +19,10 @@ function getRoomStage(room: Room): "staging" | "video" | "done" {
 }
 
 const TIPS = [
-  "Chaque pièce est stagée automatiquement par l'IA",
+  "Les pièces sont stagées en parallèle par l'IA",
   "Les vidéos montrent la transformation avant → après",
   "Le montage final sera créé automatiquement",
-  "La génération prend entre 1 et 3 minutes par pièce",
+  "Les vidéos sont générées simultanément",
   "Votre Video Visite sera prête dans quelques minutes",
 ];
 

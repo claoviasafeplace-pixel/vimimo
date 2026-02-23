@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project } from "@/lib/types";
 
-const POLL_INTERVAL = 3000;
-
 const POLLING_PHASES = new Set([
   "cleaning",
   "analyzing",
@@ -16,11 +14,17 @@ const POLLING_PHASES = new Set([
   "auto_staging",
 ]);
 
+// Faster polling for active generation phases
+const FAST_PHASES = new Set(["auto_staging", "generating_videos", "rendering_montage"]);
+const FAST_INTERVAL = 2000;
+const NORMAL_INTERVAL = 3000;
+
 export function useProject(id: string) {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFetchingRef = useRef(false);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -40,23 +44,29 @@ export function useProject(id: string) {
     }
   }, [id]);
 
-  const startPolling = useCallback(() => {
-    if (intervalRef.current) return;
-    intervalRef.current = setInterval(async () => {
-      const proj = await fetchProject();
-      if (proj && !POLLING_PHASES.has(proj.phase)) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
+  const scheduleNext = useCallback(
+    (phase: string) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (!POLLING_PHASES.has(phase)) return;
+
+      const delay = FAST_PHASES.has(phase) ? FAST_INTERVAL : NORMAL_INTERVAL;
+      timeoutRef.current = setTimeout(async () => {
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
+        const proj = await fetchProject();
+        isFetchingRef.current = false;
+        if (proj && POLLING_PHASES.has(proj.phase)) {
+          scheduleNext(proj.phase);
         }
-      }
-    }, POLL_INTERVAL);
-  }, [fetchProject]);
+      }, delay);
+    },
+    [fetchProject]
+  );
 
   const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
   }, []);
 
@@ -64,32 +74,31 @@ export function useProject(id: string) {
   useEffect(() => {
     fetchProject().then((proj) => {
       if (proj && POLLING_PHASES.has(proj.phase)) {
-        startPolling();
+        scheduleNext(proj.phase);
       }
     });
 
     return () => stopPolling();
-  }, [fetchProject, startPolling, stopPolling]);
+  }, [fetchProject, scheduleNext, stopPolling]);
 
   // Re-evaluate polling when phase changes
   useEffect(() => {
     if (!project) return;
     if (POLLING_PHASES.has(project.phase)) {
-      startPolling();
+      scheduleNext(project.phase);
     } else {
       stopPolling();
     }
-  }, [project?.phase, startPolling, stopPolling]);
+  }, [project?.phase, scheduleNext, stopPolling]);
 
   const mutate = useCallback(
     (updatedProject: Project) => {
       setProject(updatedProject);
-      // Restart polling if needed
       if (POLLING_PHASES.has(updatedProject.phase)) {
-        startPolling();
+        scheduleNext(updatedProject.phase);
       }
     },
-    [startPolling]
+    [scheduleNext]
   );
 
   return { project, isLoading, error, mutate, refetch: fetchProject };
