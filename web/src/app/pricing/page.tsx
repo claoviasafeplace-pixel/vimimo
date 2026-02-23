@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import AuthButton from "@/components/auth/AuthButton";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import PricingGrid from "@/components/pricing/PricingGrid";
 
 export default function PricingPage() {
@@ -14,7 +15,10 @@ export default function PricingPage() {
           <a href="/" className="text-xl font-bold text-gradient-gold">
             VIMIMO
           </a>
-          <AuthButton />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <AuthButton />
+          </div>
         </div>
       </header>
 

@@ -41,7 +41,6 @@ export default function ResultView({
         const data = await res.json();
         throw new Error(data.error || "Erreur");
       }
-      // Polling will pick up the rendering_montage phase
       setShowMontageForm(false);
     } catch (err) {
       console.error("Montage submit error:", err);
@@ -72,7 +71,7 @@ export default function ResultView({
       {/* Final video compilation */}
       {isRendering && (
         <div className="flex flex-col items-center gap-4 py-12">
-          <Loader2 className="h-10 w-10 text-amber-400 animate-spin" />
+          <Loader2 className="h-10 w-10 text-icon-accent animate-spin" />
           <p className="text-sm text-muted">Compilation finale en cours...</p>
         </div>
       )}
@@ -81,7 +80,7 @@ export default function ResultView({
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="overflow-hidden rounded-2xl border border-amber-700/30 bg-surface"
+          className="overflow-hidden rounded-2xl border border-badge-gold-border bg-surface"
         >
           <video
             src={project.finalVideoUrl}
@@ -110,13 +109,13 @@ export default function ResultView({
       {isRenderingMontage && (
         <div className="flex flex-col items-center gap-4 py-12">
           <div className="relative">
-            <Loader2 className="h-10 w-10 text-amber-400 animate-spin" />
-            <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-amber-300" />
+            <Loader2 className="h-10 w-10 text-icon-accent animate-spin" />
+            <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-badge-gold-text" />
           </div>
           <p className="text-sm text-muted">
             Studio Montage en cours de création...
           </p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted">
             Effets 3D, transitions et musique
           </p>
         </div>
@@ -126,11 +125,11 @@ export default function ResultView({
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="overflow-hidden rounded-2xl border-2 border-amber-600/40 bg-surface"
+          className="overflow-hidden rounded-2xl border-2 border-accent-from/40 bg-surface"
         >
-          <div className="flex items-center gap-2 px-4 py-2 bg-amber-900/20 border-b border-amber-700/30">
-            <Sparkles className="h-4 w-4 text-amber-400" />
-            <span className="text-xs font-semibold text-amber-300 uppercase tracking-wider">
+          <div className="flex items-center gap-2 px-4 py-2 bg-badge-gold-bg border-b border-badge-gold-border">
+            <Sparkles className="h-4 w-4 text-icon-accent" />
+            <span className="text-xs font-semibold text-badge-gold-text uppercase tracking-wider">
               Studio Montage
             </span>
           </div>

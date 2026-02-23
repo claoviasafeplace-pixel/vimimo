@@ -9,8 +9,11 @@ import Features from "@/components/landing/Features";
 import DropZone from "@/components/upload/DropZone";
 import PhotoGrid from "@/components/upload/PhotoGrid";
 import StyleSelector from "@/components/upload/StyleSelector";
+import ModeSelector from "@/components/upload/ModeSelector";
+import PropertyInfoForm from "@/components/upload/PropertyInfoForm";
 import Button from "@/components/ui/Button";
 import AuthButton from "@/components/auth/AuthButton";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useUpload } from "@/hooks/useUpload";
 import Link from "next/link";
 
@@ -33,8 +36,11 @@ export default function Home() {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
   const uploadRef = useRef<HTMLDivElement>(null);
-  const { photos, style, isUploading, error, addFiles, removePhoto, setStyle, submit, canSubmit } =
-    useUpload();
+  const {
+    photos, style, mode, visiteForm, maxPhotos,
+    isUploading, error, uploadProgress,
+    addFiles, removePhoto, setStyle, setMode, setVisiteForm, submit, canSubmit,
+  } = useUpload();
 
   const scrollToUpload = () => {
     uploadRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,6 +74,7 @@ export default function Home() {
                 Crédits
               </Link>
             )}
+            <ThemeToggle />
             <AuthButton />
           </div>
         </div>
@@ -108,16 +115,21 @@ export default function Home() {
                 </p>
               </div>
 
-              <DropZone onFiles={addFiles} disabled={isUploading} />
+              <ModeSelector selected={mode} onSelect={setMode} />
+              <DropZone onFiles={addFiles} disabled={isUploading} maxPhotos={maxPhotos} />
               <PhotoGrid photos={photos} onRemove={removePhoto} />
               <StyleSelector selected={style} onSelect={setStyle} />
 
+              {mode === "video_visite" && (
+                <PropertyInfoForm value={visiteForm} onChange={setVisiteForm} />
+              )}
+
               {error && (
-                <p className="text-center text-sm text-red-400">
+                <p className="text-center text-sm text-red-500">
                   {error === "Crédits insuffisants" ? (
                     <span>
                       Crédits insuffisants.{" "}
-                      <Link href="/pricing" className="text-amber-400 hover:underline">
+                      <Link href="/pricing" className="text-icon-accent hover:underline">
                         Acheter des crédits
                       </Link>
                     </span>
@@ -141,7 +153,7 @@ export default function Home() {
                   ) : (
                     <>
                       <Sparkles className="mr-2 h-5 w-5" />
-                      Lancer le staging
+                      {mode === "video_visite" ? "Lancer la Video Visite" : "Lancer le staging"}
                     </>
                   )}
                 </Button>

@@ -9,7 +9,7 @@ interface ProgressBarProps {
 
 export default function ProgressBar({ progress, className = "" }: ProgressBarProps) {
   return (
-    <div className={`h-2 w-full rounded-full bg-zinc-800 overflow-hidden ${className}`}>
+    <div className={`h-2 w-full rounded-full bg-surface-hover overflow-hidden ${className}`}>
       <motion.div
         className="h-full rounded-full gradient-gold"
         initial={{ width: 0 }}

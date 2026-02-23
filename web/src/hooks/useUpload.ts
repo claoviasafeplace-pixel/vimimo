@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { nanoid } from "nanoid";
-import type { Style } from "@/lib/types";
+import type { Style, ProjectMode, PropertyInfo, MusicChoice } from "@/lib/types";
 
 interface LocalPhoto {
   id: string;
@@ -49,12 +49,24 @@ async function uploadFileDirectly(
   return { id, originalUrl: publicUrl };
 }
 
+export interface VisiteFormData {
+  propertyInfo: PropertyInfo;
+  music: MusicChoice;
+}
+
 export function useUpload() {
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [style, setStyle] = useState<Style | null>(null);
+  const [mode, setMode] = useState<ProjectMode>("staging_piece");
+  const [visiteForm, setVisiteForm] = useState<VisiteFormData>({
+    propertyInfo: { title: "" },
+    music: "elegant",
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const maxPhotos = useMemo(() => (mode === "video_visite" ? 30 : 20), [mode]);
 
   const addFiles = useCallback((files: File[]) => {
     const newPhotos = files.map((file) => ({
@@ -63,10 +75,10 @@ export function useUpload() {
       preview: URL.createObjectURL(file),
     }));
     setPhotos((prev) => {
-      const total = [...prev, ...newPhotos].slice(0, 20);
+      const total = [...prev, ...newPhotos].slice(0, maxPhotos);
       return total;
     });
-  }, []);
+  }, [maxPhotos]);
 
   const removePhoto = useCallback((id: string) => {
     setPhotos((prev) => {
@@ -78,6 +90,7 @@ export function useUpload() {
 
   const submit = useCallback(async (): Promise<string | null> => {
     if (!photos.length || !style) return null;
+    if (mode === "video_visite" && !visiteForm.propertyInfo.title.trim()) return null;
 
     setIsUploading(true);
     setError(null);
@@ -97,7 +110,15 @@ export function useUpload() {
       const projectRes = await fetch("/api/project", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photos: uploadedPhotos, style }),
+        body: JSON.stringify({
+          photos: uploadedPhotos,
+          style,
+          mode,
+          ...(mode === "video_visite" && {
+            propertyInfo: visiteForm.propertyInfo,
+            music: visiteForm.music,
+          }),
+        }),
       });
 
       if (!projectRes.ok) {
@@ -120,18 +141,29 @@ export function useUpload() {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [photos, style]);
+  }, [photos, style, mode, visiteForm]);
+
+  const canSubmit =
+    photos.length > 0 &&
+    style !== null &&
+    !isUploading &&
+    (mode !== "video_visite" || visiteForm.propertyInfo.title.trim().length > 0);
 
   return {
     photos,
     style,
+    mode,
+    visiteForm,
+    maxPhotos,
     isUploading,
     error,
     uploadProgress,
     addFiles,
     removePhoto,
     setStyle,
+    setMode,
+    setVisiteForm,
     submit,
-    canSubmit: photos.length > 0 && style !== null && !isUploading,
+    canSubmit,
   };
 }

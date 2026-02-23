@@ -2,8 +2,10 @@ import OpenAI from "openai";
 import {
   BATCH_VISION_SYSTEM_PROMPT,
   STAGING_PROMPT_SYSTEM,
+  TRIAGE_SYSTEM_PROMPT,
   stagingPromptUser,
 } from "../prompts";
+import type { TriageResult } from "../types";
 
 function getClient() {
   return new OpenAI();
@@ -48,6 +50,39 @@ export async function analyzePhotos(
     max_tokens: 4000,
     messages: [
       { role: "system", content: BATCH_VISION_SYSTEM_PROMPT },
+      { role: "user", content },
+    ],
+  });
+
+  let raw = response.choices[0].message.content?.trim() || "";
+  if (raw.startsWith("```")) {
+    raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+  return JSON.parse(raw);
+}
+
+export async function triagePhotos(
+  photoUrls: { index: number; url: string }[],
+  style: string
+): Promise<TriageResult> {
+  const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+    {
+      type: "text",
+      text: `Analyse ces ${photoUrls.length} photos d'un bien immobilier pour créer une visite virtuelle. Style souhaité : ${style}.`,
+    },
+  ];
+
+  for (const p of photoUrls) {
+    content.push({ type: "text", text: `Photo ${p.index} :` });
+    content.push({ type: "image_url", image_url: { url: p.url, detail: "low" } });
+  }
+
+  const response = await getClient().chat.completions.create({
+    model: "gpt-4o",
+    temperature: 0.3,
+    max_tokens: 4000,
+    messages: [
+      { role: "system", content: TRIAGE_SYSTEM_PROMPT },
       { role: "user", content },
     ],
   });

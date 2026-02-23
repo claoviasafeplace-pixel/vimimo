@@ -12,6 +12,8 @@ const POLLING_PHASES = new Set([
   "generating_videos",
   "rendering",
   "rendering_montage",
+  "triaging",
+  "auto_staging",
 ]);
 
 export function useProject(id: string) {

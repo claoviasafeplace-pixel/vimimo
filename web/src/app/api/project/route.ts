@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { saveProject, getUserById, deductCredits } from "@/lib/store";
 import { cleanPhoto } from "@/lib/services/replicate";
 import { requireAuth } from "@/lib/api-auth";
-import type { Photo, Project, Style } from "@/lib/types";
+import type { Photo, Project, Style, ProjectMode, PropertyInfo, MontageConfig, MusicChoice } from "@/lib/types";
 import { STYLES } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -13,18 +13,41 @@ export async function POST(request: Request) {
 
     const userId = authResult.session.user.id;
     const body = await request.json();
-    const { photos, style } = body as { photos: Photo[]; style: Style };
+    const { photos, style, mode, propertyInfo, music } = body as {
+      photos: Photo[];
+      style: Style;
+      mode?: ProjectMode;
+      propertyInfo?: PropertyInfo;
+      music?: MusicChoice;
+    };
+
+    const projectMode: ProjectMode = mode || "staging_piece";
 
     if (!photos?.length) {
       return NextResponse.json({ error: "Aucune photo" }, { status: 400 });
+    }
+
+    const maxPhotos = projectMode === "video_visite" ? 30 : 20;
+    if (photos.length > maxPhotos) {
+      return NextResponse.json(
+        { error: `Maximum ${maxPhotos} photos autorisées` },
+        { status: 400 }
+      );
     }
 
     if (!style || !STYLES.find((s) => s.id === style)) {
       return NextResponse.json({ error: "Style invalide" }, { status: 400 });
     }
 
-    // Credit check
-    const creditsNeeded = photos.length;
+    if (projectMode === "video_visite" && !propertyInfo?.title) {
+      return NextResponse.json(
+        { error: "Le titre du bien est requis pour une vidéo visite" },
+        { status: 400 }
+      );
+    }
+
+    // Credit check: video_visite = 1 credit flat, staging_piece = 1 per photo
+    const creditsNeeded = projectMode === "video_visite" ? 1 : photos.length;
     const user = await getUserById(userId);
     if (!user || user.credits < creditsNeeded) {
       return NextResponse.json(
@@ -57,6 +80,15 @@ export async function POST(request: Request) {
       })
     );
 
+    // Build montageConfig for video_visite
+    let montageConfig: MontageConfig | undefined;
+    if (projectMode === "video_visite" && propertyInfo) {
+      montageConfig = {
+        propertyInfo,
+        music: music || "elegant",
+      };
+    }
+
     const project: Project = {
       id: projectId,
       phase: "cleaning",
@@ -68,6 +100,9 @@ export async function POST(request: Request) {
       userId,
       creditsUsed: creditsNeeded,
       creditsRefunded: false,
+      mode: projectMode,
+      propertyInfo,
+      montageConfig,
     };
 
     await saveProject(project);

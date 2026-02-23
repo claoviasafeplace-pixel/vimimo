@@ -64,7 +64,7 @@ export default function GenerationView({ project }: GenerationViewProps) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -12, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="text-center text-xs text-zinc-500"
+              className="text-center text-xs text-muted"
             >
               {TIPS[tipIndex]}
             </motion.p>
@@ -146,8 +146,8 @@ function RoomGenerationCard({ room, index }: { room: Room; index: number }) {
         ) : (
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-icon-accent opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-icon-accent" />
             </span>
             <Badge variant="muted">Génération...</Badge>
           </div>
@@ -178,7 +178,6 @@ function MorphAnimation({
 
   return (
     <div className="relative h-full w-full">
-      {/* Before image (always visible as base) */}
       <Image
         src={before}
         alt={`${label} — avant`}
@@ -187,7 +186,6 @@ function MorphAnimation({
         sizes="(max-width: 640px) 100vw, 50vw"
       />
 
-      {/* After image (fades in/out) */}
       <motion.div
         className="absolute inset-0"
         animate={{ opacity: showAfter ? 1 : 0 }}
@@ -202,7 +200,6 @@ function MorphAnimation({
         />
       </motion.div>
 
-      {/* Label overlay */}
       <AnimatePresence mode="wait">
         <motion.div
           key={showAfter ? "after" : "before"}
@@ -224,13 +221,11 @@ function MorphAnimation({
         </motion.div>
       </AnimatePresence>
 
-      {/* Scanning line effect */}
       <PulseOverlay />
     </div>
   );
 }
 
-/** Animated scanning/pulse overlay */
 function PulseOverlay() {
   return (
     <motion.div

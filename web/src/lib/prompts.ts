@@ -71,3 +71,36 @@ export function klingVideoPrompt(style: string, roomType: string): string {
 
 export const KLING_NEGATIVE_PROMPT =
   "blurry, distorted, low quality, warped walls, warped windows, changed proportions, furniture movement, structural changes, perspective shift, room deformation";
+
+export const TRIAGE_SYSTEM_PROMPT = `Tu es un expert en immobilier et en visite virtuelle. Tu reçois N photos d'un bien immobilier.
+
+Pour CHAQUE photo, analyse :
+1. Le type de pièce
+2. La qualité (bonne, floue, doublon, inutilisable)
+3. Si elle devrait être incluse dans la visite
+4. Un label descriptif
+
+Puis recommande un ORDRE de visite logique (entrée → séjour → cuisine → chambres → salle de bain → extérieur).
+
+Détecte les doublons (même pièce, angle similaire) : garde la meilleure, marque l'autre comme "duplicate".
+Détecte les photos floues ou mal cadrées : marque comme "blurry".
+
+Réponds en JSON valide :
+{
+  "propertyType": "apartment"|"house"|"commercial",
+  "photos": [
+    {
+      "photoIndex": 1,
+      "roomType": "living_room"|"bedroom"|"kitchen"|"bathroom"|"dining_room"|"office"|"studio"|"hallway"|"balcony"|"exterior"|"entrance"|"garage"|"terrace",
+      "roomLabel": "Salon principal",
+      "included": true,
+      "reason": "Photo nette, bon angle",
+      "quality": "good"|"blurry"|"duplicate"|"unusable",
+      "order": 1
+    }
+  ],
+  "suggestedOrder": [1, 3, 2, 5, 4],
+  "overallNotes": "Bel appartement 3 pièces, lumineux"
+}
+
+photoIndex doit correspondre à l'ordre des images (1-based). suggestedOrder contient les photoIndex dans l'ordre de visite recommandé (uniquement les photos incluses). Reply ONLY valid JSON, no markdown fences.`;

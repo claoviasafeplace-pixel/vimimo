@@ -28,7 +28,7 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
     <div
       className={`relative rounded-2xl border p-6 flex flex-col ${
         pack.popular
-          ? "border-amber-500/50 bg-amber-950/10 shadow-lg shadow-amber-900/10"
+          ? "border-accent-from/50 bg-badge-gold-bg shadow-lg shadow-amber-900/10"
           : "border-border bg-surface"
       }`}
     >
@@ -57,20 +57,20 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
       </div>
 
       <ul className="mb-8 flex-1 space-y-2.5">
-        <li className="flex items-center gap-2 text-sm text-zinc-300">
-          <Check className="h-4 w-4 text-amber-400 shrink-0" />
+        <li className="flex items-center gap-2 text-sm text-feature-text">
+          <Check className="h-4 w-4 text-icon-accent shrink-0" />
           {pack.credits} pièces traitées
         </li>
-        <li className="flex items-center gap-2 text-sm text-zinc-300">
-          <Check className="h-4 w-4 text-amber-400 shrink-0" />
+        <li className="flex items-center gap-2 text-sm text-feature-text">
+          <Check className="h-4 w-4 text-icon-accent shrink-0" />
           5 options de staging / pièce
         </li>
-        <li className="flex items-center gap-2 text-sm text-zinc-300">
-          <Check className="h-4 w-4 text-amber-400 shrink-0" />
+        <li className="flex items-center gap-2 text-sm text-feature-text">
+          <Check className="h-4 w-4 text-icon-accent shrink-0" />
           Vidéo IA cinématique
         </li>
-        <li className="flex items-center gap-2 text-sm text-zinc-300">
-          <Check className="h-4 w-4 text-amber-400 shrink-0" />
+        <li className="flex items-center gap-2 text-sm text-feature-text">
+          <Check className="h-4 w-4 text-icon-accent shrink-0" />
           Rendu final compilé
         </li>
       </ul>

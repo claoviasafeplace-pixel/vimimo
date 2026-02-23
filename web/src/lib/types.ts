@@ -66,6 +66,8 @@ export interface Room {
   videoPredictionId?: string;
 }
 
+export type ProjectMode = "staging_piece" | "video_visite";
+
 export type ProjectPhase =
   | "uploading"
   | "cleaning"
@@ -75,8 +77,31 @@ export type ProjectPhase =
   | "generating_videos"
   | "rendering"
   | "rendering_montage"
+  | "triaging"
+  | "reviewing"
+  | "auto_staging"
   | "done"
   | "error";
+
+// --- Triage (Video Visite) ---
+
+export interface TriagePhoto {
+  photoId: string;
+  photoIndex: number;
+  roomType: string;
+  roomLabel: string;
+  included: boolean;
+  reason?: string;
+  quality: "good" | "blurry" | "duplicate" | "unusable";
+  order: number;
+}
+
+export interface TriageResult {
+  propertyType: string;
+  photos: TriagePhoto[];
+  suggestedOrder: number[];
+  overallNotes: string;
+}
 
 // --- Studio Montage ---
 
@@ -100,6 +125,12 @@ export interface MontageConfig {
   customMusicUrl?: string;
 }
 
+export interface ConfirmedPhoto {
+  photoId: string;
+  order: number;
+  included: boolean;
+}
+
 export interface Project {
   id: string;
   phase: ProjectPhase;
@@ -117,6 +148,10 @@ export interface Project {
   studioMontageUrl?: string;
   studioMontageRenderId?: string;
   montageConfig?: MontageConfig;
+  mode?: ProjectMode;
+  triageResult?: TriageResult;
+  confirmedPhotoOrder?: ConfirmedPhoto[];
+  propertyInfo?: PropertyInfo;
 }
 
 // --- Auth & Credits ---

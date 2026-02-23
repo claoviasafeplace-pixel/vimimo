@@ -25,8 +25,8 @@ export default function StyleSelector({ selected, onSelect }: StyleSelectorProps
               onClick={() => onSelect(style.id)}
               className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all cursor-pointer ${
                 isSelected
-                  ? "border-amber-500/50 bg-amber-900/10"
-                  : "border-border bg-surface hover:border-zinc-600"
+                  ? "border-accent-from bg-badge-gold-bg"
+                  : "border-border bg-surface hover:border-muted"
               }`}
             >
               <div className="flex w-full items-center justify-between">

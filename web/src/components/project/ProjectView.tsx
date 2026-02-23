@@ -5,20 +5,26 @@ import ProcessingView from "./ProcessingView";
 import SelectionView from "./SelectionView";
 import GenerationView from "./GenerationView";
 import ResultView from "./ResultView";
+import TriageView from "./TriageView";
+import AutoStagingView from "./AutoStagingView";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import type { Project } from "@/lib/types";
+import type { Project, ConfirmedPhoto } from "@/lib/types";
 
 interface ProjectViewProps {
   project: Project;
   onSelect: (roomIndex: number, optionIndex: number) => void;
   onConfirm: () => void;
+  onTriageConfirm?: (confirmedPhotos: ConfirmedPhoto[]) => void;
+  isTriageSubmitting?: boolean;
 }
 
 export default function ProjectView({
   project,
   onSelect,
   onConfirm,
+  onTriageConfirm,
+  isTriageSubmitting,
 }: ProjectViewProps) {
   if (project.phase === "error") {
     return (
@@ -40,9 +46,24 @@ export default function ProjectView({
   if (
     project.phase === "cleaning" ||
     project.phase === "analyzing" ||
-    project.phase === "generating_options"
+    project.phase === "generating_options" ||
+    project.phase === "triaging"
   ) {
-    return <ProcessingView phase={project.phase} />;
+    return <ProcessingView phase={project.phase} mode={project.mode} />;
+  }
+
+  if (project.phase === "reviewing" && onTriageConfirm) {
+    return (
+      <TriageView
+        project={project}
+        onConfirm={onTriageConfirm}
+        isSubmitting={isTriageSubmitting || false}
+      />
+    );
+  }
+
+  if (project.phase === "auto_staging") {
+    return <AutoStagingView project={project} />;
   }
 
   if (project.phase === "selecting") {

@@ -21,14 +21,14 @@ export default function AuthButton() {
   }, []);
 
   if (status === "loading") {
-    return <div className="h-9 w-20 animate-pulse rounded-lg bg-zinc-800" />;
+    return <div className="h-9 w-20 animate-pulse rounded-lg bg-surface-hover" />;
   }
 
   if (!session) {
     return (
       <Link
         href="/login"
-        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-zinc-800"
+        className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
       >
         <LogIn className="h-4 w-4" />
         Connexion
@@ -40,7 +40,7 @@ export default function AuthButton() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm transition-colors hover:bg-zinc-800 cursor-pointer"
+        className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm transition-colors hover:bg-surface-hover cursor-pointer"
       >
         {session.user.image ? (
           <img
@@ -51,7 +51,7 @@ export default function AuthButton() {
         ) : (
           <User className="h-5 w-5 text-muted" />
         )}
-        <span className="inline-flex items-center gap-1 text-amber-300 font-medium">
+        <span className="inline-flex items-center gap-1 text-badge-gold-text font-medium">
           <Coins className="h-3.5 w-3.5" />
           {session.user.credits}
         </span>
@@ -69,7 +69,7 @@ export default function AuthButton() {
           <Link
             href="/dashboard"
             onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-zinc-800"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
           >
             <User className="h-4 w-4 text-muted" />
             Dashboard
@@ -78,7 +78,7 @@ export default function AuthButton() {
           <Link
             href="/pricing"
             onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-zinc-800"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
           >
             <Coins className="h-4 w-4 text-muted" />
             Acheter des crédits
@@ -86,7 +86,7 @@ export default function AuthButton() {
 
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-zinc-800 cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 hover:bg-surface-hover cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             Déconnexion

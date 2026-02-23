@@ -12,7 +12,10 @@ export default function Hero({ onStart }: HeroProps) {
     <section className="relative flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/5 blur-3xl" />
+        <div
+          className="absolute left-1/2 top-1/3 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+          style={{ background: `rgba(200, 164, 90, var(--glow-opacity))` }}
+        />
       </div>
 
       <motion.div
@@ -31,7 +34,7 @@ export default function Hero({ onStart }: HeroProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.15 }}
-        className="relative z-10 mt-8 max-w-xl text-lg leading-relaxed text-zinc-400 sm:text-xl"
+        className="relative z-10 mt-8 max-w-xl text-lg leading-relaxed text-muted sm:text-xl"
       >
         Transformez vos photos de pièces vides en vidéos de staging professionnel
         grâce à l&apos;intelligence artificielle.

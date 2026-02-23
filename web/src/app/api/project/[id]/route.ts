@@ -3,10 +3,10 @@ import { getProject, saveProject, refundCredits } from "@/lib/store";
 import {
   getPredictionStatus,
   extractOutputUrl,
+  generateStagingOption,
+  generateVideo,
 } from "@/lib/services/replicate";
-import { analyzePhotos } from "@/lib/services/openai";
-import { generateStagingPrompts } from "@/lib/services/openai";
-import { generateStagingOption } from "@/lib/services/replicate";
+import { analyzePhotos, triagePhotos, generateStagingPrompts } from "@/lib/services/openai";
 import { getRenderStatus, downloadRender } from "@/lib/services/remotion";
 import { uploadFromUrl } from "@/lib/services/storage";
 import { requireProjectOwner } from "@/lib/api-auth";
@@ -78,70 +78,98 @@ export async function GET(
       }
 
       if (allDone) {
-        project.phase = "analyzing";
-        updated = true;
+        if (project.mode === "video_visite") {
+          // Video visite: triage photos with GPT-4o
+          project.phase = "triaging";
+          updated = true;
 
-        // Launch GPT-4o analysis
-        try {
-          const photoUrls = project.photos.map((p, i) => ({
-            index: i + 1,
-            url: p.cleanedUrl!,
-          }));
-          const analysis = await analyzePhotos(photoUrls, project.style);
+          try {
+            const photoUrls = project.photos.map((p, i) => ({
+              index: i + 1,
+              url: p.cleanedUrl || p.originalUrl,
+            }));
+            const triageResult = await triagePhotos(photoUrls, project.style);
 
-          // Build rooms from analysis
-          project.rooms = analysis.rooms.map((room, i) => {
-            const photo = project.photos[room.photoIndex - 1] || project.photos[i];
-            return {
-              index: i,
-              roomType: room.roomType,
-              roomLabel: room.roomLabel,
-              photoId: photo.id,
-              cleanedPhotoUrl: photo.cleanedUrl!,
-              beforePhotoUrl: photo.originalUrl,
-              visionData: {
-                dimensions: room.dimensions,
-                existingMaterials: room.existingMaterials,
-                lighting: room.lighting,
-                cameraAngle: room.cameraAngle,
-                notes: room.notes,
-              },
-              options: [],
-            };
-          });
+            // Map triage result photos to include photoId from project.photos
+            triageResult.photos = triageResult.photos.map((tp, i) => ({
+              ...tp,
+              photoId: project.photos[tp.photoIndex - 1]?.id || project.photos[i]?.id || `photo-${i}`,
+            }));
 
-          project.phase = "generating_options";
-
-          // Launch staging option generation for all rooms
-          for (const room of project.rooms) {
-            try {
-              const result = await generateStagingPrompts(
-                room.cleanedPhotoUrl,
-                room.roomType,
-                room.roomLabel,
-                project.style,
-                project.styleLabel,
-                room.visionData
-              );
-
-              const predictionIds = await Promise.all(
-                result.prompts.map((prompt) =>
-                  generateStagingOption(room.cleanedPhotoUrl, prompt)
-                )
-              );
-              room.optionPredictionIds = predictionIds;
-            } catch (error) {
-              console.error(`Failed to generate options for room ${room.index}:`, error);
-              project.phase = "error";
-              project.error = `Échec de la génération pour ${room.roomLabel}`;
-              await autoRefund(project);
-            }
+            project.triageResult = triageResult;
+            project.phase = "reviewing";
+          } catch (error) {
+            console.error("Triage error:", error);
+            project.phase = "error";
+            project.error = "Échec du triage IA des photos";
+            await autoRefund(project);
           }
-        } catch (error) {
-          console.error("Analysis error:", error);
-          project.phase = "error";
-          project.error = "Échec de l'analyse IA des photos";
-          await autoRefund(project);
+        } else {
+          // Default staging_piece: analyze and generate options
+          project.phase = "analyzing";
+          updated = true;
+
+          try {
+            const photoUrls = project.photos.map((p, i) => ({
+              index: i + 1,
+              url: p.cleanedUrl!,
+            }));
+            const analysis = await analyzePhotos(photoUrls, project.style);
+
+            // Build rooms from analysis
+            project.rooms = analysis.rooms.map((room, i) => {
+              const photo = project.photos[room.photoIndex - 1] || project.photos[i];
+              return {
+                index: i,
+                roomType: room.roomType,
+                roomLabel: room.roomLabel,
+                photoId: photo.id,
+                cleanedPhotoUrl: photo.cleanedUrl!,
+                beforePhotoUrl: photo.originalUrl,
+                visionData: {
+                  dimensions: room.dimensions,
+                  existingMaterials: room.existingMaterials,
+                  lighting: room.lighting,
+                  cameraAngle: room.cameraAngle,
+                  notes: room.notes,
+                },
+                options: [],
+              };
+            });
+
+            project.phase = "generating_options";
+
+            // Launch staging option generation for all rooms
+            for (const room of project.rooms) {
+              try {
+                const result = await generateStagingPrompts(
+                  room.cleanedPhotoUrl,
+                  room.roomType,
+                  room.roomLabel,
+                  project.style,
+                  project.styleLabel,
+                  room.visionData
+                );
+
+                const predictionIds = await Promise.all(
+                  result.prompts.map((prompt) =>
+                    generateStagingOption(room.cleanedPhotoUrl, prompt)
+                  )
+                );
+                room.optionPredictionIds = predictionIds;
+              } catch (error) {
+                console.error(`Failed to generate options for room ${room.index}:`, error);
+                project.phase = "error";
+                project.error = `Échec de la génération pour ${room.roomLabel}`;
+                await autoRefund(project);
+              }
+            }
+          } catch (error) {
+            console.error("Analysis error:", error);
+            project.phase = "error";
+            project.error = "Échec de l'analyse IA des photos";
+            await autoRefund(project);
+          }
         }
       }
     }
@@ -241,6 +269,147 @@ export async function GET(
           project.error = "Aucune vidéo n'a pu être générée";
           updated = true;
           await autoRefund(project);
+        }
+      }
+    }
+
+    if (project.phase === "auto_staging") {
+      // Step 1: Build rooms from confirmed order if not yet built
+      if (project.rooms.length === 0 && project.confirmedPhotoOrder) {
+        const confirmedIncluded = project.confirmedPhotoOrder
+          .filter((c) => c.included)
+          .sort((a, b) => a.order - b.order);
+
+        project.rooms = confirmedIncluded.map((confirmed, i) => {
+          const triagePhoto = project.triageResult?.photos.find(
+            (p) => p.photoId === confirmed.photoId
+          );
+          const photo = project.photos.find((p) => p.id === confirmed.photoId);
+          return {
+            index: i,
+            roomType: triagePhoto?.roomType || "living_room",
+            roomLabel: triagePhoto?.roomLabel || `Pièce ${i + 1}`,
+            photoId: confirmed.photoId,
+            cleanedPhotoUrl: photo?.cleanedUrl || photo?.originalUrl || "",
+            beforePhotoUrl: photo?.originalUrl || "",
+            visionData: {},
+            options: [],
+          };
+        });
+        updated = true;
+      }
+
+      // Step 2: Launch staging for rooms without options (batch of 5)
+      const needsStaging = project.rooms.filter(
+        (r) => !r.optionPredictionIds?.length && r.options.length === 0
+      );
+      if (needsStaging.length > 0) {
+        const batch = needsStaging.slice(0, 5);
+        for (const room of batch) {
+          try {
+            const result = await generateStagingPrompts(
+              room.cleanedPhotoUrl,
+              room.roomType,
+              room.roomLabel,
+              project.style,
+              project.styleLabel,
+              room.visionData
+            );
+            const predictionId = await generateStagingOption(
+              room.cleanedPhotoUrl,
+              result.prompts[0]
+            );
+            room.optionPredictionIds = [predictionId];
+            updated = true;
+          } catch (error) {
+            console.error(`Auto-staging failed for room ${room.index}:`, error);
+          }
+        }
+      }
+
+      // Step 3: Check staging predictions
+      for (const room of project.rooms) {
+        if (room.options.length > 0) continue;
+        if (!room.optionPredictionIds?.length) continue;
+
+        try {
+          const status = await getPredictionStatus(room.optionPredictionIds[0]);
+          if (status.status === "succeeded") {
+            const url = extractOutputUrl(status.output);
+            if (url) {
+              room.options = [{ url, predictionId: room.optionPredictionIds[0] }];
+              room.selectedOptionIndex = 0;
+              updated = true;
+            }
+          } else if (status.status === "failed" || status.status === "canceled") {
+            // Retry with the photo URL as fallback option
+            room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
+            room.selectedOptionIndex = 0;
+            updated = true;
+          }
+        } catch {
+          // Will retry next poll
+        }
+      }
+
+      // Step 4: Launch videos for rooms with options but no video
+      for (const room of project.rooms) {
+        if (room.videoPredictionId) continue;
+        if (room.options.length === 0) continue;
+
+        try {
+          const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
+          const predictionId = await generateVideo(
+            room.beforePhotoUrl,
+            stagedUrl,
+            project.styleLabel,
+            room.roomType
+          );
+          room.videoPredictionId = predictionId;
+          updated = true;
+        } catch (error) {
+          console.error(`Video generation failed for room ${room.index}:`, error);
+        }
+      }
+
+      // Step 5: Check video predictions
+      for (const room of project.rooms) {
+        if (room.videoUrl) continue;
+        if (!room.videoPredictionId) continue;
+
+        try {
+          const status = await getPredictionStatus(room.videoPredictionId);
+          if (status.status === "succeeded") {
+            room.videoUrl = extractOutputUrl(status.output) || undefined;
+            updated = true;
+          } else if (status.status === "failed" || status.status === "canceled") {
+            room.videoUrl = "";
+            updated = true;
+          }
+        } catch {
+          // Will retry next poll
+        }
+      }
+
+      // Step 6: All done? Launch montage
+      const allHaveVideo = project.rooms.length > 0 && project.rooms.every((r) => r.videoUrl);
+      if (allHaveVideo) {
+        const roomsWithRealVideo = project.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
+        if (roomsWithRealVideo.length >= 2 && project.montageConfig) {
+          try {
+            const { startStudioRender } = await import("@/lib/services/remotion");
+            const renderId = await startStudioRender(project, project.montageConfig);
+            project.studioMontageRenderId = renderId;
+            project.phase = "rendering_montage";
+            updated = true;
+          } catch (error) {
+            console.error("Auto montage render failed:", error);
+            project.phase = "done";
+            updated = true;
+          }
+        } else {
+          project.phase = "done";
+          updated = true;
         }
       }
     }

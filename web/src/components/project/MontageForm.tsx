@@ -76,7 +76,7 @@ export default function MontageForm({
   };
 
   const inputClass =
-    "w-full rounded-xl bg-zinc-900 border border-zinc-700 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600/50 transition-colors";
+    "w-full rounded-xl bg-input-bg border border-input-border px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-accent-from focus:ring-1 focus:ring-accent-from/50 transition-colors";
 
   return (
     <motion.div
@@ -88,9 +88,9 @@ export default function MontageForm({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Header */}
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/30 border border-amber-700/30 mb-3">
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              <span className="text-xs font-medium text-amber-300">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-badge-gold-bg border border-badge-gold-border mb-3">
+              <Sparkles className="h-4 w-4 text-icon-accent" />
+              <span className="text-xs font-medium text-badge-gold-text">
                 Studio Montage
               </span>
             </div>
@@ -104,7 +104,7 @@ export default function MontageForm({
 
           {/* Property Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
+            <div className="flex items-center gap-2 text-sm font-semibold text-feature-text">
               <Building2 className="h-4 w-4" />
               Informations du bien
             </div>
@@ -163,7 +163,7 @@ export default function MontageForm({
 
           {/* Highlights */}
           <div className="space-y-3">
-            <div className="text-sm font-semibold text-zinc-300">
+            <div className="text-sm font-semibold text-feature-text">
               Points forts (optionnel)
             </div>
             <div className="flex gap-2">
@@ -194,13 +194,13 @@ export default function MontageForm({
                 {highlights.map((h, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-amber-900/30 text-amber-300 border border-amber-700/30"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-badge-gold-bg text-badge-gold-text border border-badge-gold-border"
                   >
                     {h}
                     <button
                       type="button"
                       onClick={() => removeHighlight(i)}
-                      className="hover:text-amber-100 transition-colors"
+                      className="hover:opacity-70 transition-opacity"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -212,7 +212,7 @@ export default function MontageForm({
 
           {/* Agency */}
           <div className="space-y-3">
-            <div className="text-sm font-semibold text-zinc-300">
+            <div className="text-sm font-semibold text-feature-text">
               Agence (optionnel)
             </div>
             <input
@@ -226,7 +226,7 @@ export default function MontageForm({
 
           {/* Music */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
+            <div className="flex items-center gap-2 text-sm font-semibold text-feature-text">
               <Music className="h-4 w-4" />
               Musique
             </div>
@@ -236,8 +236,8 @@ export default function MontageForm({
                   key={option.id}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
                     music === option.id
-                      ? "border-amber-600 bg-amber-900/20"
-                      : "border-zinc-700 bg-zinc-900 hover:border-zinc-600"
+                      ? "border-accent-from bg-badge-gold-bg"
+                      : "border-input-border bg-input-bg hover:border-muted"
                   }`}
                 >
                   <input
@@ -251,12 +251,12 @@ export default function MontageForm({
                   <div
                     className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                       music === option.id
-                        ? "border-amber-500"
-                        : "border-zinc-600"
+                        ? "border-accent-from"
+                        : "border-muted"
                     }`}
                   >
                     {music === option.id && (
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                      <div className="w-2 h-2 rounded-full bg-accent-from" />
                     )}
                   </div>
                   <div className="flex-1">

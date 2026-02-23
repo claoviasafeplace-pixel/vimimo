@@ -51,7 +51,7 @@ export default function SelectionView({
       >
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2
-            className={`h-4 w-4 ${allSelected ? "text-amber-400" : "text-zinc-500"}`}
+            className={`h-4 w-4 ${allSelected ? "text-icon-accent" : "text-muted"}`}
           />
           <span className="text-muted">
             {selectedCount}/{project.rooms.length} pièces sélectionnées

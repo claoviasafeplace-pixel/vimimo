@@ -1,15 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Check, Loader2, ImageIcon, Brain, Palette } from "lucide-react";
-import type { ProjectPhase } from "@/lib/types";
+import { Check, Loader2, ImageIcon, Brain, Palette, ScanSearch } from "lucide-react";
+import type { ProjectPhase, ProjectMode } from "@/lib/types";
 import ProgressBar from "@/components/ui/ProgressBar";
 
 interface ProcessingViewProps {
   phase: ProjectPhase;
+  mode?: ProjectMode;
 }
 
-const steps = [
+interface StepDef {
+  key: string;
+  label: string;
+  description: string;
+  icon: typeof ImageIcon;
+}
+
+const STAGING_PIECE_STEPS: StepDef[] = [
   {
     key: "cleaning",
     label: "Nettoyage des photos",
@@ -28,21 +37,32 @@ const steps = [
     description: "5 options de staging par pièce via Flux Kontext Pro",
     icon: Palette,
   },
-] as const;
+];
 
-type StepKey = (typeof steps)[number]["key"];
-
-const phaseOrder: StepKey[] = ["cleaning", "analyzing", "generating_options"];
+const VIDEO_VISITE_STEPS: StepDef[] = [
+  {
+    key: "cleaning",
+    label: "Nettoyage des photos",
+    description: "Suppression du mobilier existant pour préparer le staging",
+    icon: ImageIcon,
+  },
+  {
+    key: "triaging",
+    label: "Triage IA",
+    description: "Identification des pièces, détection des doublons, ordre de visite",
+    icon: ScanSearch,
+  },
+];
 
 function getStepStatus(
-  stepKey: StepKey,
-  currentPhase: ProjectPhase
+  stepKey: string,
+  currentPhase: ProjectPhase,
+  phaseOrder: string[]
 ): "pending" | "active" | "done" {
   const stepIdx = phaseOrder.indexOf(stepKey);
-  const currentIdx = phaseOrder.indexOf(currentPhase as StepKey);
+  const currentIdx = phaseOrder.indexOf(currentPhase);
 
   if (currentIdx === -1) {
-    // Phase is past generating_options (selecting, etc.)
     return "done";
   }
   if (stepIdx < currentIdx) return "done";
@@ -50,13 +70,18 @@ function getStepStatus(
   return "pending";
 }
 
-function getProgress(phase: ProjectPhase): number {
-  const idx = phaseOrder.indexOf(phase as StepKey);
+function getProgress(phase: ProjectPhase, phaseOrder: string[]): number {
+  const idx = phaseOrder.indexOf(phase);
   if (idx === -1) return 100;
   return Math.round(((idx + 0.5) / phaseOrder.length) * 100);
 }
 
-export default function ProcessingView({ phase }: ProcessingViewProps) {
+export default function ProcessingView({ phase, mode }: ProcessingViewProps) {
+  const steps = useMemo(
+    () => (mode === "video_visite" ? VIDEO_VISITE_STEPS : STAGING_PIECE_STEPS),
+    [mode]
+  );
+  const phaseOrder = useMemo(() => steps.map((s) => s.key), [steps]);
   return (
     <div className="mx-auto max-w-lg space-y-8">
       <div className="text-center">
@@ -66,11 +91,11 @@ export default function ProcessingView({ phase }: ProcessingViewProps) {
         </p>
       </div>
 
-      <ProgressBar progress={getProgress(phase)} />
+      <ProgressBar progress={getProgress(phase, phaseOrder)} />
 
       <div className="space-y-1">
         {steps.map((step, i) => {
-          const status = getStepStatus(step.key, phase);
+          const status = getStepStatus(step.key, phase, phaseOrder);
           const Icon = step.icon;
 
           return (
@@ -86,22 +111,22 @@ export default function ProcessingView({ phase }: ProcessingViewProps) {
                   status === "done"
                     ? "gradient-gold"
                     : status === "active"
-                    ? "bg-amber-900/30 border border-amber-700/40"
-                    : "bg-zinc-800 border border-border"
+                    ? "bg-badge-gold-bg border border-badge-gold-border"
+                    : "bg-surface-hover border border-border"
                 }`}
               >
                 {status === "done" ? (
                   <Check className="h-4 w-4 text-zinc-900" />
                 ) : status === "active" ? (
-                  <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />
+                  <Loader2 className="h-4 w-4 text-icon-accent animate-spin" />
                 ) : (
-                  <Icon className="h-4 w-4 text-zinc-500" />
+                  <Icon className="h-4 w-4 text-muted" />
                 )}
               </div>
               <div>
                 <p
                   className={`text-sm font-medium ${
-                    status === "pending" ? "text-zinc-500" : ""
+                    status === "pending" ? "text-muted" : ""
                   }`}
                 >
                   {step.label}

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import AuthButton from "@/components/auth/AuthButton";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -56,7 +57,7 @@ export default function DashboardPage() {
   if (status === "loading" || !session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-spinner border-t-transparent" />
       </div>
     );
   }
@@ -64,11 +65,11 @@ export default function DashboardPage() {
   const txIcon = (type: CreditTransaction["type"]) => {
     switch (type) {
       case "purchase":
-        return <TrendingUp className="h-4 w-4 text-green-400" />;
+        return <TrendingUp className="h-4 w-4 text-green-500" />;
       case "deduction":
-        return <TrendingDown className="h-4 w-4 text-red-400" />;
+        return <TrendingDown className="h-4 w-4 text-red-500" />;
       case "refund":
-        return <RotateCcw className="h-4 w-4 text-blue-400" />;
+        return <RotateCcw className="h-4 w-4 text-accent-blue" />;
       default:
         return <Coins className="h-4 w-4 text-muted" />;
     }
@@ -99,7 +100,10 @@ export default function DashboardPage() {
           <a href="/" className="text-xl font-bold text-gradient-gold">
             VIMIMO
           </a>
-          <AuthButton />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <AuthButton />
+          </div>
         </div>
       </header>
 
@@ -135,7 +139,7 @@ export default function DashboardPage() {
             {subscription ? (
               <div className="mt-2">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-amber-400" />
+                  <CreditCard className="h-5 w-5 text-icon-accent" />
                   <span className="text-lg font-bold">{planLabel}</span>
                   <Badge variant={subscription.cancel_at_period_end ? "muted" : "gold"}>
                     {subscription.cancel_at_period_end ? "Annulé" : "Actif"}
@@ -156,7 +160,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="mt-2">
-                <p className="text-sm text-zinc-400">Aucun abonnement actif</p>
+                <p className="text-sm text-muted">Aucun abonnement actif</p>
                 <Link href="/pricing" className="mt-3 block">
                   <Button variant="secondary" size="sm" className="w-full">
                     Voir les offres
@@ -172,7 +176,7 @@ export default function DashboardPage() {
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-spinner border-t-transparent" />
           </div>
         ) : transactions.length === 0 ? (
           <Card>
@@ -187,7 +191,7 @@ export default function DashboardPage() {
                 key={tx.id}
                 className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-hover">
                   {txIcon(tx.type)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -209,7 +213,7 @@ export default function DashboardPage() {
                 <div className="text-right">
                   <p
                     className={`text-sm font-semibold ${
-                      tx.amount > 0 ? "text-green-400" : "text-red-400"
+                      tx.amount > 0 ? "text-green-500" : "text-red-500"
                     }`}
                   >
                     {tx.amount > 0 ? "+" : ""}

@@ -29,8 +29,8 @@ export default function LoginForm() {
   if (emailSent) {
     return (
       <div className="text-center space-y-4">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-900/30">
-          <Mail className="h-8 w-8 text-amber-300" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-badge-gold-bg">
+          <Mail className="h-8 w-8 text-badge-gold-text" />
         </div>
         <h2 className="text-xl font-bold">Vérifiez vos emails</h2>
         <p className="text-sm text-muted">
@@ -38,7 +38,7 @@ export default function LoginForm() {
         </p>
         <button
           onClick={() => setEmailSent(false)}
-          className="text-sm text-amber-400 hover:underline cursor-pointer"
+          className="text-sm text-icon-accent hover:underline cursor-pointer"
         >
           Utiliser une autre adresse
         </button>
@@ -94,7 +94,7 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="votre@email.com"
           required
-          className="w-full rounded-xl border border-border bg-zinc-900 px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
+          className="w-full rounded-xl border border-input-border bg-input-bg px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-accent-from focus:outline-none focus:ring-1 focus:ring-accent-from/30"
         />
         <Button
           type="submit"

@@ -20,7 +20,7 @@ export const propertyConfigSchema = z.object({
 
 export const propertyShowcaseSchema = z.object({
   property: propertyConfigSchema.default({}),
-  rooms: z.array(roomSchema).min(1).max(20),
+  rooms: z.array(roomSchema).min(1).max(30),
 });
 
 export type Room = z.infer<typeof roomSchema>;
@@ -50,7 +50,7 @@ export const studioRoomSchema = z.object({
 
 export const studioMontageSchema = z.object({
   propertyInfo: studioPropertyInfoSchema,
-  rooms: z.array(studioRoomSchema).min(2).max(20),
+  rooms: z.array(studioRoomSchema).min(2).max(30),
   musicUrl: z.string().url().optional(),
 });
 

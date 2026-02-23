@@ -1,14 +1,61 @@
 @import "tailwindcss";
 
+/* ── Light mode (default) ── */
 :root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --muted: #6b7280;
+  --surface: #f4f4f5;
+  --surface-hover: #e4e4e7;
+  --border: #e4e4e7;
+  --accent-from: #b8943a;
+  --accent-to: #d4b95e;
+  --accent-blue: #2563eb;
+  --input-bg: #f4f4f5;
+  --input-border: #d4d4d8;
+  --overlay-bg: rgba(0, 0, 0, 0.05);
+  --badge-gold-bg: rgba(180, 140, 50, 0.12);
+  --badge-gold-text: #92700c;
+  --badge-gold-border: rgba(180, 140, 50, 0.25);
+  --badge-blue-bg: rgba(37, 99, 235, 0.1);
+  --badge-blue-text: #1d4ed8;
+  --badge-blue-border: rgba(37, 99, 235, 0.2);
+  --badge-muted-bg: #e4e4e7;
+  --badge-muted-text: #6b7280;
+  --badge-muted-border: #d4d4d8;
+  --spinner-color: #b8943a;
+  --icon-accent: #a17c1a;
+  --feature-text: #374151;
+  --glow-opacity: 0.07;
+}
+
+/* ── Dark mode ── */
+html.dark {
   --background: #0a0a0a;
   --foreground: #ffffff;
   --muted: #a1a1aa;
   --surface: #18181b;
+  --surface-hover: #27272a;
   --border: #27272a;
   --accent-from: #c8a45a;
   --accent-to: #e8d48b;
   --accent-blue: #3b82f6;
+  --input-bg: #18181b;
+  --input-border: #3f3f46;
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+  --badge-gold-bg: rgba(120, 80, 0, 0.3);
+  --badge-gold-text: #fcd34d;
+  --badge-gold-border: rgba(180, 130, 40, 0.3);
+  --badge-blue-bg: rgba(30, 64, 175, 0.3);
+  --badge-blue-text: #93c5fd;
+  --badge-blue-border: rgba(59, 130, 246, 0.3);
+  --badge-muted-bg: #27272a;
+  --badge-muted-text: #a1a1aa;
+  --badge-muted-border: #3f3f46;
+  --spinner-color: #f59e0b;
+  --icon-accent: #fbbf24;
+  --feature-text: #d4d4d8;
+  --glow-opacity: 0.05;
 }
 
 @theme inline {
@@ -16,10 +63,26 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
   --color-accent-from: var(--accent-from);
   --color-accent-to: var(--accent-to);
   --color-accent-blue: var(--accent-blue);
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-overlay-bg: var(--overlay-bg);
+  --color-badge-gold-bg: var(--badge-gold-bg);
+  --color-badge-gold-text: var(--badge-gold-text);
+  --color-badge-gold-border: var(--badge-gold-border);
+  --color-badge-blue-bg: var(--badge-blue-bg);
+  --color-badge-blue-text: var(--badge-blue-text);
+  --color-badge-blue-border: var(--badge-blue-border);
+  --color-badge-muted-bg: var(--badge-muted-bg);
+  --color-badge-muted-text: var(--badge-muted-text);
+  --color-badge-muted-border: var(--badge-muted-border);
+  --color-spinner: var(--spinner-color);
+  --color-icon-accent: var(--icon-accent);
+  --color-feature-text: var(--feature-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

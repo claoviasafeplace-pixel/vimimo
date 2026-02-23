@@ -84,10 +84,10 @@ export async function startStudioRender(
   montageConfig: MontageConfig,
 ): Promise<string> {
   const rooms = project.rooms
-    .filter((r) => r.videoUrl && r.selectedOptionIndex !== undefined)
+    .filter((r) => r.videoUrl && r.options.length > 0)
     .map((r) => ({
       beforePhotoUrl: r.beforePhotoUrl,
-      stagedPhotoUrl: r.options[r.selectedOptionIndex!].url,
+      stagedPhotoUrl: r.options[r.selectedOptionIndex ?? 0].url,
       videoUrl: r.videoUrl!,
       roomType: r.roomType,
       roomLabel: r.roomLabel,
