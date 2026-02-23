@@ -297,34 +297,43 @@ export async function GET(
           };
         });
         updated = true;
+        // Save and return — let next poll handle staging
+        await saveProject(project);
+        return NextResponse.json({ project });
       }
 
-      // Step 2: Launch staging for rooms without options (batch of 5)
+      // Step 2: Launch staging — ONE room per poll to avoid timeout
+      // (generateStagingPrompts calls GPT-4o which takes ~5-10s)
       const needsStaging = project.rooms.filter(
         (r) => !r.optionPredictionIds?.length && r.options.length === 0
       );
       if (needsStaging.length > 0) {
-        const batch = needsStaging.slice(0, 5);
-        for (const room of batch) {
-          try {
-            const result = await generateStagingPrompts(
-              room.cleanedPhotoUrl,
-              room.roomType,
-              room.roomLabel,
-              project.style,
-              project.styleLabel,
-              room.visionData
-            );
-            const predictionId = await generateStagingOption(
-              room.cleanedPhotoUrl,
-              result.prompts[0]
-            );
-            room.optionPredictionIds = [predictionId];
-            updated = true;
-          } catch (error) {
-            console.error(`Auto-staging failed for room ${room.index}:`, error);
-          }
+        const room = needsStaging[0];
+        try {
+          const result = await generateStagingPrompts(
+            room.cleanedPhotoUrl,
+            room.roomType,
+            room.roomLabel,
+            project.style,
+            project.styleLabel,
+            room.visionData
+          );
+          const predictionId = await generateStagingOption(
+            room.cleanedPhotoUrl,
+            result.prompts[0]
+          );
+          room.optionPredictionIds = [predictionId];
+          updated = true;
+        } catch (error) {
+          console.error(`Auto-staging failed for room ${room.index}:`, error);
+          // Mark with empty array so we don't retry forever — use cleaned photo as fallback
+          room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
+          room.selectedOptionIndex = 0;
+          updated = true;
         }
+        // Save progress and return — don't do more work this cycle
+        await saveProject(project);
+        return NextResponse.json({ project });
       }
 
       // Step 3: Check staging predictions
@@ -342,7 +351,6 @@ export async function GET(
               updated = true;
             }
           } else if (status.status === "failed" || status.status === "canceled") {
-            // Retry with the photo URL as fallback option
             room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
             room.selectedOptionIndex = 0;
             updated = true;
@@ -352,11 +360,12 @@ export async function GET(
         }
       }
 
-      // Step 4: Launch videos for rooms with options but no video
-      for (const room of project.rooms) {
-        if (room.videoPredictionId) continue;
-        if (room.options.length === 0) continue;
-
+      // Step 4: Launch videos — one at a time to avoid timeout
+      const needsVideo = project.rooms.filter(
+        (r) => !r.videoPredictionId && r.options.length > 0
+      );
+      if (needsVideo.length > 0) {
+        const room = needsVideo[0];
         try {
           const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
           const predictionId = await generateVideo(
@@ -369,12 +378,15 @@ export async function GET(
           updated = true;
         } catch (error) {
           console.error(`Video generation failed for room ${room.index}:`, error);
+          // Mark as empty so we don't block the pipeline
+          room.videoUrl = "";
+          updated = true;
         }
       }
 
       // Step 5: Check video predictions
       for (const room of project.rooms) {
-        if (room.videoUrl) continue;
+        if (room.videoUrl !== undefined) continue;
         if (!room.videoPredictionId) continue;
 
         try {
@@ -392,9 +404,12 @@ export async function GET(
       }
 
       // Step 6: All done? Launch montage
-      const allHaveVideo = project.rooms.length > 0 && project.rooms.every((r) => r.videoUrl);
-      if (allHaveVideo) {
-        const roomsWithRealVideo = project.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
+      const allRoomsProcessed = project.rooms.length > 0 &&
+        project.rooms.every((r) => r.videoUrl !== undefined);
+      if (allRoomsProcessed) {
+        const roomsWithRealVideo = project.rooms.filter(
+          (r) => r.videoUrl && r.videoUrl !== ""
+        );
         if (roomsWithRealVideo.length >= 2 && project.montageConfig) {
           try {
             const { startStudioRender } = await import("@/lib/services/remotion");
