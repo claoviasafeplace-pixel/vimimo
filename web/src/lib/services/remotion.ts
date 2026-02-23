@@ -1,5 +1,6 @@
 import type { Project, MontageConfig } from "../types";
 import { STYLES } from "../types";
+import { withRetry, REMOTION_RETRY } from "../retry";
 
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
 
@@ -38,29 +39,33 @@ export async function startRender(project: Project): Promise<string> {
     rooms,
   };
 
-  const response = await fetch(`${REMOTION_URL}/renders`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      compositionId: "PropertyShowcase",
-      inputProps,
-    }),
-  });
+  return withRetry(async () => {
+    const response = await fetch(`${REMOTION_URL}/renders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        compositionId: "PropertyShowcase",
+        inputProps,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Remotion render failed: ${response.status}`);
-  }
+    if (!response.ok) {
+      throw new Error(`Remotion render failed: ${response.status}`);
+    }
 
-  const data: RenderResponse = await response.json();
-  return data.id;
+    const data: RenderResponse = await response.json();
+    return data.id;
+  }, REMOTION_RETRY);
 }
 
 export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
-  const response = await fetch(`${REMOTION_URL}/renders/${renderId}`);
-  if (!response.ok) {
-    throw new Error(`Remotion status check failed: ${response.status}`);
-  }
-  return response.json();
+  return withRetry(async () => {
+    const response = await fetch(`${REMOTION_URL}/renders/${renderId}`);
+    if (!response.ok) {
+      throw new Error(`Remotion status check failed: ${response.status}`);
+    }
+    return response.json();
+  }, REMOTION_RETRY);
 }
 
 export async function downloadRender(renderId: string): Promise<Buffer> {
@@ -106,19 +111,21 @@ export async function startStudioRender(
     musicUrl,
   };
 
-  const response = await fetch(`${REMOTION_URL}/renders`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      compositionId: "StudioMontage",
-      inputProps,
-    }),
-  });
+  return withRetry(async () => {
+    const response = await fetch(`${REMOTION_URL}/renders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        compositionId: "StudioMontage",
+        inputProps,
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Studio Montage render failed: ${response.status}`);
-  }
+    if (!response.ok) {
+      throw new Error(`Studio Montage render failed: ${response.status}`);
+    }
 
-  const data: RenderResponse = await response.json();
-  return data.id;
+    const data: RenderResponse = await response.json();
+    return data.id;
+  }, REMOTION_RETRY);
 }

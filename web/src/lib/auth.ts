@@ -39,15 +39,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.userId = user.id;
       }
 
-      // Always fetch fresh credits from DB
+      // Always fetch fresh credits + admin status from DB
       if (token.userId) {
         const db = getSupabase();
         const { data } = await db
           .from("users")
-          .select("credits")
+          .select("credits, is_admin")
           .eq("id", token.userId as string)
           .single();
         token.credits = data?.credits ?? 0;
+        token.isAdmin = data?.is_admin ?? false;
       }
 
       return token;
@@ -56,6 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.userId as string;
         session.user.credits = (token.credits as number) ?? 0;
+        session.user.isAdmin = (token.isAdmin as boolean) ?? false;
       }
       return session;
     },

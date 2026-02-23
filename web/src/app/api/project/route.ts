@@ -5,6 +5,7 @@ import { cleanPhoto } from "@/lib/services/replicate";
 import { requireAuth } from "@/lib/api-auth";
 import type { Photo, Project, Style, ProjectMode, PropertyInfo, MontageConfig, MusicChoice } from "@/lib/types";
 import { STYLES } from "@/lib/types";
+import { inngest } from "@/lib/inngest/client";
 
 export async function POST(request: Request) {
   try {
@@ -71,7 +72,10 @@ export async function POST(request: Request) {
     const photosWithPredictions = await Promise.all(
       photos.map(async (photo) => {
         try {
-          const predictionId = await cleanPhoto(photo.originalUrl);
+          const predictionId = await cleanPhoto(photo.originalUrl, {
+            projectId,
+            predictionType: "clean",
+          });
           return { ...photo, cleanPredictionId: predictionId };
         } catch (error) {
           console.error(`Failed to clean photo ${photo.id}:`, error);
@@ -106,6 +110,14 @@ export async function POST(request: Request) {
     };
 
     await saveProject(project);
+
+    // Emit Inngest event if enabled
+    if (process.env.USE_INNGEST === "true") {
+      await inngest.send({
+        name: "project/created",
+        data: { projectId: project.id },
+      });
+    }
 
     return NextResponse.json({ projectId: project.id });
   } catch (error) {

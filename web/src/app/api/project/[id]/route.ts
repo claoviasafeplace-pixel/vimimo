@@ -47,6 +47,13 @@ export async function GET(
     if (ownerResult.error) return ownerResult.error;
 
     const project = ownerResult.project;
+
+    // Inngest mode: GET is read-only (pipeline runs server-side)
+    if (process.env.USE_INNGEST === "true") {
+      return NextResponse.json({ project });
+    }
+
+    // Legacy polling mode below
     let updated = false;
 
     if (project.phase === "cleaning") {

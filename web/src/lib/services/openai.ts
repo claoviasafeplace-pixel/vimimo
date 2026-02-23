@@ -6,6 +6,7 @@ import {
   stagingPromptUser,
 } from "../prompts";
 import type { TriageResult } from "../types";
+import { withRetry, OPENAI_RETRY } from "../retry";
 
 function getClient() {
   return new OpenAI();
@@ -44,21 +45,23 @@ export async function analyzePhotos(
     content.push({ type: "image_url", image_url: { url: p.url } });
   }
 
-  const response = await getClient().chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0.3,
-    max_tokens: 4000,
-    messages: [
-      { role: "system", content: BATCH_VISION_SYSTEM_PROMPT },
-      { role: "user", content },
-    ],
-  });
+  return withRetry(async () => {
+    const response = await getClient().chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.3,
+      max_tokens: 4000,
+      messages: [
+        { role: "system", content: BATCH_VISION_SYSTEM_PROMPT },
+        { role: "user", content },
+      ],
+    });
 
-  let raw = response.choices[0].message.content?.trim() || "";
-  if (raw.startsWith("```")) {
-    raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  return JSON.parse(raw);
+    let raw = response.choices[0].message.content?.trim() || "";
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    return JSON.parse(raw);
+  }, OPENAI_RETRY);
 }
 
 export async function triagePhotos(
@@ -77,21 +80,23 @@ export async function triagePhotos(
     content.push({ type: "image_url", image_url: { url: p.url, detail: "low" } });
   }
 
-  const response = await getClient().chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0.3,
-    max_tokens: 4000,
-    messages: [
-      { role: "system", content: TRIAGE_SYSTEM_PROMPT },
-      { role: "user", content },
-    ],
-  });
+  return withRetry(async () => {
+    const response = await getClient().chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.3,
+      max_tokens: 4000,
+      messages: [
+        { role: "system", content: TRIAGE_SYSTEM_PROMPT },
+        { role: "user", content },
+      ],
+    });
 
-  let raw = response.choices[0].message.content?.trim() || "";
-  if (raw.startsWith("```")) {
-    raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  return JSON.parse(raw);
+    let raw = response.choices[0].message.content?.trim() || "";
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    return JSON.parse(raw);
+  }, OPENAI_RETRY);
 }
 
 interface StagingPrompts {
@@ -107,34 +112,36 @@ export async function generateStagingPrompts(
   styleLabel: string,
   visionData: Record<string, unknown>
 ): Promise<StagingPrompts> {
-  const response = await getClient().chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0.5,
-    max_tokens: 2000,
-    messages: [
-      { role: "system", content: STAGING_PROMPT_SYSTEM },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: stagingPromptUser(
-              roomType,
-              roomLabel,
-              style,
-              styleLabel,
-              visionData
-            ),
-          },
-          { type: "image_url", image_url: { url: photoUrl } },
-        ],
-      },
-    ],
-  });
+  return withRetry(async () => {
+    const response = await getClient().chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.5,
+      max_tokens: 2000,
+      messages: [
+        { role: "system", content: STAGING_PROMPT_SYSTEM },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: stagingPromptUser(
+                roomType,
+                roomLabel,
+                style,
+                styleLabel,
+                visionData
+              ),
+            },
+            { type: "image_url", image_url: { url: photoUrl } },
+          ],
+        },
+      ],
+    });
 
-  let raw = response.choices[0].message.content?.trim() || "";
-  if (raw.startsWith("```")) {
-    raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  return JSON.parse(raw);
+    let raw = response.choices[0].message.content?.trim() || "";
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    return JSON.parse(raw);
+  }, OPENAI_RETRY);
 }

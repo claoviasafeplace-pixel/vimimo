@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { saveProject } from "@/lib/store";
 import { requireProjectOwner } from "@/lib/api-auth";
 import type { ConfirmedPhoto } from "@/lib/types";
+import { inngest } from "@/lib/inngest/client";
 
 export async function POST(
   request: Request,
@@ -43,6 +44,13 @@ export async function POST(
     project.confirmedPhotoOrder = confirmedPhotos;
     project.phase = "auto_staging";
     await saveProject(project);
+
+    if (process.env.USE_INNGEST === "true") {
+      await inngest.send({
+        name: "project/triage.confirmed",
+        data: { projectId: project.id },
+      });
+    }
 
     return NextResponse.json({ project });
   } catch (error) {

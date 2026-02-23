@@ -306,3 +306,41 @@ export async function upsertSubscription(sub: {
     });
   }
 }
+
+// =============================================
+// Prediction Map — Replicate webhook routing
+// =============================================
+
+export interface PredictionMapEntry {
+  predictionId: string;
+  projectId: string;
+  predictionType: "clean" | "staging" | "video";
+  roomIndex?: number;
+}
+
+export async function savePredictionMap(entry: PredictionMapEntry): Promise<void> {
+  const db = getSupabase();
+  await db.from("prediction_map").upsert({
+    prediction_id: entry.predictionId,
+    project_id: entry.projectId,
+    prediction_type: entry.predictionType,
+    room_index: entry.roomIndex ?? null,
+  });
+}
+
+export async function getPredictionMap(predictionId: string): Promise<PredictionMapEntry | null> {
+  const db = getSupabase();
+  const { data } = await db
+    .from("prediction_map")
+    .select("*")
+    .eq("prediction_id", predictionId)
+    .single();
+
+  if (!data) return null;
+  return {
+    predictionId: data.prediction_id,
+    projectId: data.project_id,
+    predictionType: data.prediction_type,
+    roomIndex: data.room_index ?? undefined,
+  };
+}

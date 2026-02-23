@@ -78,6 +78,18 @@ CREATE TABLE IF NOT EXISTS projects (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Admin column
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Prediction map (for Replicate webhooks)
+CREATE TABLE IF NOT EXISTS prediction_map (
+  prediction_id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  prediction_type TEXT NOT NULL,
+  room_index INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts("userId");
 CREATE INDEX IF NOT EXISTS idx_credit_tx_user ON credit_transactions(user_id);
@@ -87,6 +99,9 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe ON subscriptions(stripe_subs
 CREATE INDEX IF NOT EXISTS idx_users_stripe ON users(stripe_customer_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+CREATE INDEX IF NOT EXISTS idx_prediction_map_project ON prediction_map(project_id);
+CREATE INDEX IF NOT EXISTS idx_projects_phase ON projects ((data->>'phase'));
+CREATE INDEX IF NOT EXISTS idx_projects_created ON projects (created_at DESC);
 
 -- RLS (Row Level Security)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -95,6 +110,7 @@ ALTER TABLE verification_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prediction_map ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS. These policies are for extra safety.
 DO $$ BEGIN
@@ -115,5 +131,8 @@ DO $$ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='projects' AND policyname='Service role full access') THEN
     CREATE POLICY "Service role full access" ON projects FOR ALL USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='prediction_map' AND policyname='Service role full access') THEN
+    CREATE POLICY "Service role full access" ON prediction_map FOR ALL USING (true);
   END IF;
 END $$;

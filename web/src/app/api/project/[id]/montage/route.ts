@@ -3,6 +3,7 @@ import { getProject, saveProject } from "@/lib/store";
 import { startStudioRender } from "@/lib/services/remotion";
 import { requireProjectOwner } from "@/lib/api-auth";
 import type { MontageConfig } from "@/lib/types";
+import { inngest } from "@/lib/inngest/client";
 
 export async function POST(
   request: Request,
@@ -76,6 +77,14 @@ export async function POST(
       project.studioMontageRenderId = renderId;
       project.montageConfig = montageConfig;
       await saveProject(project);
+
+      if (process.env.USE_INNGEST === "true") {
+        await inngest.send({
+          name: "project/montage.start",
+          data: { projectId: project.id },
+        });
+      }
+
       return NextResponse.json({ project, renderId });
     }
 
@@ -87,6 +96,13 @@ export async function POST(
     project.montageConfig = body;
 
     await saveProject(project);
+
+    if (process.env.USE_INNGEST === "true") {
+      await inngest.send({
+        name: "project/montage.start",
+        data: { projectId: project.id },
+      });
+    }
 
     return NextResponse.json({ project, renderId });
   } catch (error) {

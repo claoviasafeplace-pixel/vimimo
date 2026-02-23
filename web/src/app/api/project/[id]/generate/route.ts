@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { saveProject } from "@/lib/store";
 import { generateVideo } from "@/lib/services/replicate";
 import { requireProjectOwner } from "@/lib/api-auth";
+import { inngest } from "@/lib/inngest/client";
 
 export async function POST(
   _request: Request,
@@ -37,7 +38,8 @@ export async function POST(
             room.cleanedPhotoUrl,
             selectedOption.url,
             project.style,
-            room.roomType
+            room.roomType,
+            { projectId: project.id, predictionType: "video", roomIndex: room.index },
           );
           room.videoPredictionId = predictionId;
         } catch (error) {
@@ -47,6 +49,13 @@ export async function POST(
     );
 
     await saveProject(project);
+
+    if (process.env.USE_INNGEST === "true") {
+      await inngest.send({
+        name: "project/videos.start",
+        data: { projectId: project.id },
+      });
+    }
 
     return NextResponse.json({ project });
   } catch (error) {
