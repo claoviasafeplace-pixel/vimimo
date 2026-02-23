@@ -41,17 +41,46 @@ export async function POST(
       );
     }
 
-    const body: MontageConfig = await request.json();
+    const body = await request.json();
+    const { selectedRoomIndices, ...montageConfig } = body as MontageConfig & {
+      selectedRoomIndices?: number[];
+    };
 
-    if (!body.propertyInfo?.title) {
+    if (!montageConfig.propertyInfo?.title) {
       return NextResponse.json(
         { error: "Le titre du bien est requis" },
         { status: 400 },
       );
     }
 
-    // Launch Remotion StudioMontage render
-    const renderId = await startStudioRender(project, body);
+    // If specific rooms are selected, reorder project.rooms before rendering
+    if (selectedRoomIndices?.length) {
+      const reorderedRooms = selectedRoomIndices
+        .map((idx) => project.rooms.find((r) => r.index === idx))
+        .filter(Boolean);
+
+      if (reorderedRooms.length < 2) {
+        return NextResponse.json(
+          { error: "Il faut au moins 2 vidéos sélectionnées" },
+          { status: 400 },
+        );
+      }
+
+      // Temporarily replace rooms for rendering with selected order
+      const originalRooms = project.rooms;
+      project.rooms = reorderedRooms as typeof project.rooms;
+      const renderId = await startStudioRender(project, montageConfig);
+      project.rooms = originalRooms;
+
+      project.phase = "rendering_montage";
+      project.studioMontageRenderId = renderId;
+      project.montageConfig = montageConfig;
+      await saveProject(project);
+      return NextResponse.json({ project, renderId });
+    }
+
+    // Launch Remotion StudioMontage render with all rooms
+    const renderId = await startStudioRender(project, montageConfig);
 
     project.phase = "rendering_montage";
     project.studioMontageRenderId = renderId;
