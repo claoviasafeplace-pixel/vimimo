@@ -73,6 +73,10 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
           <Check className="h-4 w-4 text-icon-accent shrink-0" />
           Rendu final compilé
         </li>
+        <li className="flex items-center gap-2 text-sm text-feature-text">
+          <Check className="h-4 w-4 text-icon-accent shrink-0" />
+          Descriptions Insta &amp; TikTok
+        </li>
       </ul>
 
       <Button

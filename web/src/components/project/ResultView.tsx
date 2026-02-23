@@ -11,6 +11,8 @@ import {
   Clapperboard,
   ArrowUp,
   ArrowDown,
+  Copy,
+  Check,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -31,6 +33,12 @@ export default function ResultView({
   const [showMontageForm, setShowMontageForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectingForMontage, setSelectingForMontage] = useState(false);
+
+  // Description generator state
+  const [descLoading, setDescLoading] = useState(false);
+  const [description, setDescription] = useState<{ instagram: string; tiktok: string } | null>(null);
+  const [descTab, setDescTab] = useState<"instagram" | "tiktok">("instagram");
+  const [copied, setCopied] = useState(false);
 
   const roomsWithVideo = project.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
 
@@ -96,6 +104,28 @@ export default function ResultView({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleGenerateDescription = async () => {
+    setDescLoading(true);
+    try {
+      const res = await fetch(`/api/project/${project.id}/description`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Erreur");
+      const data = await res.json();
+      setDescription(data);
+    } catch (err) {
+      console.error("Description error:", err);
+    } finally {
+      setDescLoading(false);
+    }
+  };
+
+  const handleCopy = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -198,6 +228,98 @@ export default function ResultView({
               </Button>
             </a>
           </div>
+        </div>
+      )}
+
+      {/* Description Insta & TikTok */}
+      {project.phase === "done" && !isRendering && !isRenderingMontage && (
+        <div className="space-y-4">
+          {!description ? (
+            <div className="text-center">
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={handleGenerateDescription}
+                disabled={descLoading}
+              >
+                {descLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-5 w-5" />
+                )}
+                {descLoading ? "Génération en cours..." : "Générer description Insta & TikTok"}
+              </Button>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-border bg-surface overflow-hidden"
+            >
+              {/* Tabs */}
+              <div className="flex border-b border-border">
+                <button
+                  onClick={() => setDescTab("instagram")}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                    descTab === "instagram"
+                      ? "border-b-2 border-accent-from text-foreground"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Instagram
+                </button>
+                <button
+                  onClick={() => setDescTab("tiktok")}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
+                    descTab === "tiktok"
+                      ? "border-b-2 border-accent-from text-foreground"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  TikTok
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4">
+                <pre className="whitespace-pre-wrap text-sm leading-relaxed text-feature-text">
+                  {descTab === "instagram" ? description.instagram : description.tiktok}
+                </pre>
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    onClick={handleGenerateDescription}
+                    disabled={descLoading}
+                    className="text-xs text-muted hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {descLoading ? "Régénération..." : "Régénérer"}
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      handleCopy(
+                        descTab === "instagram"
+                          ? description.instagram
+                          : description.tiktok
+                      )
+                    }
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                        Copié !
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-1.5 h-3.5 w-3.5" />
+                        Copier
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
       )}
 

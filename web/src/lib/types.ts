@@ -209,6 +209,7 @@ export interface SubscriptionPlan {
   name: string;
   creditsPerMonth: number;
   priceEur: number;
+  priceEurYearly: number;
   features: string[];
   popular?: boolean;
 }
@@ -219,11 +220,13 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: "Starter",
     creditsPerMonth: 5,
     priceEur: 29,
+    priceEurYearly: 278,
     features: [
-      "5 crédits / mois",
+      "5 crédits / mois (= 5 pièces meublées + vidéo)",
       "5 options de staging / pièce",
       "Vidéo IA cinématique",
       "Rendu final compilé",
+      "Descriptions Insta & TikTok",
     ],
   },
   {
@@ -231,12 +234,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: "Pro",
     creditsPerMonth: 15,
     priceEur: 79,
+    priceEurYearly: 758,
     popular: true,
     features: [
-      "15 crédits / mois",
+      "15 crédits / mois (= 15 pièces meublées + vidéo)",
       "5 options de staging / pièce",
       "Vidéo IA cinématique",
       "Rendu final compilé",
+      "Descriptions Insta & TikTok",
       "Support prioritaire",
     ],
   },
@@ -245,13 +250,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: "Agency",
     creditsPerMonth: 50,
     priceEur: 199,
+    priceEurYearly: 1910,
     features: [
-      "50 crédits / mois",
+      "50 crédits / mois (= 50 pièces meublées + vidéo)",
       "5 options de staging / pièce",
       "Vidéo IA cinématique",
       "Rendu final compilé",
+      "Descriptions Insta & TikTok",
       "Support prioritaire",
-      "Accès API",
     ],
   },
 ];

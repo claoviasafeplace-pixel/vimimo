@@ -3,9 +3,10 @@ import {
   BATCH_VISION_SYSTEM_PROMPT,
   STAGING_PROMPT_SYSTEM,
   TRIAGE_SYSTEM_PROMPT,
+  DESCRIPTION_SYSTEM_PROMPT,
   stagingPromptUser,
 } from "../prompts";
-import type { TriageResult } from "../types";
+import type { Project, TriageResult } from "../types";
 import { withRetry, OPENAI_RETRY } from "../retry";
 
 function getClient() {
@@ -135,6 +136,58 @@ export async function generateStagingPrompts(
             { type: "image_url", image_url: { url: photoUrl } },
           ],
         },
+      ],
+    });
+
+    let raw = response.choices[0].message.content?.trim() || "";
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+    return JSON.parse(raw);
+  }, OPENAI_RETRY);
+}
+
+export interface DescriptionResult {
+  instagram: string;
+  tiktok: string;
+}
+
+export async function generateDescription(
+  project: Project
+): Promise<DescriptionResult> {
+  const roomList = project.rooms
+    .map((r) => `${r.roomLabel} (${r.roomType})`)
+    .join(", ");
+
+  const propertyInfo = project.propertyInfo;
+  const propertyDetails = propertyInfo
+    ? [
+        propertyInfo.title,
+        propertyInfo.city,
+        propertyInfo.surface,
+        propertyInfo.rooms ? `${propertyInfo.rooms} pièces` : null,
+        propertyInfo.price,
+      ]
+        .filter(Boolean)
+        .join(" — ")
+    : "";
+
+  const userPrompt = `Projet de staging virtuel :
+- Style : ${project.styleLabel} (${project.style})
+- Pièces traitées : ${roomList}
+- Mode : ${project.mode || "staging_piece"}
+${propertyDetails ? `- Bien : ${propertyDetails}` : ""}
+
+Génère les descriptions Instagram et TikTok.`;
+
+  return withRetry(async () => {
+    const response = await getClient().chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.7,
+      max_tokens: 1000,
+      messages: [
+        { role: "system", content: DESCRIPTION_SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
       ],
     });
 

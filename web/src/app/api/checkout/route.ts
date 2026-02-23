@@ -10,7 +10,11 @@ export async function POST(request: Request) {
     if (result.error) return result.error;
 
     const body = await request.json();
-    const { packId, planId } = body as { packId?: string; planId?: string };
+    const { packId, planId, billing } = body as {
+      packId?: string;
+      planId?: string;
+      billing?: "monthly" | "yearly";
+    };
 
     if (!packId && !planId) {
       return NextResponse.json({ error: "Pack ou plan requis" }, { status: 400 });
@@ -74,12 +78,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ url: session.url });
     }
 
-    // --- Monthly subscription ---
+    // --- Subscription (monthly or yearly) ---
     if (planId) {
       const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
       if (!plan) {
         return NextResponse.json({ error: "Plan invalide" }, { status: 400 });
       }
+
+      const isYearly = billing === "yearly";
+      const interval = isYearly ? "year" : "month";
+      const unitAmount = isYearly
+        ? Math.round(plan.priceEurYearly * 100)
+        : Math.round(plan.priceEur * 100);
+      const description = isYearly
+        ? `${plan.creditsPerMonth} crédits / mois (annuel)`
+        : `${plan.creditsPerMonth} crédits / mois`;
 
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
@@ -90,10 +103,10 @@ export async function POST(request: Request) {
               currency: "eur",
               product_data: {
                 name: `VIMIMO — ${plan.name}`,
-                description: `${plan.creditsPerMonth} crédits / mois`,
+                description,
               },
-              unit_amount: Math.round(plan.priceEur * 100),
-              recurring: { interval: "month" },
+              unit_amount: unitAmount,
+              recurring: { interval },
             },
             quantity: 1,
           },
@@ -104,12 +117,14 @@ export async function POST(request: Request) {
             type: "subscription",
             planId: plan.id,
             creditsPerMonth: String(plan.creditsPerMonth),
+            billing: isYearly ? "yearly" : "monthly",
           },
         },
         metadata: {
           userId: user.id,
           type: "subscription",
           planId: plan.id,
+          billing: isYearly ? "yearly" : "monthly",
         },
         success_url: `${origin}/?checkout=success`,
         cancel_url: `${origin}/pricing`,

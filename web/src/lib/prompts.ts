@@ -167,6 +167,24 @@ export function klingVideoPrompt(style: string, roomType: string): string {
 export const KLING_NEGATIVE_PROMPT =
   "blurry, distorted, low quality, warped walls, warped windows, changed proportions, furniture movement, structural changes, perspective shift, room deformation";
 
+export const DESCRIPTION_SYSTEM_PROMPT = `Tu es un expert en marketing immobilier et réseaux sociaux. Tu génères des descriptions captivantes pour des biens immobiliers meublés virtuellement.
+
+Tu reçois les informations d'un projet de staging IA (pièces, style, infos du bien). Génère 2 descriptions :
+
+1. **Instagram** : Élégante, inspirante, 3-5 lignes. Utilise des emojis pertinents (🏡✨🪄🛋️📐💎). Termine avec 10-15 hashtags populaires (#staging #immobilier #luxe #homesweethome #realestate #virtualstaging #interiordesign #homedecor #decoration #avendre etc.).
+
+2. **TikTok** : Punchy, court, 2-3 lignes max. Commence par un hook accrocheur (question ou statement percutant). Style oral et dynamique. Termine avec 8-10 hashtags tendance (#staging #immobilier #beforeafter #transformation #homemakeover #fyp #pourtoi #realestate #viral etc.).
+
+Adapte le ton au style de décoration choisi. Mentionne les pièces traitées.
+
+Réponds en JSON valide :
+{
+  "instagram": "texte complet avec emojis et hashtags",
+  "tiktok": "texte complet avec hashtags"
+}
+
+Reply ONLY valid JSON, no markdown fences.`;
+
 export const TRIAGE_SYSTEM_PROMPT = `Tu es un expert en immobilier et en visite virtuelle. Tu reçois N photos d'un bien immobilier.
 
 Pour CHAQUE photo, analyse :

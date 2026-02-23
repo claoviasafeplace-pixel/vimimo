@@ -33,9 +33,13 @@ export default function PricingPage() {
 
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold">Tarifs</h1>
-          <p className="mt-3 text-muted">
-            1 crédit = 1 pièce traitée (nettoyage + analyse + 5 options + vidéo IA)
-          </p>
+          <p className="mt-3 text-muted">1 crédit = 1 pièce complète :</p>
+          <div className="mt-3 inline-flex flex-col items-start gap-1 text-sm text-muted">
+            <span>&#10003; Nettoyage automatique de la photo</span>
+            <span>&#10003; 5 options de staging IA au choix</span>
+            <span>&#10003; Vidéo cinématique animée</span>
+            <span>&#10003; Description Insta &amp; TikTok prête à copier</span>
+          </div>
         </div>
 
         <PricingGrid />

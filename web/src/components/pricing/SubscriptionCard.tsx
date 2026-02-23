@@ -7,22 +7,30 @@ import type { SubscriptionPlan } from "@/lib/types";
 
 interface SubscriptionCardProps {
   plan: SubscriptionPlan;
-  onSubscribe: (planId: string) => Promise<void>;
+  billing: "monthly" | "yearly";
+  onSubscribe: (planId: string, billing: "monthly" | "yearly") => Promise<void>;
 }
 
-export default function SubscriptionCard({ plan, onSubscribe }: SubscriptionCardProps) {
+export default function SubscriptionCard({ plan, billing, onSubscribe }: SubscriptionCardProps) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
     setLoading(true);
     try {
-      await onSubscribe(plan.id);
+      await onSubscribe(plan.id, billing);
     } finally {
       setLoading(false);
     }
   };
 
-  const pricePerCredit = (plan.priceEur / plan.creditsPerMonth).toFixed(2);
+  const isYearly = billing === "yearly";
+  const displayPrice = isYearly
+    ? Math.round(plan.priceEurYearly / 12)
+    : plan.priceEur;
+  const savings = isYearly
+    ? plan.priceEur * 12 - plan.priceEurYearly
+    : 0;
+  const pricePerCredit = (displayPrice / plan.creditsPerMonth).toFixed(2);
 
   return (
     <div
@@ -48,8 +56,20 @@ export default function SubscriptionCard({ plan, onSubscribe }: SubscriptionCard
       </div>
 
       <div className="mb-6">
-        <span className="text-4xl font-bold">{plan.priceEur}€</span>
-        <span className="text-sm text-muted"> / mois</span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-bold">{displayPrice}€</span>
+          <span className="text-sm text-muted"> / mois</span>
+        </div>
+        {isYearly && (
+          <>
+            <p className="mt-1 text-sm text-muted line-through">
+              {plan.priceEur}€ / mois
+            </p>
+            <p className="mt-0.5 text-xs font-semibold text-green-400">
+              Économisez {savings}€ / an
+            </p>
+          </>
+        )}
         <p className="mt-1 text-xs text-muted">
           soit {pricePerCredit.replace(".", ",")}€ / pièce
         </p>
