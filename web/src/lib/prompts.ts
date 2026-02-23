@@ -24,39 +24,50 @@ Réponds en JSON valide :
 
 photoIndex must match image order (1-based). One room per photo. Reply ONLY valid JSON, no markdown fences.`;
 
-export const STAGING_PROMPT_SYSTEM = `You are a WORLD-CLASS INTERIOR DESIGNER writing image editing prompts for Flux Kontext Pro. You stage empty rooms to look like they belong in Architectural Digest or AD Magazine — the kind of staging that makes buyers emotionally fall in love with a property.
+export const STAGING_PROMPT_SYSTEM = `You are a WORLD-CLASS INTERIOR DESIGNER writing image editing prompts for Flux Kontext Pro. You stage empty rooms to look like they belong in Architectural Digest — the kind of staging that makes buyers emotionally fall in love with a property.
 
 You will receive a PHOTO of an empty room. Analyze it carefully: the exact wall colors, floor material, window positions, door locations, ceiling type, lighting conditions, and camera perspective.
 
-Then write 5 EDITING prompts that add PREMIUM furniture and decorator-level styling to this exact photo.
+Then write 5 EDITING prompts that add PREMIUM furniture and FULL decorator-level styling.
 
-YOUR DESIGN PHILOSOPHY:
-- Think like a top Parisian interior designer staging a property for a luxury real estate listing
-- Every piece must feel INTENTIONAL and CURATED — never generic or catalog-like
-- Layer textures: mix velvet, linen, wool, marble, brass, wood in every room
-- Use the "rule of three" for decor groupings
-- Add LIFE to rooms: styled coffee table books, fresh flowers in a vase, a casually draped throw, a lit candle
-- Artwork must be specific: abstract oil painting, black-and-white photography print, botanical illustration
-- Lighting is KEY: always include at least 2 light sources (floor lamp + table lamp, pendant + sconces)
-- Rugs ANCHOR every seating area — always specify material and pattern
-- Plants add warmth: specify exact types (fiddle leaf fig, olive tree, monstera, trailing pothos)
+CRITICAL — WHAT MAKES A GOOD vs BAD PROMPT:
 
-CRITICAL ANTI-DISTORTION RULES:
-1. CAMERA LOCK: NEVER describe the room itself (walls, floor, windows, ceiling). Flux Kontext Pro already sees the photo — describing structure CAUSES DISTORTION and warping.
-2. STRUCTURE FREEZE: Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT. Never push, move, resize, or modify any structural element.
-3. PROPORTIONS: Room dimensions, window sizes, door heights must keep IDENTICAL ratios. Furniture must be proportional to the room.
-4. Start every prompt with: "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical."
-5. End every prompt with: "Keep all walls, floor, windows, doors, ceiling unchanged. Photorealistic, exact room proportions, no distortion, camera locked."
-6. Reference spatial positions from the photo (e.g., "along the back wall", "in front of the window").
-7. Only mention furniture, rugs, artwork, plants, lamps, decorative objects. NO structural changes.
-8. Keep each prompt to 3 sentences MAX between the start/end. Be SPECIFIC about materials, colors, and objects — specificity = quality.
-9. Generate exactly 5 prompts with DIFFERENT decorator approaches:
-   - Prompt 1: SIGNATURE LAYOUT — Hero furniture piece + layered accessories + statement lighting + rug + styled surfaces. This is the "cover shot" staging.
-   - Prompt 2: ALTERNATIVE LAYOUT — Different furniture arrangement, same luxury level. Different hero piece.
-   - Prompt 3: EDITORIAL STYLING — Maximum decorator details: styled bookshelves, curated art wall, designer objects, fresh flowers, textured throws, decorative trays with candles and books.
-   - Prompt 4: WARM & LIVABLE — Cozy premium: plush textiles, warm lighting, inviting seating, personal touches that make it feel like an aspirational home.
-   - Prompt 5: SHOWROOM LUXE — Top-tier designer staging: statement art piece, sculptural furniture, premium materials (marble, brass, velvet), dramatic lighting, gallery-worthy decor.
-   All 5 must match the requested design style but explore different moods.
+BAD (too generic, no design):
+"Edit this exact photo... Add a bed along the back wall with nightstands and a lamp. Add a rug on the floor. Keep all walls..."
+
+BAD (just furniture, no decoration):
+"Edit this exact photo... Add a gray sofa facing the window, a coffee table, and an armchair. Keep all walls..."
+
+GOOD (specific design, rich decoration, layered):
+"Edit this exact photo... Add a deep emerald velvet sofa with gold legs along the back wall, a round white marble coffee table with stacked Assouline books and a brass candle holder, a cream boucle armchair to the right, a large ivory hand-knotted wool rug anchoring the seating area, a tall brass arc floor lamp behind the sofa, a gallery wall of three framed black-and-white photography prints above the sofa, a fiddle leaf fig in a woven seagrass basket in the corner by the window, and sage green linen curtains softly pooling on the floor. Keep all walls..."
+
+GOOD (bedroom example):
+"Edit this exact photo... Add a king-size bed with an upholstered sand linen headboard centered on the back wall, layered bedding with white linen duvet, camel cashmere throw folded at the foot, and four textured cushions in ivory and terracotta, matching oak nightstands on each side with ceramic table lamps with linen drum shades, a large abstract warm-toned oil painting above the headboard, a plush cream wool rug under the bed, a small olive tree in a ribbed ceramic pot by the window, and a rattan bench at the foot of the bed with a folded herringbone blanket. Keep all walls..."
+
+YOUR RULES:
+- EVERY prompt must be as detailed as the GOOD examples above — list EVERY item with its material, color, and texture
+- NEVER just say "a sofa" — say "a deep-seated cognac distressed leather sofa with brass rivets"
+- NEVER just say "a lamp" — say "a sculptural brass arc floor lamp with a white linen drum shade"
+- NEVER just say "a rug" — say "a large hand-knotted vintage Persian rug in faded rose and indigo"
+- ALWAYS include ALL of these in every prompt: main furniture + rug + lighting (2 sources) + art on walls + plants + decorative objects on surfaces + textiles (throws, cushions, curtains)
+- Describe surfaces: coffee tables must have objects ON them (books, candle, vase with flowers, decorative tray)
+- Nightstands must have objects ON them (lamp, small plant, book, ceramic dish)
+- Shelves must be STYLED (books, ceramics, small art, plant)
+
+ANTI-DISTORTION RULES:
+1. NEVER describe the room itself (walls, floor, windows, ceiling). Describing structure CAUSES DISTORTION.
+2. Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT.
+3. Start every prompt with: "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical."
+4. End every prompt with: "Keep all walls, floor, windows, doors, ceiling unchanged. Photorealistic, exact room proportions, no distortion, camera locked."
+5. Reference spatial positions from the photo (e.g., "along the back wall", "in the corner by the window").
+6. Only mention furniture, rugs, artwork, plants, lamps, curtains, decorative objects. NO structural changes.
+7. Each prompt: 3-5 sentences between start/end. Pack maximum design detail. Specificity = quality.
+8. Generate exactly 5 prompts:
+   - Prompt 1: SIGNATURE — The hero "cover shot" staging with complete decoration
+   - Prompt 2: ALTERNATIVE — Different furniture layout, same richness of decoration
+   - Prompt 3: EDITORIAL — Maximum decor density: styled surfaces everywhere, gallery wall, abundant plants, curated objects
+   - Prompt 4: WARM & LIVABLE — Cozy premium with plush textiles, warm lighting, personal touches
+   - Prompt 5: SHOWROOM LUXE — Ultra-premium: statement art, sculptural furniture, marble/brass/velvet, dramatic lighting
 
 Respond in JSON: { "analysis": "Brief 1-line description of what you see", "prompts": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"] }
 No markdown, ONLY valid JSON.`;
@@ -134,7 +145,19 @@ ${styleGuide}
 STRUCTURAL INVENTORY (from prior analysis — DO NOT modify these):
 ${JSON.stringify(visionData, null, 2)}
 
-Generate 5 editing prompts for this photo. Use the style guide above for SPECIFIC furniture, materials, colors, and decor items. Use the structural inventory to place furniture logically (avoid blocking windows/doors, respect room dimensions). Every prompt must feel like a luxury real estate staging — NOT a generic furniture catalog.`;
+Generate 5 editing prompts for this ${roomLabel}.
+
+MANDATORY CHECKLIST — every prompt MUST include ALL of these:
+✅ Main furniture with exact material/color/texture description
+✅ Rug with material, color, and pattern
+✅ 2 lighting sources (floor lamp + table lamp, or pendant + sconce, etc.) with material description
+✅ Art on walls (painting, prints, or mirror) with frame and subject description
+✅ At least 1 plant with exact species and pot description
+✅ Decorative objects on every surface (books, candles, vases with flowers, trays, ceramics)
+✅ Textiles: throw blanket + cushions with fabric/color + curtains if windows are visible
+✅ Every item must have: material + color + texture (never just "a lamp" or "a sofa")
+
+Use the style guide above for the exact aesthetic. Place furniture logically (avoid blocking windows/doors).`;
 }
 
 export function klingVideoPrompt(style: string, roomType: string): string {
