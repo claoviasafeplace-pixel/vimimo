@@ -133,6 +133,7 @@ export async function generateVideo(
           end_image: stagedUrl,
           mode: "pro",
           duration: 5,
+          cfg_scale: 0.7,
           negative_prompt: KLING_NEGATIVE_PROMPT,
         },
         ...(webhookUrl ? { webhook: webhookUrl, webhook_events_filter: ["completed"] } : {}),

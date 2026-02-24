@@ -162,12 +162,56 @@ MANDATORY CHECKLIST — every prompt MUST include ALL of these:
 Use the style guide above for the exact aesthetic. Place furniture logically (avoid blocking windows/doors).`;
 }
 
+// ─── Video generation constants (Kling v2.1 Pro) ───
+
+/**
+ * Camera direction tokens — forces slow, professional real estate camera work.
+ * Kling interprets these as motion instructions; explicit "no" tokens
+ * reduce hallucinated fast pans and whip movements.
+ */
+export const VIDEO_CAMERA_PROMPT = [
+  "Ultra slow smooth cinematic dolly-in,",
+  "locked tripod-mounted camera with imperceptible forward glide,",
+  "professional real estate walkthrough cinematography,",
+  "no handheld shake, no fast pan, no whip movement, no rotation,",
+  "camera height fixed at eye level throughout entire sequence.",
+].join(" ");
+
+/**
+ * Quality suffix appended to every video prompt — enforces temporal coherence.
+ * "Strict temporal consistency" and "frame-to-frame coherence" are the
+ * strongest anti-morphing tokens for diffusion-based video models.
+ */
+export const VIDEO_QUALITY_SUFFIX = [
+  "8K photorealistic professional real estate video,",
+  "strict temporal consistency, frame-to-frame coherence,",
+  "no morphing, no melting, no warping, no object flickering,",
+  "all furniture physically stable and stationary throughout,",
+  "walls, floor, windows, doors structurally rigid in every frame,",
+  "natural indoor lighting with consistent shadows, no light flickering,",
+  "Architectural Digest cinematic quality, 24fps smooth motion.",
+].join(" ");
+
 export function klingVideoPrompt(style: string, roomType: string): string {
-  return `Morph from original empty room to furnished room. KEEP EXACT same room structure, walls, floor, windows, camera angle, perspective, and proportions throughout the entire video. Subtle dolly zoom only, no perspective change. ${style} ${roomType}, photorealistic professional real estate video, smooth furniture appearance, steady camera, natural lighting.`;
+  return [
+    VIDEO_CAMERA_PROMPT,
+    `Seamless transition from empty ${roomType} to beautifully furnished ${style} ${roomType}.`,
+    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL in every frame.",
+    "Furniture appears gradually and naturally, already in final position — no sliding, no floating.",
+    VIDEO_QUALITY_SUFFIX,
+  ].join(" ");
 }
 
-export const KLING_NEGATIVE_PROMPT =
-  "blurry, distorted, low quality, warped walls, warped windows, changed proportions, furniture movement, structural changes, perspective shift, room deformation";
+export const KLING_NEGATIVE_PROMPT = [
+  "blurry, out of focus, low quality, low resolution, grainy,",
+  "warped walls, warped floor, warped windows, bent doorframes, curved ceiling,",
+  "changed room proportions, room shape shift, structural deformation,",
+  "furniture sliding, furniture floating, furniture morphing, objects melting,",
+  "fast camera movement, shaky camera, handheld, whip pan, rotation,",
+  "perspective shift, fisheye distortion, lens flare,",
+  "flickering lights, inconsistent shadows, temporal artifacts,",
+  "text, watermark, logo, signature.",
+].join(" ");
 
 // ─── Quality boosters & negative prompts for Flux Kontext staging ───
 
