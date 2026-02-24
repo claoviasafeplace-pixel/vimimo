@@ -1,5 +1,11 @@
 import Replicate from "replicate";
-import { CLEAN_PHOTO_PROMPT, klingVideoPrompt, KLING_NEGATIVE_PROMPT } from "../prompts";
+import {
+  CLEAN_PHOTO_PROMPT,
+  CLEANING_QUALITY_SUFFIX,
+  STAGING_QUALITY_SUFFIX,
+  klingVideoPrompt,
+  KLING_NEGATIVE_PROMPT,
+} from "../prompts";
 import { withRetry, REPLICATE_RETRY } from "../retry";
 import { savePredictionMap } from "../store";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
@@ -40,7 +46,7 @@ export async function cleanPhoto(
       const prediction = await getClient().predictions.create({
         model: "black-forest-labs/flux-kontext-pro",
         input: {
-          prompt: CLEAN_PHOTO_PROMPT,
+          prompt: `${CLEAN_PHOTO_PROMPT} ${CLEANING_QUALITY_SUFFIX}`,
           input_image: photoUrl,
           aspect_ratio: "match_input_image",
           output_format: "jpg",
@@ -80,7 +86,7 @@ export async function generateStagingOption(
       const prediction = await getClient().predictions.create({
         model: "black-forest-labs/flux-kontext-pro",
         input: {
-          prompt: prompt + " Photorealistic, exact room proportions, no distortion, camera locked.",
+          prompt: `${prompt} ${STAGING_QUALITY_SUFFIX}`,
           input_image: photoUrl,
           aspect_ratio: "match_input_image",
           output_format: "jpg",

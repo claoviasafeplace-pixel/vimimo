@@ -54,15 +54,17 @@ YOUR RULES:
 - Nightstands must have objects ON them (lamp, small plant, book, ceramic dish)
 - Shelves must be STYLED (books, ceramics, small art, plant)
 
-ANTI-DISTORTION RULES:
+ANTI-DISTORTION RULES (HIGHEST PRIORITY — violating these ruins the image):
 1. NEVER describe the room itself (walls, floor, windows, ceiling). Describing structure CAUSES DISTORTION.
-2. Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT.
+2. Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT — zero modifications.
 3. Start every prompt with: "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical."
-4. End every prompt with: "Keep all walls, floor, windows, doors, ceiling unchanged. Photorealistic, exact room proportions, no distortion, camera locked."
+4. End every prompt with: "Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
 5. Reference spatial positions from the photo (e.g., "along the back wall", "in the corner by the window").
 6. Only mention furniture, rugs, artwork, plants, lamps, curtains, decorative objects. NO structural changes.
-7. Each prompt: 3-5 sentences between start/end. Pack maximum design detail. Specificity = quality.
-8. Generate exactly 5 prompts:
+7. ALL furniture must obey gravity — feet flat on the floor, no floating objects, no clipping through walls.
+8. Shadows and reflections must be CONSISTENT with existing light sources in the photo.
+9. Each prompt: 3-5 sentences between start/end. Pack maximum design detail. Specificity = quality.
+10. Generate exactly 5 prompts:
    - Prompt 1: SIGNATURE — The hero "cover shot" staging with complete decoration
    - Prompt 2: ALTERNATIVE — Different furniture layout, same richness of decoration
    - Prompt 3: EDITORIAL — Maximum decor density: styled surfaces everywhere, gallery wall, abundant plants, curated objects
@@ -166,6 +168,32 @@ export function klingVideoPrompt(style: string, roomType: string): string {
 
 export const KLING_NEGATIVE_PROMPT =
   "blurry, distorted, low quality, warped walls, warped windows, changed proportions, furniture movement, structural changes, perspective shift, room deformation";
+
+// ─── Quality boosters & negative prompts for Flux Kontext staging ───
+
+/**
+ * Appended to EVERY staging prompt to enforce photorealism + structural fidelity.
+ * Flux Kontext Pro reads the tail of the prompt with high weight,
+ * so quality tokens here act as a "style lock".
+ */
+export const STAGING_QUALITY_SUFFIX = [
+  "Ultra-photorealistic interior photography, shot on Canon EOS R5 with 16-35mm f/2.8 lens,",
+  "natural window light mixed with warm interior lighting,",
+  "8K resolution, architectural magazine quality, Architectural Digest editorial,",
+  "exact room geometry preserved, walls plumb, floor plane undistorted,",
+  "all doors, windows, radiators, outlets, light switches, and fixed elements pixel-perfect unchanged,",
+  "correct perspective, no lens warping, no floating objects, physically plausible furniture placement,",
+  "consistent shadows matching existing light direction, subtle ambient occlusion under furniture.",
+].join(" ");
+
+/**
+ * Appended to EVERY cleaning prompt to enforce structural preservation.
+ */
+export const CLEANING_QUALITY_SUFFIX = [
+  "Ultra-photorealistic, shot on Canon EOS R5,",
+  "exact room geometry preserved, all architectural elements pixel-perfect,",
+  "consistent lighting and shadows, 8K resolution, no artifacts.",
+].join(" ");
 
 export const DESCRIPTION_SYSTEM_PROMPT = `Tu es un expert en marketing immobilier et réseaux sociaux. Tu génères des descriptions captivantes pour des biens immobiliers meublés virtuellement.
 
