@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { addCredits, upsertSubscription } from "@/lib/store";
+import { addCredits, upsertSubscription, getUserByEmail, updateUser } from "@/lib/store";
+import { getSupabase } from "@/lib/supabase";
 import { SUBSCRIPTION_PLANS } from "@/lib/types";
+import { nanoid } from "nanoid";
 
 function getSubPeriodEnd(sub: { items: { data: Array<{ current_period_end: number }> } }): Date {
   const firstItem = sub.items.data[0];
@@ -46,9 +48,49 @@ export async function POST(request: Request) {
 
         if (session.metadata?.type !== "pack") break;
 
-        const userId = session.metadata.userId;
         const credits = parseInt(session.metadata.credits || "0", 10);
         const packId = session.metadata.packId || "unknown";
+        let userId = session.metadata.userId;
+
+        // Guest checkout: resolve or create user from Stripe email
+        if (!userId && session.metadata.guest === "true") {
+          const email = session.customer_details?.email;
+          if (!email) {
+            console.error("Guest checkout without email, skipping:", session.id);
+            break;
+          }
+
+          // Check if user already exists
+          const existingUser = await getUserByEmail(email);
+          if (existingUser) {
+            userId = existingUser.id;
+            // Link Stripe customer if not yet linked
+            if (!existingUser.stripe_customer_id && typeof session.customer === "string") {
+              await updateUser(userId, { stripe_customer_id: session.customer });
+            }
+          } else {
+            // Create new user
+            const newId = nanoid(12);
+            const now = new Date().toISOString();
+            const db = getSupabase();
+            const { error } = await db.from("users").insert({
+              id: newId,
+              email,
+              name: session.customer_details?.name ?? null,
+              image: null,
+              credits: 0,
+              stripe_customer_id: typeof session.customer === "string" ? session.customer : null,
+              created_at: now,
+              updated_at: now,
+            });
+            if (error) {
+              console.error("Failed to create guest user:", error);
+              break;
+            }
+            userId = newId;
+            console.log(`Guest user created: ${userId} (${email})`);
+          }
+        }
 
         if (userId && credits) {
           await addCredits(

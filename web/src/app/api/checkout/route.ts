@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
+import { auth } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { getUserById, updateUser, getActiveSubscription } from "@/lib/store";
 import { CREDIT_PACKS, SUBSCRIPTION_PLANS } from "@/lib/types";
@@ -18,8 +18,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await requireAuth();
-    if (result.error) return result.error;
+    // Auth optional — guests can checkout too
+    const session = await auth();
+    const isGuest = !session?.user?.id;
 
     const body = await request.json();
 
@@ -33,7 +34,54 @@ export async function POST(request: Request) {
     const { packId, planId, billing } = parsed.data;
 
     const stripe = getStripe();
-    const userId = result.session.user.id;
+    const origin = new URL(request.url).origin;
+
+    // --- Guest mode: Stripe collects email, user created in webhook ---
+    if (isGuest) {
+      // Guests can only buy packs (no subscriptions)
+      if (!packId) {
+        return NextResponse.json(
+          { error: "Connectez-vous pour souscrire un abonnement." },
+          { status: 401 }
+        );
+      }
+
+      const pack = CREDIT_PACKS.find((p) => p.id === packId);
+      if (!pack) {
+        return NextResponse.json({ error: "Pack invalide" }, { status: 400 });
+      }
+
+      const checkoutSession = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer_creation: "always",
+        line_items: [
+          {
+            price_data: {
+              currency: "eur",
+              product_data: {
+                name: `VIMIMO — Pack ${pack.name}`,
+                description: `${pack.credits} crédits de staging IA`,
+              },
+              unit_amount: Math.round(pack.priceEur * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          type: "pack",
+          packId: pack.id,
+          credits: String(pack.credits),
+          guest: "true",
+        },
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/pricing`,
+      });
+
+      return NextResponse.json({ url: checkoutSession.url });
+    }
+
+    // --- Authenticated user flow ---
+    const userId = session.user.id;
     const user = await getUserById(userId);
 
     if (!user) {
@@ -52,8 +100,6 @@ export async function POST(request: Request) {
       await updateUser(userId, { stripe_customer_id: customerId });
     }
 
-    const origin = new URL(request.url).origin;
-
     // --- One-time credit pack ---
     if (packId) {
       const pack = CREDIT_PACKS.find((p) => p.id === packId);
@@ -61,7 +107,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Pack invalide" }, { status: 400 });
       }
 
-      const session = await stripe.checkout.sessions.create({
+      const checkoutSession = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "payment",
         line_items: [
@@ -83,11 +129,11 @@ export async function POST(request: Request) {
           packId: pack.id,
           credits: String(pack.credits),
         },
-        success_url: `${origin}/?checkout=success`,
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/pricing`,
       });
 
-      return NextResponse.json({ url: session.url });
+      return NextResponse.json({ url: checkoutSession.url });
     }
 
     // --- Subscription (monthly or yearly) ---
@@ -115,7 +161,7 @@ export async function POST(request: Request) {
         ? `${plan.creditsPerMonth} crédits / mois (annuel)`
         : `${plan.creditsPerMonth} crédits / mois`;
 
-      const session = await stripe.checkout.sessions.create({
+      const checkoutSession = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "subscription",
         line_items: [
@@ -147,11 +193,11 @@ export async function POST(request: Request) {
           planId: plan.id,
           billing: isYearly ? "yearly" : "monthly",
         },
-        success_url: `${origin}/?checkout=success`,
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/pricing`,
       });
 
-      return NextResponse.json({ url: session.url });
+      return NextResponse.json({ url: checkoutSession.url });
     }
 
     return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });

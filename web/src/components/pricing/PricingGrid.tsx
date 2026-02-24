@@ -24,7 +24,8 @@ export default function PricingGrid() {
     billing?: Billing;
   }) => {
     setCheckoutError(null);
-    if (!session) {
+    // Guests must log in for subscriptions, but can buy packs directly
+    if (!session && !params.packId) {
       router.push("/login");
       return;
     }
@@ -36,12 +37,14 @@ export default function PricingGrid() {
         body: JSON.stringify(params),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        setCheckoutError("Erreur lors de la création du paiement. Veuillez réessayer.");
+        setCheckoutError(data.error || "Erreur lors de la création du paiement. Veuillez réessayer.");
         return;
       }
 
-      const { url } = await res.json();
+      const { url } = data;
       if (url) window.location.href = url;
     } catch (error) {
       console.error("[PricingGrid] Checkout request failed:", error);
