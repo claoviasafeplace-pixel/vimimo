@@ -90,7 +90,6 @@ export async function POST(request: Request) {
 
         const checkoutSession = await stripe.checkout.sessions.create({
           mode: "subscription",
-          customer_creation: "always",
           line_items: [
             {
               price_data: {
