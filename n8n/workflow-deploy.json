@@ -216,7 +216,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: $json.message.chat.id, text: '\ud83c\udfa8 *Catalogue des Styles VIMIMO*\\n\\n\ud83d\uddbc\ufe0f *Scandinave* \u2014 Bois clair, lignes \u00e9pur\u00e9es, tons neutres et chaleureux.\\n\ud83e\uddf1 *Industriel* \u2014 M\u00e9tal brut, briques, mobilier vintage.\\n\u2728 *Moderne* \u2014 Minimaliste, design \u00e9pur\u00e9, touches de couleur.\\n\ud83c\udfdb\ufe0f *Classique* \u2014 \u00c9l\u00e9gance intemporelle, moulures, dorures subtiles.\\n\ud83c\udf3f *Boh\u00e8me* \u2014 Textures naturelles, plantes, atmosph\u00e8re d\u00e9contract\u00e9e.\\n\\n\ud83d\udc47 Envoyez d\\'abord votre photo/vid\u00e9o, puis choisissez votre style !', parse_mode: 'Markdown', reply_markup: { keyboard: [[{text:'\ud83d\uddbc\ufe0f Scandinave'},{text:'\ud83e\uddf1 Industriel'}],[{text:'\u2728 Moderne'},{text:'\ud83c\udfdb\ufe0f Classique'}],[{text:'\ud83c\udf3f Boh\u00e8me'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
@@ -296,7 +296,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '\u2705 M\u00e9dia re\u00e7u !\\n\\n\ud83c\udfa8 Choisissez maintenant votre style de d\u00e9coration :', reply_markup: { keyboard: [[{text:'\ud83d\uddbc\ufe0f Scandinave'},{text:'\ud83e\uddf1 Industriel'}],[{text:'\u2728 Moderne'},{text:'\ud83c\udfdb\ufe0f Classique'}],[{text:'\ud83c\udf3f Boh\u00e8me'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
@@ -377,7 +377,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '\ud83d\ude80 Style *' + $json.chosenLabel + '* s\u00e9lectionn\u00e9 !\\n\\n\u23f3 Analyse de votre espace en cours... Cela prendra environ 2-3 minutes.\\n\\nJe vais :\\n1. Analyser votre pi\u00e8ce \ud83d\udd0d\\n2. G\u00e9n\u00e9rer 5 \u00e9tapes de transformation \ud83c\udfa8\\n3. Cr\u00e9er une vid\u00e9o cin\u00e9matique \ud83c\udfac', parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }) }}",
@@ -395,7 +395,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/getFile?file_id={{ $('Load Media + Style').first().json.fileId }}",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/getFile?file_id={{ $('Load Media + Style').first().json.fileId }}",
         "options": {}
       },
       "id": "009afd6c-1c36-40a9-be16-f63cae2891e4",

@@ -1,12 +1,17 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { CheckCircle, ArrowRight, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SuccessPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
+
+  useEffect(() => {
+    update();
+  }, [update]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6">

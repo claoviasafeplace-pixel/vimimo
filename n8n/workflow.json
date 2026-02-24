@@ -152,7 +152,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: $json.message.chat.id, text: '🎨 *Catalogue des Styles VIMIMO*\\n\\n🖼️ *Scandinave* — Bois clair, lignes épurées, tons neutres et chaleureux.\\n🧱 *Industriel* — Métal brut, briques, mobilier vintage.\\n✨ *Moderne* — Minimaliste, design épuré, touches de couleur.\\n🏛️ *Classique* — Élégance intemporelle, moulures, dorures subtiles.\\n🌿 *Bohème* — Textures naturelles, plantes, atmosphère décontractée.\\n\\n👇 Envoyez d\\'abord votre photo/vidéo, puis choisissez votre style !', parse_mode: 'Markdown', reply_markup: { keyboard: [[{text:'🖼️ Scandinave'},{text:'🧱 Industriel'}],[{text:'✨ Moderne'},{text:'🏛️ Classique'}],[{text:'🌿 Bohème'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
@@ -218,7 +218,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '✅ Média reçu !\\n\\n🎨 Choisissez maintenant votre style de décoration :', reply_markup: { keyboard: [[{text:'🖼️ Scandinave'},{text:'🧱 Industriel'}],[{text:'✨ Moderne'},{text:'🏛️ Classique'}],[{text:'🌿 Bohème'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
@@ -283,7 +283,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '🚀 Style *' + $json.chosenLabel + '* sélectionné !\\n\\n⏳ Analyse de votre espace en cours... Cela prendra environ 2-3 minutes.\\n\\nJe vais :\\n1. Analyser votre pièce 🔍\\n2. Générer 5 étapes de transformation 🎨\\n3. Créer une vidéo cinématique 🎬', parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }) }}",
@@ -299,7 +299,7 @@
 
     {
       "parameters": {
-        "url": "=https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/getFile?file_id={{ $('Load Media + Style').first().json.fileId }}",
+        "url": "=https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/getFile?file_id={{ $('Load Media + Style').first().json.fileId }}",
         "options": {}
       },
       "id": "download-media",

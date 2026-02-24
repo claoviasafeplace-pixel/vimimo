@@ -292,7 +292,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: $json.message.chat.id, text: '🎨 *Catalogue des Styles VIMIMO*\\n\\n🖼️ *Scandinave* — Bois clair, lignes épurées, tons neutres et chaleureux.\\n🧱 *Industriel* — Métal brut, briques, mobilier vintage.\\n✨ *Moderne* — Minimaliste, design épuré, touches de couleur.\\n🏛️ *Classique* — Élégance intemporelle, moulures, dorures subtiles.\\n🌿 *Bohème* — Textures naturelles, plantes, atmosphère décontractée.\\n\\n👇 Choisissez votre style !', parse_mode: 'Markdown', reply_markup: { keyboard: [[{text:'🖼️ Scandinave'},{text:'🧱 Industriel'}],[{text:'✨ Moderne'},{text:'🏛️ Classique'}],[{text:'🌿 Bohème'}]], resize_keyboard: true, one_time_keyboard: true } }) }}",
@@ -369,7 +369,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: ($json.isAlbum ? '\\ud83d\\udcf8 Album re\\u00e7u ! Choisissez un style puis tapez /go.' : '\\ud83d\\udcf7 Photo ' + $json.count + ' re\\u00e7ue ! Envoyez d\\u0027autres photos ou tapez /go.') + '\\n\\n\\ud83c\\udfa8 Style actuel : ' + ($json.style || 'Choisissez ci-dessous'), reply_markup: { keyboard: [[{text:'\\ud83d\\uddbc\\ufe0f Scandinave'},{text:'\\ud83e\\uddf1 Industriel'}],[{text:'\\u2728 Moderne'},{text:'\\ud83c\\udfdb\\ufe0f Classique'}],[{text:'\\ud83c\\udf3f Boh\\u00e8me'}]], resize_keyboard: true, one_time_keyboard: false } }) }}",
@@ -400,7 +400,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '\\u2705 Style *' + $json.chosenLabel + '* s\\u00e9lectionn\\u00e9 !\\n\\nVous avez ' + $json.photoCount + ' photo(s).\\nEnvoyez d\\'autres photos ou tapez /go pour lancer.', parse_mode: 'Markdown', reply_markup: { keyboard: [[{text:'\\ud83d\\uddbc\\ufe0f Scandinave'},{text:'\\ud83e\\uddf1 Industriel'}],[{text:'\\u2728 Moderne'},{text:'\\ud83c\\udfdb\\ufe0f Classique'}],[{text:'\\ud83c\\udf3f Boh\\u00e8me'}]], resize_keyboard: true, one_time_keyboard: false } }) }}",
@@ -444,7 +444,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.telegram.org/bot8120972729:AAFlDrC7dfgnTAqAjlc4pUsadqxjhc5IYOU/sendMessage",
+        "url": "https://api.telegram.org/{{TELEGRAM_BOT_TOKEN}}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: Number($json.chatId), text: '\\ud83d\\udd0d *Analyse en cours de vos ' + $json.totalPhotos + ' photos en style ' + $json.styleLabel + '...*\\n\\nVous pourrez ensuite choisir votre staging pr\\u00e9f\\u00e9r\\u00e9 pour chaque pi\\u00e8ce.\\n\\n\\u23f3 Quelques instants...', parse_mode: 'Markdown', reply_markup: { remove_keyboard: true } }) }}",

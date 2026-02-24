@@ -21,7 +21,7 @@ function CheckoutSuccess() {
   const { update } = useSession();
 
   useEffect(() => {
-    if (searchParams.get("checkout") === "success") {
+    if (searchParams.get("session_id")) {
       update();
       router.replace("/new", { scroll: false });
     }
