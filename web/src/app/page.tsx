@@ -2,76 +2,957 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useState, useEffect, useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import {
+  Sparkles,
+  Play,
+  Camera,
+  Wand2,
+  Rocket,
+  Check,
+  ArrowRight,
+  Star,
+  Clock,
+  Zap,
+  Shield,
+  ChevronRight,
+  Menu,
+  X,
+} from "lucide-react";
 import AuthButton from "@/components/auth/AuthButton";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import Hero from "@/components/marketing/Hero";
-import BeforeAfter from "@/components/marketing/BeforeAfter";
-import HowItWorks from "@/components/marketing/HowItWorks";
-import Stats from "@/components/marketing/Stats";
-import CTASection from "@/components/marketing/CTASection";
+import PricingGrid from "@/components/pricing/PricingGrid";
+
+/* ─────────────────────────────────────────────
+   Data
+   ───────────────────────────────────────────── */
+
+const NAV_LINKS = [
+  { label: "Fonctionnalités", href: "#features" },
+  { label: "Comment ça marche", href: "#how" },
+  { label: "Tarifs", href: "#pricing" },
+  { label: "FAQ", href: "#faq" },
+];
+
+const STATS = [
+  { value: "500+", label: "agences clientes" },
+  { value: "<2min", label: "par pièce" },
+  { value: "4K", label: "qualité rendu" },
+  { value: "95%", label: "satisfaction" },
+];
+
+const FEATURES = [
+  {
+    icon: Camera,
+    title: "Upload intelligent",
+    description:
+      "Importez vos photos de pièces vides depuis n'importe quel appareil. Notre IA détecte automatiquement les murs, sols et perspectives.",
+  },
+  {
+    icon: Wand2,
+    title: "Staging IA instantané",
+    description:
+      "5 options de décoration professionnelle par pièce. Scandinave, moderne, classique... Choisissez le style qui vend.",
+  },
+  {
+    icon: Rocket,
+    title: "Vidéo cinématique",
+    description:
+      "Recevez une vidéo avant/après prête à publier. Effet waouh garanti sur vos annonces et réseaux sociaux.",
+  },
+  {
+    icon: Zap,
+    title: "Résultats en minutes",
+    description:
+      "Pas besoin d'attendre des jours. Obtenez vos visuels et vidéos de staging en quelques minutes seulement.",
+  },
+  {
+    icon: Shield,
+    title: "Qualité professionnelle",
+    description:
+      "Rendu photoréaliste en haute résolution. Lumières naturelles, ombres cohérentes, meubles proportionnés.",
+  },
+  {
+    icon: Star,
+    title: "Descriptions IA",
+    description:
+      "Générez automatiquement des descriptions optimisées pour Instagram et TikTok avec chaque projet.",
+  },
+];
+
+const STEPS = [
+  {
+    step: "01",
+    title: "Photographiez",
+    description:
+      "Prenez en photo vos pièces vides avec votre smartphone. Aucun matériel spécial requis.",
+  },
+  {
+    step: "02",
+    title: "L'IA décore",
+    description:
+      "Notre IA analyse la géométrie, la lumière et génère un staging professionnel avec 5 options au choix.",
+  },
+  {
+    step: "03",
+    title: "Publiez et vendez",
+    description:
+      "Récupérez vos photos staging + vidéo cinématique avant/après prêtes à publier sur vos annonces.",
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    name: "Sophie Martin",
+    role: "Directrice, Agence Prestige Immobilier",
+    quote:
+      "Nos biens se vendent 40% plus vite depuis qu'on utilise VIMIMO. Les acquéreurs se projettent immédiatement.",
+    stars: 5,
+  },
+  {
+    name: "Thomas Durand",
+    role: "Agent indépendant, Paris 16e",
+    quote:
+      "J'économise 2 000€ par mois en staging physique. La qualité IA est bluffante, mes clients ne voient pas la différence.",
+    stars: 5,
+  },
+  {
+    name: "Claire Benoit",
+    role: "Responsable marketing, Century 21",
+    quote:
+      "Les vidéos avant/après sont notre meilleur outil marketing. Les vues sur nos annonces ont triplé.",
+    stars: 5,
+  },
+];
+
+const FAQS = [
+  {
+    q: "Comment fonctionne le staging virtuel IA ?",
+    a: "Vous uploadez des photos de pièces vides. Notre IA analyse la géométrie 3D, la lumière naturelle et les perspectives pour générer un ameublement photoréaliste dans le style de votre choix.",
+  },
+  {
+    q: "Combien de temps faut-il pour obtenir un résultat ?",
+    a: "Le staging d'une pièce prend environ 2 minutes. Vous recevez 5 options de décoration + une vidéo cinématique avant/après.",
+  },
+  {
+    q: "Puis-je essayer avant d'acheter ?",
+    a: "Vous pouvez acheter un pack ponctuel de 3 crédits pour tester le service sans engagement. Chaque crédit = 1 pièce meublée + vidéo.",
+  },
+  {
+    q: "La qualité est-elle suffisante pour des annonces professionnelles ?",
+    a: "Absolument. Le rendu est en haute résolution (4K) avec des ombres cohérentes, une lumière naturelle et des meubles proportionnés. 95% de nos clients sont satisfaits.",
+  },
+  {
+    q: "Puis-je annuler mon abonnement ?",
+    a: "Oui, à tout moment. Vos crédits restants restent disponibles jusqu'à la fin de la période en cours.",
+  },
+];
+
+const BEFORE_IMG =
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80";
+const AFTER_IMG =
+  "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&q=80";
+
+/* ─────────────────────────────────────────────
+   Helpers
+   ───────────────────────────────────────────── */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, delay: 0.08 * i, ease: [0.21, 0.47, 0.32, 0.98] as const },
+  }),
+};
+
+function SectionHeading({
+  badge,
+  title,
+  highlight,
+  subtitle,
+}: {
+  badge?: string;
+  title: string;
+  highlight: string;
+  subtitle: string;
+}) {
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-80px" }}
+      variants={fadeUp}
+      className="mx-auto max-w-3xl text-center mb-16"
+    >
+      {badge && (
+        <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-badge-gold-border bg-badge-gold-bg px-3 py-1 text-xs font-medium tracking-wide text-badge-gold-text uppercase">
+          {badge}
+        </span>
+      )}
+      <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+        {title} <span className="text-gradient-gold">{highlight}</span>
+      </h2>
+      <p className="mt-5 text-lg leading-relaxed text-muted">{subtitle}</p>
+    </motion.div>
+  );
+}
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border/60">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between py-5 text-left cursor-pointer group"
+      >
+        <span className="text-base font-medium pr-4 group-hover:text-badge-gold-text transition-colors">
+          {q}
+        </span>
+        <ChevronRight
+          className={`h-5 w-5 shrink-0 text-muted transition-transform duration-300 ${
+            open ? "rotate-90" : ""
+          }`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-300 ${
+          open ? "max-h-48 pb-5" : "max-h-0"
+        }`}
+      >
+        <p className="text-sm leading-relaxed text-muted">{a}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Page
+   ───────────────────────────────────────────── */
 
 export default function LandingPage() {
   const { data: session } = useSession();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.95]);
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
 
   return (
-    <div className="min-h-screen">
-      {/* ─── Sticky Header ─── */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <a href="/" className="text-xl font-bold text-gradient-gold tracking-wide">
-            VIMIMO
+    <div className="min-h-screen overflow-x-hidden">
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          NAVBAR
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? "bg-background/70 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_1px_30px_rgba(0,0,0,0.2)]"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-gold">
+              <Sparkles className="h-4 w-4 text-zinc-900" />
+            </div>
+            <span className="text-xl font-bold tracking-wide text-gradient-gold">
+              VIMIMO
+            </span>
           </a>
-          <nav className="hidden items-center gap-6 sm:flex">
-            <a href="#demo" className="text-sm text-muted hover:text-foreground transition-colors">
-              Démo
-            </a>
-            <Link href="/pricing" className="text-sm text-muted hover:text-foreground transition-colors">
-              Tarifs
-            </Link>
-            {session && (
-              <Link href="/dashboard" className="text-sm text-muted hover:text-foreground transition-colors">
-                Dashboard
-              </Link>
-            )}
+
+          {/* Desktop Nav */}
+          <nav className="hidden items-center gap-8 lg:flex">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm text-muted transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-3">
+
+          {/* Desktop Right */}
+          <div className="hidden items-center gap-3 lg:flex">
             <ThemeToggle />
             {session ? (
-              <Link
-                href="/new"
-                className="rounded-lg gradient-gold px-4 py-2 text-sm font-semibold text-zinc-900 transition-opacity hover:opacity-90"
-              >
-                Nouveau projet
-              </Link>
-            ) : (
               <AuthButton />
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  href="/new"
+                  className="inline-flex items-center gap-2 rounded-lg gradient-gold px-5 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-amber-900/20 transition-all hover:opacity-90 hover:shadow-amber-900/30"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Démarrer
+                </Link>
+              </>
             )}
           </div>
+
+          {/* Mobile toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface lg:hidden cursor-pointer"
+            aria-label="Menu"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
         </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="border-t border-border/50 bg-background/95 backdrop-blur-xl px-6 pb-6 pt-4 lg:hidden"
+          >
+            <nav className="flex flex-col gap-1">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+              <Link
+                href="/login"
+                className="rounded-lg border border-border bg-surface px-4 py-2.5 text-center text-sm font-medium"
+              >
+                Se connecter
+              </Link>
+              <Link
+                href="/new"
+                className="inline-flex items-center justify-center gap-2 rounded-lg gradient-gold px-4 py-2.5 text-sm font-semibold text-zinc-900"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Démarrer gratuitement
+              </Link>
+            </div>
+          </motion.div>
+        )}
       </header>
 
-      {/* ─── Page content ─── */}
-      <div className="pt-14">
-        <Hero />
-        <Stats />
-        <BeforeAfter />
-        <HowItWorks />
-        <CTASection />
-      </div>
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          HERO
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <motion.section
+        ref={heroRef}
+        style={{ opacity: heroOpacity, scale: heroScale }}
+        className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 pt-20 text-center"
+      >
+        {/* Glow */}
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute left-1/2 top-[20%] h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[140px]"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(200,164,90,0.12) 0%, transparent 70%)",
+            }}
+          />
+          <div
+            className="absolute right-[20%] bottom-[20%] h-[500px] w-[500px] rounded-full blur-[120px]"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(200,164,90,0.06) 0%, transparent 70%)",
+            }}
+          />
+          {/* Grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+              backgroundSize: "60px 60px",
+            }}
+          />
+        </div>
 
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-border py-12 px-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <p className="text-sm text-muted">
-            &copy; {new Date().getFullYear()} VIMIMO. Tous droits réservés.
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 mb-8"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-badge-gold-border bg-badge-gold-bg/60 px-5 py-2 text-sm font-medium text-badge-gold-text backdrop-blur-sm">
+            <Sparkles className="h-3.5 w-3.5" />
+            Propulsé par l&apos;Intelligence Artificielle
+          </span>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1 }}
+          className="relative z-10 max-w-5xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
+        >
+          Vendez{" "}
+          <span className="text-gradient-gold">2x plus vite</span>
+          <br />
+          <span className="text-muted">grâce au staging</span>{" "}
+          <span className="text-gradient-gold">IA</span>
+        </motion.h1>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.25 }}
+          className="relative z-10 mt-8 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl"
+        >
+          Transformez vos photos de pièces vides en visuels et vidéos de staging
+          professionnel. En quelques minutes, pas en quelques semaines.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row"
+        >
+          <Link
+            href="/new"
+            className="group inline-flex items-center gap-2.5 rounded-xl gradient-gold px-8 py-4 text-base font-semibold text-zinc-900 shadow-xl shadow-amber-900/25 transition-all hover:shadow-amber-900/40 hover:scale-[1.02]"
+          >
+            <Sparkles className="h-5 w-5" />
+            Commencer gratuitement
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+          <a
+            href="#how"
+            className="inline-flex items-center gap-2.5 rounded-xl border border-border bg-surface/60 px-7 py-4 text-base font-medium text-foreground backdrop-blur-sm transition-all hover:bg-surface-hover hover:border-border"
+          >
+            <Play className="h-4 w-4 text-icon-accent" />
+            Voir comment ça marche
+          </a>
+        </motion.div>
+
+        {/* Social proof */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="relative z-10 mt-12 flex flex-col items-center gap-3 sm:flex-row sm:gap-6"
+        >
+          <div className="flex -space-x-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="h-8 w-8 rounded-full border-2 border-background gradient-gold"
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                  key={i}
+                  className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                />
+              ))}
+            </div>
+            <span>
+              Utilisé par{" "}
+              <span className="font-semibold text-foreground">500+</span> agences
+              immobilières
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        >
+          <div className="flex h-8 w-5 items-start justify-center rounded-full border border-border/50 pt-1.5">
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{
+                repeat: Infinity,
+                duration: 1.5,
+                ease: "easeInOut",
+              }}
+              className="h-1.5 w-1 rounded-full gradient-gold"
+            />
+          </div>
+        </motion.div>
+      </motion.section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          STATS BAR
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="relative z-10 border-y border-border/50 bg-surface/30 backdrop-blur-sm">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-6 py-12 sm:grid-cols-4 sm:gap-8">
+          {STATS.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i}
+              variants={fadeUp}
+              className="text-center"
+            >
+              <p className="text-3xl font-bold text-gradient-gold sm:text-4xl">
+                {stat.value}
+              </p>
+              <p className="mt-1.5 text-sm text-muted">{stat.label}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          BEFORE / AFTER
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section id="demo" className="py-24 px-6 lg:py-32">
+        <div className="mx-auto max-w-6xl">
+          <SectionHeading
+            badge="Avant / Après"
+            title="Le résultat parle de"
+            highlight="lui-même"
+            subtitle="Comparez une pièce vide et son staging IA. Même angle, même lumière, un tout autre impact émotionnel."
+          />
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+              variants={{
+                hidden: { opacity: 0, x: -40 },
+                visible: {
+                  opacity: 1,
+                  x: 0,
+                  transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] },
+                },
+              }}
+              className="group relative overflow-hidden rounded-2xl border border-border"
+            >
+              <img
+                src={BEFORE_IMG}
+                alt="Pièce vide avant staging"
+                className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4">
+                <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-md border border-white/20">
+                  AVANT
+                </span>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+              variants={{
+                hidden: { opacity: 0, x: 40 },
+                visible: {
+                  opacity: 1,
+                  x: 0,
+                  transition: {
+                    duration: 0.7,
+                    delay: 0.15,
+                    ease: [0.21, 0.47, 0.32, 0.98],
+                  },
+                },
+              }}
+              className="group relative overflow-hidden rounded-2xl border border-badge-gold-border/50"
+            >
+              <img
+                src={AFTER_IMG}
+                alt="Pièce meublée par staging IA"
+                className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <div className="absolute bottom-4 left-4">
+                <span className="rounded-full gradient-gold px-4 py-1.5 text-sm font-semibold text-zinc-900">
+                  APRES — IA
+                </span>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          FEATURES
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section
+        id="features"
+        className="py-24 px-6 lg:py-32 border-t border-border/50"
+      >
+        <div className="mx-auto max-w-6xl">
+          <SectionHeading
+            badge="Fonctionnalités"
+            title="Tout ce qu&apos;il faut pour"
+            highlight="vendre plus vite"
+            subtitle="Une suite complète d&apos;outils IA conçus pour les professionnels de l&apos;immobilier."
+          />
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feat, i) => (
+              <motion.div
+                key={feat.title}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                variants={fadeUp}
+                className="group relative rounded-2xl border border-border/60 bg-surface/40 p-7 backdrop-blur-sm transition-all duration-300 hover:border-badge-gold-border/40 hover:bg-surface/70"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-badge-gold-bg border border-badge-gold-border/30">
+                  <feat.icon className="h-6 w-6 text-icon-accent" />
+                </div>
+                <h3 className="text-lg font-semibold">{feat.title}</h3>
+                <p className="mt-2.5 text-sm leading-relaxed text-muted">
+                  {feat.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          HOW IT WORKS
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section
+        id="how"
+        className="py-24 px-6 lg:py-32 border-t border-border/50"
+      >
+        <div className="mx-auto max-w-5xl">
+          <SectionHeading
+            badge="3 étapes"
+            title="Comment ça"
+            highlight="marche"
+            subtitle="Aucune compétence technique requise. Du smartphone à l&apos;annonce en quelques minutes."
+          />
+
+          <div className="relative grid gap-8 sm:grid-cols-3">
+            {/* Connector line (desktop) */}
+            <div className="absolute top-12 left-[16.6%] right-[16.6%] hidden h-px bg-gradient-to-r from-transparent via-border to-transparent sm:block" />
+
+            {STEPS.map((step, i) => (
+              <motion.div
+                key={step.step}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                variants={fadeUp}
+                className="relative text-center"
+              >
+                {/* Step number */}
+                <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl gradient-gold text-xl font-bold text-zinc-900 shadow-lg shadow-amber-900/20">
+                  {step.step}
+                </div>
+                <h3 className="text-lg font-semibold">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  {step.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          TESTIMONIALS
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="py-24 px-6 lg:py-32 border-t border-border/50 bg-surface/20">
+        <div className="mx-auto max-w-6xl">
+          <SectionHeading
+            badge="Témoignages"
+            title="Ils nous font"
+            highlight="confiance"
+            subtitle="Ce que disent les agences immobilières qui utilisent VIMIMO au quotidien."
+          />
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {TESTIMONIALS.map((t, i) => (
+              <motion.div
+                key={t.name}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                variants={fadeUp}
+                className="rounded-2xl border border-border/60 bg-surface/40 p-7 backdrop-blur-sm"
+              >
+                <div className="flex gap-0.5 mb-4">
+                  {Array.from({ length: t.stars }).map((_, j) => (
+                    <Star
+                      key={j}
+                      className="h-4 w-4 fill-amber-400 text-amber-400"
+                    />
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-feature-text italic">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-gold text-sm font-bold text-zinc-900">
+                    {t.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-xs text-muted">{t.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          PRICING
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section
+        id="pricing"
+        className="py-24 px-6 lg:py-32 border-t border-border/50"
+      >
+        <div className="mx-auto max-w-5xl">
+          <SectionHeading
+            badge="Tarifs"
+            title="Des tarifs"
+            highlight="simples et transparents"
+            subtitle="Sans engagement. 1 crédit = 1 pièce meublée + vidéo cinématique. Choisissez la formule qui vous convient."
+          />
+
+          <PricingGrid />
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          FAQ
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section
+        id="faq"
+        className="py-24 px-6 lg:py-32 border-t border-border/50 bg-surface/20"
+      >
+        <div className="mx-auto max-w-3xl">
+          <SectionHeading
+            badge="FAQ"
+            title="Questions"
+            highlight="fréquentes"
+            subtitle="Tout ce que vous devez savoir avant de commencer."
+          />
+
+          <div className="rounded-2xl border border-border/60 bg-surface/40 px-6 backdrop-blur-sm">
+            {FAQS.map((faq) => (
+              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          FINAL CTA
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <section className="relative py-32 px-6 border-t border-border/50 overflow-hidden">
+        {/* Glow */}
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute left-1/2 top-1/2 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[160px]"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(200,164,90,0.08) 0%, transparent 70%)",
+            }}
+          />
+        </div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeUp}
+          className="relative z-10 mx-auto max-w-3xl text-center"
+        >
+          <h2 className="text-3xl font-bold sm:text-4xl lg:text-5xl">
+            Prêt à transformer vos{" "}
+            <span className="text-gradient-gold">annonces</span> ?
+          </h2>
+          <p className="mt-5 text-lg text-muted">
+            Rejoignez les 500+ agences qui vendent plus vite grâce au staging
+            virtuel IA.
           </p>
-          <div className="flex items-center gap-6">
-            <Link href="/pricing" className="text-sm text-muted hover:text-foreground transition-colors">
-              Tarifs
+          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Link
+              href="/new"
+              className="group inline-flex items-center gap-2.5 rounded-xl gradient-gold px-8 py-4 text-base font-semibold text-zinc-900 shadow-xl shadow-amber-900/25 transition-all hover:shadow-amber-900/40 hover:scale-[1.02]"
+            >
+              <Sparkles className="h-5 w-5" />
+              Essayer gratuitement
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <Link href="/login" className="text-sm text-muted hover:text-foreground transition-colors">
-              Connexion
+            <Link
+              href="#pricing"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-7 py-4 text-base font-medium text-foreground backdrop-blur-sm transition-all hover:bg-surface-hover"
+            >
+              Voir les tarifs
             </Link>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          FOOTER
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <footer className="border-t border-border/50 bg-surface/20">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand */}
+            <div className="lg:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
+                  <Sparkles className="h-3.5 w-3.5 text-zinc-900" />
+                </div>
+                <span className="text-lg font-bold tracking-wide text-gradient-gold">
+                  VIMIMO
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed text-muted max-w-xs">
+                Le staging virtuel IA pour les professionnels de l&apos;immobilier.
+                Vendez plus vite, impressionnez vos clients.
+              </p>
+            </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
+                Produit
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <a
+                    href="#features"
+                    className="text-sm text-muted transition-colors hover:text-foreground"
+                  >
+                    Fonctionnalités
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#pricing"
+                    className="text-sm text-muted transition-colors hover:text-foreground"
+                  >
+                    Tarifs
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#how"
+                    className="text-sm text-muted transition-colors hover:text-foreground"
+                  >
+                    Comment ça marche
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#faq"
+                    className="text-sm text-muted transition-colors hover:text-foreground"
+                  >
+                    FAQ
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
+                Entreprise
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <Link
+                    href="/login"
+                    className="text-sm text-muted transition-colors hover:text-foreground"
+                  >
+                    Connexion
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/pricing"
+                    className="text-sm text-muted transition-colors hover:text-foreground"
+                  >
+                    Tarifs
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Légal */}
+            <div>
+              <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
+                Légal
+              </h4>
+              <ul className="space-y-2.5">
+                <li>
+                  <span className="text-sm text-muted">
+                    Mentions légales
+                  </span>
+                </li>
+                <li>
+                  <span className="text-sm text-muted">
+                    Politique de confidentialité
+                  </span>
+                </li>
+                <li>
+                  <span className="text-sm text-muted">CGV</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/50 pt-8 sm:flex-row">
+            <p className="text-xs text-muted">
+              &copy; {new Date().getFullYear()} VIMIMO. Tous droits réservés.
+            </p>
+            <p className="text-xs text-muted">
+              Fait avec{" "}
+              <span className="text-gradient-gold font-medium">&#9829;</span> a
+              Paris
+            </p>
           </div>
         </div>
       </footer>
