@@ -15,9 +15,22 @@ app.use(express.json({ limit: "10mb" }));
 // CORS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+
+// Auth middleware — skip /health, require Bearer token on all other routes
+const RENDER_SECRET = process.env.RENDER_SECRET || "vimimo-dev-secret";
+
+app.use((req, res, next) => {
+  if (req.path === "/health") return next();
+
+  const auth = req.headers.authorization;
+  if (!auth || auth !== `Bearer ${RENDER_SECRET}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   next();
 });
 

@@ -138,12 +138,20 @@ export async function POST(request: Request) {
         const creditsPerMonth = parseInt(metadata.creditsPerMonth || "0", 10);
 
         if (userId && creditsPerMonth) {
-          const desc = isFirstPayment
-            ? `Abonnement ${metadata.planId} — ${creditsPerMonth} crédits (premier mois)`
-            : `Renouvellement ${metadata.planId} — ${creditsPerMonth} crédits`;
+          // Detect annual billing: use metadata first, fall back to price interval
+          const isYearly =
+            metadata.billing === "yearly" ||
+            sub.items.data[0]?.price?.recurring?.interval === "year";
 
-          await addCredits(userId, creditsPerMonth, desc, invoice.id);
-          console.log(`Subscription credits: ${creditsPerMonth} for user ${userId} (${invoice.billing_reason})`);
+          const credits = isYearly ? creditsPerMonth * 12 : creditsPerMonth;
+          const billingLabel = isYearly ? "annuel" : "mensuel";
+
+          const desc = isFirstPayment
+            ? `Abonnement ${metadata.planId} — ${credits} crédits (${billingLabel}, premier paiement)`
+            : `Renouvellement ${metadata.planId} — ${credits} crédits (${billingLabel})`;
+
+          await addCredits(userId, credits, desc, invoice.id);
+          console.log(`Subscription credits: ${credits} for user ${userId} (${invoice.billing_reason}, ${billingLabel})`);
         }
         break;
       }

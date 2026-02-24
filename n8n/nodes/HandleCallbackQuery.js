@@ -42,7 +42,7 @@ function get(url, headers = {}) {
   return httpRequest(url, { headers, timeout: 600000 });
 }
 
-function downloadBinary(url) {
+function downloadBinary(url, headers) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const lib = u.protocol === 'https:' ? https : http;
@@ -50,7 +50,8 @@ function downloadBinary(url) {
       hostname: u.hostname,
       port: u.port || (u.protocol === 'https:' ? 443 : 80),
       path: u.pathname + u.search,
-      method: 'GET'
+      method: 'GET',
+      headers: headers || {}
     };
     const req = lib.request(opts, (res) => {
       const chunks = [];
@@ -118,6 +119,8 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN || '8120972729:AAFlDrC7dfgnTAqAj
 const openaiKey = process.env.OPENAI_API_KEY || 'OPENAI_KEY_REDACTED';
 const replicateToken = process.env.REPLICATE_API_TOKEN || 'REPLICATE_TOKEN_REDACTED';
 const repHeaders = { 'Authorization': `Bearer ${replicateToken}` };
+const renderSecret = 'vimimo-dev-secret';
+const renderHeaders = { 'Authorization': `Bearer ${renderSecret}` };
 
 // Answer callback query immediately (Telegram requirement)
 await post(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
@@ -750,7 +753,7 @@ if (choice === 'regen') {
       }
     };
 
-    const renderResp = await post('http://172.18.0.1:8000/renders', remotionPayload);
+    const renderResp = await post('http://172.18.0.1:8000/renders', remotionPayload, renderHeaders);
     const renderId = renderResp.data.id;
 
     // Poll render status (server uses 'done'/'error')
@@ -758,7 +761,7 @@ if (choice === 'regen') {
     let renderData;
     while (renderStatus !== 'done' && renderStatus !== 'error') {
       await new Promise(r => setTimeout(r, 15000));
-      const pollResp = await get(`http://172.18.0.1:8000/renders/${renderId}`);
+      const pollResp = await get(`http://172.18.0.1:8000/renders/${renderId}`, renderHeaders);
       renderData = pollResp.data;
       renderStatus = renderData.status || 'rendering';
     }
@@ -774,7 +777,7 @@ if (choice === 'regen') {
 
     // Download via /renders/:id/download endpoint and upload to Telegram
     const internalVideoUrl = `http://172.18.0.1:8000/renders/${renderId}/download`;
-    const videoBuffer = await downloadBinary(internalVideoUrl);
+    const videoBuffer = await downloadBinary(internalVideoUrl, renderHeaders);
 
     if (videoBuffer.length < 1000) {
       await post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
