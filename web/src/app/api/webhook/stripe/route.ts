@@ -86,7 +86,7 @@ export async function POST(request: Request) {
                 metadata: {
                   ...session.metadata,
                   userId: guestUserId,
-                  guest: undefined,
+                  guest: "",
                 },
               });
               console.log(`Guest subscription ${subId} linked to user ${guestUserId}`);
@@ -201,7 +201,7 @@ export async function POST(request: Request) {
               }
               // Persist userId in subscription metadata for future events
               await stripe.subscriptions.update(sub.id, {
-                metadata: { ...metadata, userId, guest: undefined },
+                metadata: { ...metadata, userId, guest: "" },
               });
             }
           }
