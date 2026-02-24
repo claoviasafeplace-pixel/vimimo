@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   Sparkles,
@@ -37,8 +37,8 @@ const NAV_LINKS = [
 
 const STATS = [
   { value: "500+", label: "agences clientes" },
-  { value: "<2min", label: "par pièce" },
-  { value: "4K", label: "qualité rendu" },
+  { value: "100%", label: "automatisé" },
+  { value: "8K", label: "qualité rendu" },
   { value: "95%", label: "satisfaction" },
 ];
 
@@ -51,9 +51,9 @@ const FEATURES = [
   },
   {
     icon: Wand2,
-    title: "Staging IA instantané",
+    title: "5 styles au choix",
     description:
-      "5 options de décoration professionnelle par pièce. Scandinave, moderne, classique... Choisissez le style qui vend.",
+      "Scandinave, moderne, classique, industriel, bohème. 5 propositions de décoration par pièce pour trouver celle qui fait vendre.",
   },
   {
     icon: Rocket,
@@ -63,9 +63,9 @@ const FEATURES = [
   },
   {
     icon: Zap,
-    title: "Résultats en minutes",
+    title: "Entièrement automatisé",
     description:
-      "Pas besoin d'attendre des jours. Obtenez vos visuels et vidéos de staging en quelques minutes seulement.",
+      "Aucune intervention manuelle. L'IA gère le nettoyage, le staging et le montage vidéo de bout en bout pendant que vous travaillez.",
   },
   {
     icon: Shield,
@@ -133,7 +133,7 @@ const FAQS = [
   },
   {
     q: "Combien de temps faut-il pour obtenir un résultat ?",
-    a: "Le staging d'une pièce prend environ 2 minutes. Vous recevez 5 options de décoration + une vidéo cinématique avant/après.",
+    a: "Le pipeline complet — nettoyage, staging 5 options, vidéo cinématique — prend entre 5 et 10 minutes par pièce. Tout est automatisé, vous n'avez rien à faire.",
   },
   {
     q: "Puis-je essayer avant d'acheter ?",
@@ -149,10 +149,18 @@ const FAQS = [
   },
 ];
 
-const BEFORE_IMG =
-  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80";
-const AFTER_IMG =
-  "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&q=80";
+const COMPARISONS = [
+  {
+    before: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=960&q=85",
+    after: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=960&q=85",
+    label: "Salon — Style Scandinave",
+  },
+  {
+    before: "https://images.unsplash.com/photo-1564540586988-aa4e53c3d799?w=960&q=85",
+    after: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=960&q=85",
+    label: "Chambre — Style Moderne",
+  },
+];
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -196,6 +204,125 @@ function SectionHeading({
       </h2>
       <p className="mt-5 text-lg leading-relaxed text-muted">{subtitle}</p>
     </motion.div>
+  );
+}
+
+function BeforeAfterSlider({
+  before,
+  after,
+  label,
+}: {
+  before: string;
+  after: string;
+  label: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const updatePosition = useCallback(
+    (clientX: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      setPosition((x / rect.width) * 100);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => updatePosition(e.clientX);
+    const onTouchMove = (e: TouchEvent) => updatePosition(e.touches[0].clientX);
+    const onUp = () => setIsDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, [isDragging, updatePosition]);
+
+  return (
+    <div className="space-y-3">
+      <div
+        ref={containerRef}
+        className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border/60 cursor-col-resize select-none"
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          updatePosition(e.clientX);
+        }}
+        onTouchStart={(e) => {
+          setIsDragging(true);
+          updatePosition(e.touches[0].clientX);
+        }}
+      >
+        {/* After image (full background) */}
+        <img
+          src={after}
+          alt="Après staging IA"
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+
+        {/* Before image (clipped) */}
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{ width: `${position}%` }}
+        >
+          <img
+            src={before}
+            alt="Avant — pièce vide"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ width: `${containerRef.current?.offsetWidth ?? 960}px`, maxWidth: "none" }}
+            draggable={false}
+          />
+        </div>
+
+        {/* Slider line */}
+        <div
+          className="absolute top-0 bottom-0 z-10 w-0.5 bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+          style={{ left: `${position}%`, transform: "translateX(-50%)" }}
+        >
+          {/* Handle */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg backdrop-blur-sm border border-white/20">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="text-zinc-800"
+            >
+              <path
+                d="M4.5 3L1.5 8L4.5 13M11.5 3L14.5 8L11.5 13"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Labels */}
+        <div className="absolute top-4 left-4 z-20">
+          <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/10">
+            AVANT
+          </span>
+        </div>
+        <div className="absolute top-4 right-4 z-20">
+          <span className="rounded-full gradient-gold px-3 py-1 text-xs font-semibold text-zinc-900">
+            APRÈS — IA
+          </span>
+        </div>
+      </div>
+      <p className="text-center text-sm text-muted">{label}</p>
+    </div>
   );
 }
 
@@ -401,45 +528,44 @@ export default function LandingPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6 }}
           className="relative z-10 mb-8"
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-badge-gold-border bg-badge-gold-bg/60 px-5 py-2 text-sm font-medium text-badge-gold-text backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5" />
-            Propulsé par l&apos;Intelligence Artificielle
+            Virtual Staging nouvelle génération
           </span>
         </motion.div>
 
         {/* Headline */}
         <motion.h1
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.21, 0.47, 0.32, 0.98] as const }}
           className="relative z-10 max-w-5xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
         >
-          Vendez{" "}
-          <span className="text-gradient-gold">2x plus vite</span>
+          <span className="text-gradient-gold">Sublimez</span> vos biens.
           <br />
-          <span className="text-muted">grâce au staging</span>{" "}
-          <span className="text-gradient-gold">IA</span>
+          <span className="text-muted">Vendez</span>{" "}
+          <span className="text-gradient-gold">plus vite.</span>
         </motion.h1>
 
         {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
+          transition={{ duration: 0.7, delay: 0.35, ease: [0.21, 0.47, 0.32, 0.98] as const }}
           className="relative z-10 mt-8 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl"
         >
-          Transformez vos photos de pièces vides en visuels et vidéos de staging
-          professionnel. En quelques minutes, pas en quelques semaines.
+          Notre IA transforme vos photos de pièces vides en staging photoréaliste
+          et vidéos cinématiques — avec un niveau de détail qui rivalise avec un décorateur professionnel.
         </motion.p>
 
         {/* CTAs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
           className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row"
         >
           <Link
@@ -447,15 +573,15 @@ export default function LandingPage() {
             className="group inline-flex items-center gap-2.5 rounded-xl gradient-gold px-8 py-4 text-base font-semibold text-zinc-900 shadow-xl shadow-amber-900/25 transition-all hover:shadow-amber-900/40 hover:scale-[1.02]"
           >
             <Sparkles className="h-5 w-5" />
-            Commencer gratuitement
+            Essayer maintenant
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <a
-            href="#how"
+            href="#demo"
             className="inline-flex items-center gap-2.5 rounded-xl border border-border bg-surface/60 px-7 py-4 text-base font-medium text-foreground backdrop-blur-sm transition-all hover:bg-surface-hover hover:border-border"
           >
             <Play className="h-4 w-4 text-icon-accent" />
-            Voir comment ça marche
+            Voir le résultat
           </a>
         </motion.div>
 
@@ -463,8 +589,8 @@ export default function LandingPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="relative z-10 mt-12 flex flex-col items-center gap-3 sm:flex-row sm:gap-6"
+          transition={{ duration: 0.8, delay: 0.7 }}
+          className="relative z-10 mt-14 flex flex-col items-center gap-3 sm:flex-row sm:gap-6"
         >
           <div className="flex -space-x-2">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -484,9 +610,9 @@ export default function LandingPage() {
               ))}
             </div>
             <span>
-              Utilisé par{" "}
+              Adopté par{" "}
               <span className="font-semibold text-foreground">500+</span> agences
-              immobilières
+              immobilières en France
             </span>
           </div>
         </motion.div>
@@ -543,69 +669,28 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl">
           <SectionHeading
             badge="Avant / Après"
-            title="Le résultat parle de"
-            highlight="lui-même"
-            subtitle="Comparez une pièce vide et son staging IA. Même angle, même lumière, un tout autre impact émotionnel."
+            title="Jugez par"
+            highlight="vous-même"
+            subtitle="Glissez le curseur pour révéler la transformation. Même pièce, même angle — un tout autre impact émotionnel."
           />
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-80px" }}
-              variants={{
-                hidden: { opacity: 0, x: -40 },
-                visible: {
-                  opacity: 1,
-                  x: 0,
-                  transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] },
-                },
-              }}
-              className="group relative overflow-hidden rounded-2xl border border-border"
-            >
-              <img
-                src={BEFORE_IMG}
-                alt="Pièce vide avant staging"
-                className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4">
-                <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-md border border-white/20">
-                  AVANT
-                </span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-80px" }}
-              variants={{
-                hidden: { opacity: 0, x: 40 },
-                visible: {
-                  opacity: 1,
-                  x: 0,
-                  transition: {
-                    duration: 0.7,
-                    delay: 0.15,
-                    ease: [0.21, 0.47, 0.32, 0.98],
-                  },
-                },
-              }}
-              className="group relative overflow-hidden rounded-2xl border border-badge-gold-border/50"
-            >
-              <img
-                src={AFTER_IMG}
-                alt="Pièce meublée par staging IA"
-                className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4">
-                <span className="rounded-full gradient-gold px-4 py-1.5 text-sm font-semibold text-zinc-900">
-                  APRES — IA
-                </span>
-              </div>
-            </motion.div>
+          <div className="grid gap-8 lg:grid-cols-2">
+            {COMPARISONS.map((comp, i) => (
+              <motion.div
+                key={comp.label}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                variants={fadeUp}
+              >
+                <BeforeAfterSlider
+                  before={comp.before}
+                  after={comp.after}
+                  label={comp.label}
+                />
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -806,12 +891,12 @@ export default function LandingPage() {
           className="relative z-10 mx-auto max-w-3xl text-center"
         >
           <h2 className="text-3xl font-bold sm:text-4xl lg:text-5xl">
-            Prêt à transformer vos{" "}
+            Prêt à sublimer vos{" "}
             <span className="text-gradient-gold">annonces</span> ?
           </h2>
           <p className="mt-5 text-lg text-muted">
-            Rejoignez les 500+ agences qui vendent plus vite grâce au staging
-            virtuel IA.
+            Rejoignez les agences qui ont choisi le staging IA pour se
+            démarquer et vendre plus vite.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
