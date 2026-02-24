@@ -38,46 +38,96 @@ export async function POST(request: Request) {
 
     // --- Guest mode: Stripe collects email, user created in webhook ---
     if (isGuest) {
-      // Guests can only buy packs (no subscriptions)
-      if (!packId) {
-        return NextResponse.json(
-          { error: "Connectez-vous pour souscrire un abonnement." },
-          { status: 401 }
-        );
-      }
+      if (packId) {
+        const pack = CREDIT_PACKS.find((p) => p.id === packId);
+        if (!pack) {
+          return NextResponse.json({ error: "Pack invalide" }, { status: 400 });
+        }
 
-      const pack = CREDIT_PACKS.find((p) => p.id === packId);
-      if (!pack) {
-        return NextResponse.json({ error: "Pack invalide" }, { status: 400 });
-      }
-
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_creation: "always",
-        line_items: [
-          {
-            price_data: {
-              currency: "eur",
-              product_data: {
-                name: `VIMIMO — Pack ${pack.name}`,
-                description: `${pack.credits} crédits de staging IA`,
+        const checkoutSession = await stripe.checkout.sessions.create({
+          mode: "payment",
+          customer_creation: "always",
+          line_items: [
+            {
+              price_data: {
+                currency: "eur",
+                product_data: {
+                  name: `VIMIMO — Pack ${pack.name}`,
+                  description: `${pack.credits} biens de staging IA`,
+                },
+                unit_amount: Math.round(pack.priceEur * 100),
               },
-              unit_amount: Math.round(pack.priceEur * 100),
+              quantity: 1,
             },
-            quantity: 1,
+          ],
+          metadata: {
+            type: "pack",
+            packId: pack.id,
+            credits: String(pack.credits),
+            guest: "true",
           },
-        ],
-        metadata: {
-          type: "pack",
-          packId: pack.id,
-          credits: String(pack.credits),
-          guest: "true",
-        },
-        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/pricing`,
-      });
+          success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/pricing`,
+        });
 
-      return NextResponse.json({ url: checkoutSession.url });
+        return NextResponse.json({ url: checkoutSession.url });
+      }
+
+      if (planId) {
+        const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
+        if (!plan) {
+          return NextResponse.json({ error: "Plan invalide" }, { status: 400 });
+        }
+
+        const isYearly = billing === "yearly";
+        const interval = isYearly ? "year" : "month";
+        const unitAmount = isYearly
+          ? Math.round(plan.priceEurYearly * 100)
+          : Math.round(plan.priceEur * 100);
+        const description = isYearly
+          ? `${plan.creditsPerMonth} biens / mois (annuel)`
+          : `${plan.creditsPerMonth} biens / mois`;
+
+        const checkoutSession = await stripe.checkout.sessions.create({
+          mode: "subscription",
+          customer_creation: "always",
+          line_items: [
+            {
+              price_data: {
+                currency: "eur",
+                product_data: {
+                  name: `VIMIMO — ${plan.name}`,
+                  description,
+                },
+                unit_amount: unitAmount,
+                recurring: { interval },
+              },
+              quantity: 1,
+            },
+          ],
+          subscription_data: {
+            metadata: {
+              type: "subscription",
+              planId: plan.id,
+              creditsPerMonth: String(plan.creditsPerMonth),
+              billing: isYearly ? "yearly" : "monthly",
+              guest: "true",
+            },
+          },
+          metadata: {
+            type: "subscription",
+            planId: plan.id,
+            billing: isYearly ? "yearly" : "monthly",
+            guest: "true",
+          },
+          success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/pricing`,
+        });
+
+        return NextResponse.json({ url: checkoutSession.url });
+      }
+
+      return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });
     }
 
     // --- Authenticated user flow ---

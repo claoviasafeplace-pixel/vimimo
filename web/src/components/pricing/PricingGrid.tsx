@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { AlertCircle } from "lucide-react";
 import PricingCard from "./PricingCard";
 import SubscriptionCard from "./SubscriptionCard";
@@ -12,8 +10,6 @@ type Tab = "subscriptions" | "packs";
 type Billing = "monthly" | "yearly";
 
 export default function PricingGrid() {
-  const router = useRouter();
-  const { data: session } = useSession();
   const [tab, setTab] = useState<Tab>("subscriptions");
   const [billing, setBilling] = useState<Billing>("monthly");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -24,11 +20,6 @@ export default function PricingGrid() {
     billing?: Billing;
   }) => {
     setCheckoutError(null);
-    // Guests must log in for subscriptions, but can buy packs directly
-    if (!session && !params.packId) {
-      router.push("/login");
-      return;
-    }
 
     try {
       const res = await fetch("/api/checkout", {

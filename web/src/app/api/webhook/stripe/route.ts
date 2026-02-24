@@ -42,9 +42,58 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
-      // --- One-time credit pack purchase ---
+      // --- Checkout completed (pack or subscription) ---
       case "checkout.session.completed": {
         const session = event.data.object;
+
+        // For guest subscriptions, resolve user and attach userId to subscription metadata
+        if (session.metadata?.type === "subscription" && session.metadata?.guest === "true") {
+          const email = session.customer_details?.email;
+          const customerId = typeof session.customer === "string" ? session.customer : null;
+          const subId = typeof session.subscription === "string" ? session.subscription : null;
+
+          if (email && customerId && subId) {
+            let guestUserId: string | undefined;
+            const existingUser = await getUserByEmail(email);
+            if (existingUser) {
+              guestUserId = existingUser.id;
+              if (!existingUser.stripe_customer_id) {
+                await updateUser(guestUserId, { stripe_customer_id: customerId });
+              }
+            } else {
+              const newId = nanoid(12);
+              const now = new Date().toISOString();
+              const db = getSupabase();
+              const { error } = await db.from("users").insert({
+                id: newId,
+                email,
+                name: session.customer_details?.name ?? null,
+                image: null,
+                credits: 0,
+                stripe_customer_id: customerId,
+                created_at: now,
+                updated_at: now,
+              });
+              if (!error) {
+                guestUserId = newId;
+                console.log(`Guest user created via checkout: ${guestUserId} (${email})`);
+              }
+            }
+
+            if (guestUserId) {
+              // Attach userId to subscription metadata for invoice.payment_succeeded
+              await stripe.subscriptions.update(subId, {
+                metadata: {
+                  ...session.metadata,
+                  userId: guestUserId,
+                  guest: undefined,
+                },
+              });
+              console.log(`Guest subscription ${subId} linked to user ${guestUserId}`);
+            }
+          }
+          break;
+        }
 
         if (session.metadata?.type !== "pack") break;
 
@@ -109,11 +158,57 @@ export async function POST(request: Request) {
       case "customer.subscription.updated": {
         const sub = event.data.object;
         const metadata = sub.metadata || {};
-        const userId = metadata.userId;
+        let userId = metadata.userId;
         const planId = metadata.planId;
 
-        if (!userId || !planId) {
-          console.error("Missing subscription metadata:", sub.id);
+        if (!planId) {
+          console.error("Missing planId in subscription metadata:", sub.id);
+          break;
+        }
+
+        // Guest subscription: resolve or create user from Stripe customer email
+        if (!userId && metadata.guest === "true") {
+          const customerId = typeof sub.customer === "string" ? sub.customer : null;
+          if (customerId) {
+            const customer = await stripe.customers.retrieve(customerId);
+            if ("email" in customer && customer.email) {
+              const existingUser = await getUserByEmail(customer.email);
+              if (existingUser) {
+                userId = existingUser.id;
+                if (!existingUser.stripe_customer_id) {
+                  await updateUser(userId, { stripe_customer_id: customerId });
+                }
+              } else {
+                const newId = nanoid(12);
+                const now = new Date().toISOString();
+                const db = getSupabase();
+                const { error } = await db.from("users").insert({
+                  id: newId,
+                  email: customer.email,
+                  name: ("name" in customer ? customer.name : null) ?? null,
+                  image: null,
+                  credits: 0,
+                  stripe_customer_id: customerId,
+                  created_at: now,
+                  updated_at: now,
+                });
+                if (error) {
+                  console.error("Failed to create guest user for subscription:", error);
+                  break;
+                }
+                userId = newId;
+                console.log(`Guest user created for subscription: ${userId} (${customer.email})`);
+              }
+              // Persist userId in subscription metadata for future events
+              await stripe.subscriptions.update(sub.id, {
+                metadata: { ...metadata, userId, guest: undefined },
+              });
+            }
+          }
+        }
+
+        if (!userId) {
+          console.error("Could not resolve userId for subscription:", sub.id);
           break;
         }
 
