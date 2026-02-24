@@ -425,13 +425,13 @@ export default function LandingPage() {
                 >
                   Se connecter
                 </Link>
-                <Link
-                  href="/new"
+                <a
+                  href="#pricing"
                   className="inline-flex items-center gap-2 rounded-lg gradient-gold px-5 py-2.5 text-sm font-semibold text-zinc-900 shadow-lg shadow-amber-900/20 transition-all hover:opacity-90 hover:shadow-amber-900/30"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  Démarrer
-                </Link>
+                  Voir les tarifs
+                </a>
               </>
             )}
           </div>
@@ -476,13 +476,14 @@ export default function LandingPage() {
               >
                 Se connecter
               </Link>
-              <Link
-                href="/new"
+              <a
+                href="#pricing"
+                onClick={() => setMobileMenuOpen(false)}
                 className="inline-flex items-center justify-center gap-2 rounded-lg gradient-gold px-4 py-2.5 text-sm font-semibold text-zinc-900"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                Démarrer gratuitement
-              </Link>
+                Voir les tarifs
+              </a>
             </div>
           </motion.div>
         )}
@@ -567,14 +568,14 @@ export default function LandingPage() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row"
         >
-          <Link
-            href="/new"
+          <a
+            href="#pricing"
             className="group inline-flex items-center gap-2.5 rounded-xl gradient-gold px-8 py-4 text-base font-semibold text-zinc-900 shadow-xl shadow-amber-900/25 transition-all hover:shadow-amber-900/40 hover:scale-[1.02]"
           >
             <Sparkles className="h-5 w-5" />
-            Essayer maintenant
+            Voir les tarifs
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
+          </a>
           <a
             href="#demo"
             className="inline-flex items-center gap-2.5 rounded-xl border border-border bg-surface/60 px-7 py-4 text-base font-medium text-foreground backdrop-blur-sm transition-all hover:bg-surface-hover hover:border-border"
@@ -826,7 +827,7 @@ export default function LandingPage() {
             badge="Tarifs"
             title="Des tarifs"
             highlight="simples et transparents"
-            subtitle="Sans engagement. 1 crédit = 1 pièce meublée + vidéo cinématique. Choisissez la formule qui vous convient."
+            subtitle="1 crédit = 1 photo traitée (5 options de staging + 1 vidéo cinématique). Un bien complet de 15 photos nécessite 15 crédits. Sans engagement, sans abonnement obligatoire."
           />
 
           <PricingGrid />
@@ -887,14 +888,14 @@ export default function LandingPage() {
             vos annonces et accélérer vos ventes.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link
-              href="/new"
+            <a
+              href="#pricing"
               className="group inline-flex items-center gap-2.5 rounded-xl gradient-gold px-8 py-4 text-base font-semibold text-zinc-900 shadow-xl shadow-amber-900/25 transition-all hover:shadow-amber-900/40 hover:scale-[1.02]"
             >
               <Sparkles className="h-5 w-5" />
-              Essayer gratuitement
+              Voir les tarifs
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            </a>
             <Link
               href="#pricing"
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-7 py-4 text-base font-medium text-foreground backdrop-blur-sm transition-all hover:bg-surface-hover"

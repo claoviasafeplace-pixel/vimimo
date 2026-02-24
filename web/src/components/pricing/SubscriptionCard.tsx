@@ -53,6 +53,11 @@ export default function SubscriptionCard({ plan, billing, onSubscribe }: Subscri
         <p className="mt-1 text-sm text-muted">
           {plan.creditsPerMonth} crédits / mois
         </p>
+        {plan.id === "pro" && (
+          <p className="mt-2 text-xs font-semibold text-badge-gold-text">
+            Idéal pour un bien immobilier complet (15 photos)
+          </p>
+        )}
       </div>
 
       <div className="mb-6">
