@@ -83,7 +83,7 @@ export default function AuthButton() {
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface-hover"
           >
             <Coins className="h-4 w-4 text-muted" />
-            Acheter des crédits
+            Acheter des biens
           </Link>
 
           <button

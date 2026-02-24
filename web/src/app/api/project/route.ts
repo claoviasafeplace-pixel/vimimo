@@ -37,10 +37,9 @@ export async function POST(request: Request) {
     const { photos, style, mode, propertyInfo, music } = parsed.data;
     const projectMode: ProjectMode = mode || "staging_piece";
 
-    const maxPhotos = projectMode === "video_visite" ? 30 : 20;
-    if (photos.length > maxPhotos) {
+    if (photos.length > 6) {
       return NextResponse.json(
-        { error: `Maximum ${maxPhotos} photos autorisées` },
+        { error: "Pour garantir une qualité vidéo optimale pour les réseaux sociaux, la limite est de 6 photos par bien." },
         { status: 400 }
       );
     }
@@ -52,8 +51,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Credit check: video_visite = 1 credit flat, staging_piece = 1 per photo
-    const creditsNeeded = projectMode === "video_visite" ? 1 : photos.length;
+    // Credit check: 1 Bien = 1 crédit (flat, quel que soit le mode)
+    const creditsNeeded = 1;
     const user = await getUserById(userId);
     if (!user || user.credits < creditsNeeded) {
       return NextResponse.json(
@@ -70,7 +69,7 @@ export async function POST(request: Request) {
       userId,
       creditsNeeded,
       projectId,
-      `Projet ${projectId} — ${creditsNeeded} pièce(s)`
+      `Projet ${projectId} — 1 bien`
     );
 
     // Launch cleaning predictions for all photos

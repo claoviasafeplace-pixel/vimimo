@@ -14,14 +14,14 @@ const MODES = [
     id: "staging_piece" as ProjectMode,
     label: "Staging par pièce",
     description: "Sélectionnez manuellement le staging de chaque pièce",
-    detail: "1 crédit / pièce",
+    detail: "1 bien",
     icon: LayoutGrid,
   },
   {
     id: "video_visite" as ProjectMode,
     label: "Video Visite",
     description: "Visite complète automatique en 1 clic",
-    detail: "1 crédit total",
+    detail: "1 bien",
     icon: Video,
   },
 ];

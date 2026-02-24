@@ -99,7 +99,7 @@ export default function NewProjectPage() {
                 Uploadez vos photos et choisissez un style
               </p>
               <p className="mt-1 text-xs text-muted">
-                Solde : <span className="font-semibold text-foreground">{session.user.credits}</span> crédits
+                Solde : <span className="font-semibold text-foreground">{session.user.credits}</span> bien{session.user.credits > 1 ? "s" : ""}
               </p>
             </div>
 
@@ -118,7 +118,7 @@ export default function NewProjectPage() {
                   <span>
                     Crédits insuffisants.{" "}
                     <Link href="/pricing" className="text-icon-accent hover:underline">
-                      Acheter des crédits
+                      Acheter des biens
                     </Link>
                   </span>
                 ) : (
@@ -154,8 +154,8 @@ export default function NewProjectPage() {
                   <>
                     <Sparkles className="mr-2 h-5 w-5" />
                     {mode === "video_visite"
-                      ? "Lancer la Video Visite (1 crédit)"
-                      : `Lancer le staging (${photos.length} crédit${photos.length > 1 ? "s" : ""})`}
+                      ? "Lancer la Video Visite (1 bien)"
+                      : "Lancer le staging (1 bien)"}
                   </>
                 )}
               </Button>

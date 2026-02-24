@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { Style, ProjectMode, PropertyInfo, MusicChoice } from "@/lib/types";
 
@@ -67,7 +67,7 @@ export function useUpload() {
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const maxPhotos = useMemo(() => (mode === "video_visite" ? 30 : 20), [mode]);
+  const maxPhotos = 6;
 
   const addFiles = useCallback((files: File[]) => {
     const newPhotos = files.map((file) => {

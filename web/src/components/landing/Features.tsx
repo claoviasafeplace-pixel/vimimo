@@ -8,7 +8,7 @@ const features = [
   {
     icon: Upload,
     title: "Upload",
-    description: "Glissez-déposez vos photos de pièces vides. Jusqu'à 20 photos par projet.",
+    description: "Glissez-déposez vos photos de pièces vides. Jusqu'à 6 photos par bien.",
   },
   {
     icon: Wand2,

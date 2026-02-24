@@ -54,7 +54,7 @@ export default function DashboardShell({
           <div className="rounded-xl border border-badge-gold-border/40 bg-badge-gold-bg/30 p-4">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-badge-gold-text">
               <Coins className="h-3.5 w-3.5" />
-              Crédits disponibles
+              Biens restants
             </div>
             <p className="mt-2 text-3xl font-bold text-gradient-gold">{credits}</p>
             <Link
@@ -147,7 +147,7 @@ export default function DashboardShell({
               <div className="rounded-xl border border-badge-gold-border/40 bg-badge-gold-bg/30 p-4">
                 <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-badge-gold-text">
                   <Coins className="h-3.5 w-3.5" />
-                  Crédits
+                  Biens restants
                 </div>
                 <p className="mt-2 text-3xl font-bold text-gradient-gold">{credits}</p>
               </div>

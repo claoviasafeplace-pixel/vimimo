@@ -13,7 +13,7 @@ interface DropZoneProps {
   maxPhotos?: number;
 }
 
-export default function DropZone({ onFiles, disabled, maxPhotos = 20 }: DropZoneProps) {
+export default function DropZone({ onFiles, disabled, maxPhotos = 6 }: DropZoneProps) {
   const [rejection, setRejection] = useState<string | null>(null);
 
   const onDrop = useCallback(
@@ -78,7 +78,7 @@ export default function DropZone({ onFiles, disabled, maxPhotos = 20 }: DropZone
                 : "Glissez-déposez vos photos"}
             </p>
             <p className="mt-1 text-sm text-muted">
-              {`ou cliquez pour sélectionner (max. ${maxPhotos} photos, 20 Mo/image)`}
+              {`Sélectionnez jusqu'à ${maxPhotos} photos maîtresses (vidéo optimisée ~25s pour vos réseaux)`}
             </p>
           </div>
         </div>

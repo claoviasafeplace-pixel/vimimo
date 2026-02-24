@@ -53,14 +53,14 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
           {pack.priceEur.toFixed(2).replace(".", ",")}€
         </span>
         <span className="ml-2 text-sm text-muted">
-          soit {pricePerCredit.replace(".", ",")}€ / pièce
+          soit {pricePerCredit.replace(".", ",")}€ / bien
         </span>
       </div>
 
       <ul className="mb-8 flex-1 space-y-2.5">
         <li className="flex items-center gap-2 text-sm text-feature-text">
           <Check className="h-4 w-4 text-icon-accent shrink-0" />
-          {pack.credits} photo{pack.credits > 1 ? "s" : ""} traitée{pack.credits > 1 ? "s" : ""}
+          {pack.credits} bien{pack.credits > 1 ? "s" : ""} immobilier{pack.credits > 1 ? "s" : ""} complet{pack.credits > 1 ? "s" : ""}
         </li>
         <li className="flex items-center gap-2 text-sm text-feature-text">
           <Check className="h-4 w-4 text-icon-accent shrink-0" />
@@ -68,11 +68,7 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
         </li>
         <li className="flex items-center gap-2 text-sm text-feature-text">
           <Check className="h-4 w-4 text-icon-accent shrink-0" />
-          Vidéo IA cinématique
-        </li>
-        <li className="flex items-center gap-2 text-sm text-feature-text">
-          <Check className="h-4 w-4 text-icon-accent shrink-0" />
-          Rendu final compilé
+          Vidéo visite IA cinématique
         </li>
         <li className="flex items-center gap-2 text-sm text-feature-text">
           <Check className="h-4 w-4 text-icon-accent shrink-0" />

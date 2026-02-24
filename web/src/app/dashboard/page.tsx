@@ -127,7 +127,7 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-badge-gold-border/30 bg-badge-gold-bg/20 p-5 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-wider text-badge-gold-text">
-              Crédits
+              Biens restants
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-badge-gold-bg">
               <Coins className="h-4 w-4 text-icon-accent" />

@@ -51,13 +51,8 @@ export default function SubscriptionCard({ plan, billing, onSubscribe }: Subscri
       <div className="mb-6">
         <h3 className="text-lg font-bold">{plan.name}</h3>
         <p className="mt-1 text-sm text-muted">
-          {plan.creditsPerMonth} crédits / mois
+          {plan.creditsPerMonth} bien{plan.creditsPerMonth > 1 ? "s" : ""} / mois
         </p>
-        {plan.id === "pro" && (
-          <p className="mt-2 text-xs font-semibold text-badge-gold-text">
-            Idéal pour un bien immobilier complet (15 photos)
-          </p>
-        )}
       </div>
 
       <div className="mb-6">
@@ -76,7 +71,7 @@ export default function SubscriptionCard({ plan, billing, onSubscribe }: Subscri
           </>
         )}
         <p className="mt-1 text-xs text-muted">
-          soit {pricePerCredit.replace(".", ",")}€ / pièce
+          soit {pricePerCredit.replace(".", ",")}€ / bien
         </p>
       </div>
 

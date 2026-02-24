@@ -38,67 +38,67 @@ const NAV_LINKS = [
 const STATS = [
   { value: "5", label: "styles de décoration" },
   { value: "100%", label: "automatisé" },
-  { value: "8K", label: "qualité rendu" },
+  { value: "1 Bien", label: "= photos + vidéo pub" },
   { value: "4K", label: "vidéo cinématique" },
 ];
 
 const FEATURES = [
   {
     icon: Camera,
-    title: "Upload intelligent",
+    title: "1 Bien = 1 Crédit",
     description:
-      "Importez vos photos de pièces vides depuis n'importe quel appareil. Notre IA détecte automatiquement les murs, sols et perspectives.",
+      "Importez jusqu'à 6 photos de pièces vides d'un même bien. Notre IA analyse chaque pièce et génère un staging complet avec vidéo de visite.",
   },
   {
     icon: Wand2,
-    title: "5 styles au choix",
+    title: "5 décors par pièce",
     description:
-      "Scandinave, moderne, classique, industriel, bohème. 5 propositions de décoration par pièce pour trouver celle qui fait vendre.",
+      "Scandinave, moderne, classique, industriel, bohème. Choisissez le style qui correspond à votre cible d'acheteurs.",
   },
   {
     icon: Rocket,
-    title: "Vidéo cinématique",
+    title: "Vidéo de visite pub",
     description:
-      "Recevez une vidéo avant/après prête à publier. Effet waouh garanti sur vos annonces et réseaux sociaux.",
+      "Recevez une vidéo avant/après prête à publier. L'effet waouh qui déclenche les visites sur vos annonces et réseaux.",
   },
   {
     icon: Zap,
-    title: "Entièrement automatisé",
+    title: "Décrochez des mandats",
     description:
-      "Aucune intervention manuelle. L'IA gère le nettoyage, le staging et le montage vidéo de bout en bout pendant que vous travaillez.",
+      "Différenciez-vous de la concurrence en proposant un service de staging virtuel à vos vendeurs. Justifiez vos honoraires.",
   },
   {
     icon: Shield,
-    title: "Qualité professionnelle",
+    title: "Vendez au prix fort",
     description:
-      "Rendu photoréaliste en haute résolution. Lumières naturelles, ombres cohérentes, meubles proportionnés.",
+      "Les acheteurs se projettent instantanément. Coup de cœur garanti, moins de négociation, vente plus rapide.",
   },
   {
     icon: Star,
     title: "Descriptions IA",
     description:
-      "Générez automatiquement des descriptions optimisées pour Instagram et TikTok avec chaque projet.",
+      "Générez automatiquement des descriptions optimisées pour Instagram et TikTok avec chaque bien.",
   },
 ];
 
 const STEPS = [
   {
     step: "01",
-    title: "Photographiez",
+    title: "Photographiez le bien",
     description:
-      "Prenez en photo vos pièces vides avec votre smartphone. Aucun matériel spécial requis.",
+      "Photographiez les pièces vides avec votre smartphone. Jusqu'à 6 photos par bien, aucun matériel spécial requis.",
   },
   {
     step: "02",
-    title: "L'IA décore",
+    title: "L'IA décore et filme",
     description:
-      "Notre IA analyse la géométrie, la lumière et génère un staging professionnel avec 5 options au choix.",
+      "Notre IA analyse chaque pièce, génère 5 options de décoration et compile une vidéo de visite cinématique avant/après.",
   },
   {
     step: "03",
-    title: "Publiez et vendez",
+    title: "Décrochez le mandat",
     description:
-      "Récupérez vos photos staging + vidéo cinématique avant/après prêtes à publier sur vos annonces.",
+      "Présentez le résultat à votre vendeur. Publiez les photos et la vidéo sur vos annonces. Vendez plus vite, au prix fort.",
   },
 ];
 
@@ -128,24 +128,28 @@ const TESTIMONIALS = [
 
 const FAQS = [
   {
-    q: "Comment fonctionne le staging virtuel IA ?",
-    a: "Vous uploadez des photos de pièces vides. Notre IA analyse la géométrie 3D, la lumière naturelle et les perspectives pour générer un ameublement photoréaliste dans le style de votre choix.",
+    q: "Que comprend exactement 1 Bien (1 crédit) ?",
+    a: "1 Bien = jusqu'à 6 photos de pièces vides d'un même bien immobilier. Chaque pièce reçoit 5 options de décoration IA + 1 vidéo de visite cinématique compilée. Tout est inclus.",
   },
   {
-    q: "Combien de temps faut-il pour obtenir un résultat ?",
-    a: "Le pipeline complet — nettoyage, staging 5 options, vidéo cinématique — prend entre 5 et 10 minutes par pièce. Tout est automatisé, vous n'avez rien à faire.",
+    q: "Combien de temps pour obtenir le résultat ?",
+    a: "Le pipeline complet — nettoyage, staging 5 options, vidéo cinématique — prend entre 5 et 10 minutes par bien. Tout est automatisé, vous n'avez rien à faire.",
   },
   {
-    q: "Puis-je essayer avant d'acheter ?",
-    a: "Vous pouvez acheter un pack ponctuel de 3 crédits pour tester le service sans engagement. Chaque crédit = 1 pièce meublée + vidéo.",
+    q: "Puis-je essayer avant de m'abonner ?",
+    a: "Oui. Achetez un pack ponctuel d'1 Bien à 19€ pour tester le service sans engagement. Si le résultat vous convainc, passez à l'abonnement.",
   },
   {
-    q: "La qualité est-elle suffisante pour des annonces professionnelles ?",
-    a: "Absolument. Le rendu est en haute résolution (4K) avec des ombres cohérentes, une lumière naturelle et des meubles proportionnés. 95% de nos clients sont satisfaits.",
+    q: "Comment ça aide à décrocher des mandats exclusifs ?",
+    a: "Lors du R1 avec votre vendeur, montrez-lui ce que VIMIMO peut faire pour son bien. Un staging virtuel professionnel + vidéo pub est un argument concret que les autres agents ne proposent pas.",
+  },
+  {
+    q: "Si je supprime un projet, est-ce que je récupère mon crédit ?",
+    a: "Non. Le crédit (Bien) est consommé définitivement à la création du projet. La suppression d'un projet ne recrédite pas votre compte.",
   },
   {
     q: "Puis-je annuler mon abonnement ?",
-    a: "Oui, à tout moment. Vos crédits restants restent disponibles jusqu'à la fin de la période en cours.",
+    a: "Oui, à tout moment. Vos biens restants restent disponibles jusqu'à la fin de la période en cours.",
   },
 ];
 
@@ -533,7 +537,7 @@ export default function LandingPage() {
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-badge-gold-border bg-badge-gold-bg/60 px-5 py-2 text-sm font-medium text-badge-gold-text backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5" />
-            Virtual Staging nouvelle génération
+            L'arme secrète des agents immobiliers
           </span>
         </motion.div>
 
@@ -544,7 +548,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.15, ease: [0.21, 0.47, 0.32, 0.98] as const }}
           className="relative z-10 max-w-5xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
         >
-          <span className="text-gradient-gold">Sublimez</span> vos biens.
+          <span className="text-gradient-gold">Décrochez</span> des mandats.
           <br />
           <span className="text-muted">Vendez</span>{" "}
           <span className="text-gradient-gold">plus vite.</span>
@@ -557,8 +561,8 @@ export default function LandingPage() {
           transition={{ duration: 0.7, delay: 0.35, ease: [0.21, 0.47, 0.32, 0.98] as const }}
           className="relative z-10 mt-8 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl"
         >
-          Notre IA transforme vos photos de pièces vides en staging photoréaliste
-          et vidéos cinématiques — avec un niveau de détail qui rivalise avec un décorateur professionnel.
+          Transformez chaque bien vide en vitrine irrésistible.
+          Staging IA photoréaliste + vidéo de visite cinématique — l'argument qui fait signer des mandats exclusifs.
         </motion.p>
 
         {/* CTAs */}
@@ -594,15 +598,15 @@ export default function LandingPage() {
         >
           <span className="flex items-center gap-1.5">
             <Check className="h-4 w-4 text-icon-accent" />
+            1 Bien = Photos + Vidéo pub
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-icon-accent" />
+            5 décors par pièce
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-icon-accent" />
             Sans engagement
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Check className="h-4 w-4 text-icon-accent" />
-            5 styles de décoration
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Check className="h-4 w-4 text-icon-accent" />
-            Vidéo cinématique incluse
           </span>
         </motion.div>
 
@@ -660,7 +664,7 @@ export default function LandingPage() {
             badge="Avant / Après"
             title="Jugez par"
             highlight="vous-même"
-            subtitle="Glissez le curseur pour révéler la transformation. Même pièce, même angle — un tout autre impact émotionnel."
+            subtitle="Glissez le curseur pour révéler la transformation. C'est ce que vos acheteurs verront sur l'annonce."
           />
 
           <div className="grid gap-8 lg:grid-cols-2">
@@ -694,9 +698,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl">
           <SectionHeading
             badge="Fonctionnalités"
-            title="Tout ce qu&apos;il faut pour"
-            highlight="vendre plus vite"
-            subtitle="Une suite complète d&apos;outils IA conçus pour les professionnels de l&apos;immobilier."
+            title="Décrochez des mandats,"
+            highlight="vendez plus vite"
+            subtitle="L&apos;outil complet qui vous différencie de la concurrence et aide vos vendeurs à vendre au prix fort."
           />
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -735,7 +739,7 @@ export default function LandingPage() {
             badge="3 étapes"
             title="Comment ça"
             highlight="marche"
-            subtitle="Aucune compétence technique requise. Du smartphone à l&apos;annonce en quelques minutes."
+            subtitle="Du smartphone à l&apos;annonce en quelques minutes. 1 Bien = jusqu&apos;à 6 pièces décorées + 1 vidéo de visite."
           />
 
           <div className="relative grid gap-8 sm:grid-cols-3">
@@ -827,7 +831,7 @@ export default function LandingPage() {
             badge="Tarifs"
             title="Des tarifs"
             highlight="simples et transparents"
-            subtitle="1 crédit = 1 photo traitée (5 options de staging + 1 vidéo cinématique). Un bien complet de 15 photos nécessite 15 crédits. Sans engagement, sans abonnement obligatoire."
+            subtitle="1 Crédit = 1 Bien Immobilier Complet (jusqu&apos;à 6 pièces décorées + vidéo de visite pub). Sans engagement, sans abonnement obligatoire."
           />
 
           <PricingGrid />
@@ -880,12 +884,12 @@ export default function LandingPage() {
           className="relative z-10 mx-auto max-w-3xl text-center"
         >
           <h2 className="text-3xl font-bold sm:text-4xl lg:text-5xl">
-            Prêt à sublimer vos{" "}
-            <span className="text-gradient-gold">annonces</span> ?
+            Prêt à décrocher plus de{" "}
+            <span className="text-gradient-gold">mandats</span> ?
           </h2>
           <p className="mt-5 text-lg text-muted">
-            Découvrez comment le staging virtuel IA peut transformer
-            vos annonces et accélérer vos ventes.
+            Proposez un service que vos concurrents n'ont pas.
+            Staging IA + vidéo pub pour chaque bien de votre portefeuille.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a

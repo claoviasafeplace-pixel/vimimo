@@ -10,7 +10,7 @@ export const createProjectSchema = z.object({
       })
     )
     .min(1, "Au moins une photo requise")
-    .max(30, "Maximum 30 photos"),
+    .max(6, "Maximum 6 photos par bien"),
   style: z.enum([
     "scandinavian",
     "industrial",
