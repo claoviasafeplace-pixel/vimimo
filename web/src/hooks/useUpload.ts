@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { Style, ProjectMode, PropertyInfo, MusicChoice } from "@/lib/types";
 
@@ -56,6 +56,7 @@ export interface VisiteFormData {
 
 export function useUpload() {
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
+  const previewUrlsRef = useRef<Set<string>>(new Set());
   const [style, setStyle] = useState<Style | null>(null);
   const [mode, setMode] = useState<ProjectMode>("staging_piece");
   const [visiteForm, setVisiteForm] = useState<VisiteFormData>({
@@ -69,13 +70,21 @@ export function useUpload() {
   const maxPhotos = useMemo(() => (mode === "video_visite" ? 30 : 20), [mode]);
 
   const addFiles = useCallback((files: File[]) => {
-    const newPhotos = files.map((file) => ({
-      id: nanoid(8),
-      file,
-      preview: URL.createObjectURL(file),
-    }));
+    const newPhotos = files.map((file) => {
+      const preview = URL.createObjectURL(file);
+      previewUrlsRef.current.add(preview);
+      return { id: nanoid(8), file, preview };
+    });
     setPhotos((prev) => {
       const total = [...prev, ...newPhotos].slice(0, maxPhotos);
+      // Revoke URLs of photos that got sliced off
+      const kept = new Set(total.map((p) => p.preview));
+      for (const p of newPhotos) {
+        if (!kept.has(p.preview)) {
+          URL.revokeObjectURL(p.preview);
+          previewUrlsRef.current.delete(p.preview);
+        }
+      }
       return total;
     });
   }, [maxPhotos]);
@@ -83,9 +92,23 @@ export function useUpload() {
   const removePhoto = useCallback((id: string) => {
     setPhotos((prev) => {
       const photo = prev.find((p) => p.id === id);
-      if (photo) URL.revokeObjectURL(photo.preview);
+      if (photo) {
+        URL.revokeObjectURL(photo.preview);
+        previewUrlsRef.current.delete(photo.preview);
+      }
       return prev.filter((p) => p.id !== id);
     });
+  }, []);
+
+  // Revoke all remaining Object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    const urls = previewUrlsRef.current;
+    return () => {
+      for (const url of urls) {
+        URL.revokeObjectURL(url);
+      }
+      urls.clear();
+    };
   }, []);
 
   const submit = useCallback(async (): Promise<string | null> => {

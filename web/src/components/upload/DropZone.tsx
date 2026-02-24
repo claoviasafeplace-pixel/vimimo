@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
-import { useDropzone } from "react-dropzone";
+import { useCallback, useState } from "react";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { Upload, ImagePlus } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
@@ -12,17 +14,39 @@ interface DropZoneProps {
 }
 
 export default function DropZone({ onFiles, disabled, maxPhotos = 20 }: DropZoneProps) {
+  const [rejection, setRejection] = useState<string | null>(null);
+
   const onDrop = useCallback(
     (accepted: File[]) => {
+      setRejection(null);
       if (accepted.length) onFiles(accepted);
     },
     [onFiles]
   );
 
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    const tooLarge = rejections.some((r) =>
+      r.errors.some((e) => e.code === "file-too-large")
+    );
+    const wrongType = rejections.some((r) =>
+      r.errors.some((e) => e.code === "file-invalid-type")
+    );
+    if (tooLarge) {
+      setRejection("Fichier trop volumineux (max. 20 Mo par image).");
+    } else if (wrongType) {
+      setRejection("Format non supporté. Utilisez JPG, PNG ou WebP.");
+    } else {
+      setRejection("Certains fichiers ont été refusés.");
+    }
+    setTimeout(() => setRejection(null), 5000);
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: { "image/*": [".jpg", ".jpeg", ".png", ".webp"] },
     maxFiles: maxPhotos,
+    maxSize: MAX_FILE_SIZE,
     disabled,
   });
 
@@ -54,11 +78,23 @@ export default function DropZone({ onFiles, disabled, maxPhotos = 20 }: DropZone
                 : "Glissez-déposez vos photos"}
             </p>
             <p className="mt-1 text-sm text-muted">
-              {`ou cliquez pour sélectionner (max. ${maxPhotos} photos)`}
+              {`ou cliquez pour sélectionner (max. ${maxPhotos} photos, 20 Mo/image)`}
             </p>
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {rejection && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400"
+          >
+            {rejection}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

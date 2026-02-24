@@ -15,9 +15,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VIMIMO — Virtual Staging IA",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://vimimo.fr"),
+  title: {
+    default: "VIMIMO — Virtual Staging IA",
+    template: "%s | VIMIMO",
+  },
   description:
     "Transformez vos photos de pièces vides en vidéos de staging professionnel grâce à l'intelligence artificielle.",
+  openGraph: {
+    type: "website",
+    siteName: "VIMIMO",
+    title: "VIMIMO — Virtual Staging IA",
+    description:
+      "Transformez vos photos de pièces vides en vidéos de staging professionnel grâce à l'IA.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VIMIMO — Virtual Staging IA",
+    description:
+      "Transformez vos photos de pièces vides en vidéos de staging professionnel grâce à l'IA.",
+  },
 };
 
 export default function RootLayout({
