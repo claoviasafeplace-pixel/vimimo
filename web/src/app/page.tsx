@@ -36,10 +36,10 @@ const NAV_LINKS = [
 ];
 
 const STATS = [
-  { value: "500+", label: "agences clientes" },
+  { value: "5", label: "styles de décoration" },
   { value: "100%", label: "automatisé" },
   { value: "8K", label: "qualité rendu" },
-  { value: "95%", label: "satisfaction" },
+  { value: "4K", label: "vidéo cinématique" },
 ];
 
 const FEATURES = [
@@ -151,14 +151,14 @@ const FAQS = [
 
 const COMPARISONS = [
   {
-    before: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=960&q=85",
-    after: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=960&q=85",
-    label: "Salon — Style Scandinave",
+    before: "https://images.unsplash.com/photo-1585128792020-803d29415281?w=960&q=85",
+    after: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=960&q=85",
+    label: "Salon — Staging Moderne",
   },
   {
-    before: "https://images.unsplash.com/photo-1564540586988-aa4e53c3d799?w=960&q=85",
-    after: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=960&q=85",
-    label: "Chambre — Style Moderne",
+    before: "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=960&q=85",
+    after: "https://images.unsplash.com/photo-1617325247661-675ab4b64ae2?w=960&q=85",
+    label: "Chambre — Staging Contemporain",
   },
 ];
 
@@ -270,16 +270,15 @@ function BeforeAfterSlider({
           draggable={false}
         />
 
-        {/* Before image (clipped) */}
+        {/* Before image (clipped via clip-path for pixel-perfect alignment) */}
         <div
-          className="absolute inset-0 overflow-hidden"
-          style={{ width: `${position}%` }}
+          className="absolute inset-0"
+          style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
         >
           <img
             src={before}
             alt="Avant — pièce vide"
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ width: `${containerRef.current?.offsetWidth ?? 960}px`, maxWidth: "none" }}
             draggable={false}
           />
         </div>
@@ -585,36 +584,25 @@ export default function LandingPage() {
           </a>
         </motion.div>
 
-        {/* Social proof */}
+        {/* Value props */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="relative z-10 mt-14 flex flex-col items-center gap-3 sm:flex-row sm:gap-6"
+          className="relative z-10 mt-14 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted"
         >
-          <div className="flex -space-x-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="h-8 w-8 rounded-full border-2 border-background gradient-gold"
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-3 text-sm text-muted">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                  key={i}
-                  className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
-                />
-              ))}
-            </div>
-            <span>
-              Adopté par{" "}
-              <span className="font-semibold text-foreground">500+</span> agences
-              immobilières en France
-            </span>
-          </div>
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-icon-accent" />
+            Sans engagement
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-icon-accent" />
+            5 styles de décoration
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-icon-accent" />
+            Vidéo cinématique incluse
+          </span>
         </motion.div>
 
         {/* Scroll indicator */}
@@ -786,7 +774,7 @@ export default function LandingPage() {
             badge="Témoignages"
             title="Ils nous font"
             highlight="confiance"
-            subtitle="Ce que disent les agences immobilières qui utilisent VIMIMO au quotidien."
+            subtitle="Ce que disent les professionnels de l'immobilier qui utilisent VIMIMO."
           />
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -895,8 +883,8 @@ export default function LandingPage() {
             <span className="text-gradient-gold">annonces</span> ?
           </h2>
           <p className="mt-5 text-lg text-muted">
-            Rejoignez les agences qui ont choisi le staging IA pour se
-            démarquer et vendre plus vite.
+            Découvrez comment le staging virtuel IA peut transformer
+            vos annonces et accélérer vos ventes.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
