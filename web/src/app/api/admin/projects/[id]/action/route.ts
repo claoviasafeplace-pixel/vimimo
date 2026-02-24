@@ -35,7 +35,7 @@ export async function POST(
         generating_videos: "project/videos.start",
         rendering: "project/videos.done",
         rendering_montage: "project/montage.start",
-        auto_staging: "project/options.done",
+        auto_staging: "project/triage.confirmed",
         error: "project/created", // restart from beginning
       };
 
