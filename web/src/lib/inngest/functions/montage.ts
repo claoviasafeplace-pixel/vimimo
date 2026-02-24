@@ -22,18 +22,21 @@ export const montagePoll = inngest.createFunction(
                 `${process.env.REMOTION_SERVER_URL}/renders/${proj.studioMontageRenderId}/download`,
                 "montages");
               proj.studioMontageUrl = videoUrl;
-            } catch {
+            } catch (error) {
+              console.error(`[montage-poll] Upload from Remotion failed for ${proj.studioMontageRenderId}:`, error);
               proj.studioMontageUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.studioMontageRenderId}/download`;
             }
             proj.phase = "done";
             await saveProject(proj);
             return true;
           } else if (renderStatus.status === "error") {
+            console.error(`[montage-poll] Remotion montage render ${proj.studioMontageRenderId} failed`);
             proj.phase = "done";
             await saveProject(proj);
             return true;
           }
-        } catch {
+        } catch (error) {
+          console.error(`[montage-poll] Render status check failed for ${proj.studioMontageRenderId}:`, error);
           proj.phase = "done";
           await saveProject(proj);
           return true;

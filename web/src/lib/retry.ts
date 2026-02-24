@@ -37,6 +37,7 @@ export function isRetryableError(err: unknown, statusCodes: number[]): boolean {
     (err as { statusCode?: number }).statusCode ??
     (err as { response?: { status?: number } }).response?.status;
 
+  if (status === 402) return false; // Never retry 402 — quota exhausted
   if (status && statusCodes.includes(status)) return true;
 
   // Network errors

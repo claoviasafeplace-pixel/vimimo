@@ -3,6 +3,11 @@ import { getProject, saveProject, refundCredits } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { analyzePhotos, triagePhotos, generateStagingPrompts } from "@/lib/services/openai";
 import { generateStagingOption } from "@/lib/services/replicate";
+import {
+  pipelinePreCheck,
+  CircuitOpenError,
+  CostThresholdError,
+} from "@/lib/circuit-breaker";
 
 async function autoRefund(project: {
   userId?: string;
@@ -31,6 +36,24 @@ export const cleaningPoll = inngest.createFunction(
   async ({ event, step }) => {
     const { projectId } = event.data;
 
+    // Pre-check: verify critical services before starting
+    const preCheckOk = await step.run("pre-check", async () => {
+      const { degraded } = await pipelinePreCheck(["openai", "replicate"]);
+      if (degraded.length > 0) {
+        const proj = await getProject(projectId);
+        if (proj) {
+          proj.phase = "error";
+          proj.error = `Services indisponibles : ${degraded.join(", ")}`;
+          await autoRefund(proj);
+          await saveProject(proj);
+        }
+        return false;
+      }
+      return true;
+    });
+
+    if (!preCheckOk) return { projectId, status: "aborted-pre-check" };
+
     // Poll cleaning with step.sleep() between attempts (max 60 = ~5 min)
     for (let attempt = 0; attempt < 60; attempt++) {
       const done = await step.run(`check-cleaning-${attempt}`, async () => {
@@ -53,7 +76,8 @@ export const cleaningPoll = inngest.createFunction(
             } else {
               allDone = false;
             }
-          } catch {
+          } catch (error) {
+            console.error(`Cleaning prediction check failed for photo ${photo.cleanPredictionId}:`, error);
             photo.cleanedUrl = photo.originalUrl;
           }
         }
@@ -94,7 +118,7 @@ export const cleaningPoll = inngest.createFunction(
             index: i + 1,
             url: p.cleanedUrl || p.originalUrl,
           }));
-          const triageResult = await triagePhotos(photoUrls, proj.style);
+          const triageResult = await triagePhotos(photoUrls, proj.style, projectId);
           triageResult.photos = triageResult.photos.map((tp, i) => ({
             ...tp,
             photoId: proj.photos[tp.photoIndex - 1]?.id || proj.photos[i]?.id || `photo-${i}`,
@@ -104,7 +128,13 @@ export const cleaningPoll = inngest.createFunction(
         } catch (error) {
           console.error("Triage error:", error);
           proj.phase = "error";
-          proj.error = "Échec du triage IA des photos";
+          if (error instanceof CircuitOpenError) {
+            proj.error = `Service ${error.service} indisponible`;
+          } else if (error instanceof CostThresholdError) {
+            proj.error = `Seuil de coût dépassé ($${error.currentCost.toFixed(2)})`;
+          } else {
+            proj.error = "Échec du triage IA des photos";
+          }
           await autoRefund(proj);
         }
         await saveProject(proj);
@@ -121,7 +151,7 @@ export const cleaningPoll = inngest.createFunction(
             index: i + 1,
             url: p.cleanedUrl!,
           }));
-          const analysis = await analyzePhotos(photoUrls, proj.style);
+          const analysis = await analyzePhotos(photoUrls, proj.style, undefined, projectId);
 
           proj.rooms = analysis.rooms.map((room, i) => {
             const photo = proj.photos[room.photoIndex - 1] || proj.photos[i];
@@ -154,6 +184,7 @@ export const cleaningPoll = inngest.createFunction(
                 proj.style,
                 proj.styleLabel,
                 room.visionData,
+                projectId,
               );
               const predictionIds = await Promise.all(
                 result.prompts.map((prompt) =>
@@ -164,7 +195,13 @@ export const cleaningPoll = inngest.createFunction(
             } catch (error) {
               console.error(`Failed to generate options for room ${room.index}:`, error);
               proj.phase = "error";
-              proj.error = `Échec de la génération pour ${room.roomLabel}`;
+              if (error instanceof CircuitOpenError) {
+                proj.error = `Service ${error.service} indisponible`;
+              } else if (error instanceof CostThresholdError) {
+                proj.error = `Seuil de coût dépassé ($${error.currentCost.toFixed(2)})`;
+              } else {
+                proj.error = `Échec de la génération pour ${room.roomLabel}`;
+              }
               await autoRefund(proj);
               break;
             }
@@ -173,7 +210,13 @@ export const cleaningPoll = inngest.createFunction(
         } catch (error) {
           console.error("Analysis error:", error);
           proj.phase = "error";
-          proj.error = "Échec de l'analyse IA des photos";
+          if (error instanceof CircuitOpenError) {
+            proj.error = `Service ${error.service} indisponible`;
+          } else if (error instanceof CostThresholdError) {
+            proj.error = `Seuil de coût dépassé ($${error.currentCost.toFixed(2)})`;
+          } else {
+            proj.error = "Échec de l'analyse IA des photos";
+          }
           await autoRefund(proj);
           await saveProject(proj);
         }
@@ -200,8 +243,8 @@ export const cleaningPoll = inngest.createFunction(
                 } else if (status.status !== "failed" && status.status !== "canceled") {
                   allDone = false;
                 }
-              } catch {
-                // skip
+              } catch (error) {
+                console.error(`Option prediction check failed for room ${room.index}, prediction ${i}:`, error);
               }
             }
             if (resolvedOptions.length !== room.options.length) {

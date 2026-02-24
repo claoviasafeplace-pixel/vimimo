@@ -43,7 +43,8 @@ export default function PricingGrid() {
 
       const { url } = await res.json();
       if (url) window.location.href = url;
-    } catch {
+    } catch (error) {
+      console.error("[PricingGrid] Checkout request failed:", error);
       setCheckoutError("Erreur réseau. Vérifiez votre connexion.");
     }
   };

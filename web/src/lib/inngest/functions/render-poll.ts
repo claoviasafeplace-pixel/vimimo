@@ -22,18 +22,21 @@ export const renderPoll = inngest.createFunction(
                 `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`,
                 "renders");
               proj.finalVideoUrl = videoUrl;
-            } catch {
+            } catch (error) {
+              console.error(`[render-poll] Upload from Remotion failed for ${proj.remotionRenderId}:`, error);
               proj.finalVideoUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`;
             }
             proj.phase = "done";
             await saveProject(proj);
             return true;
           } else if (renderStatus.status === "error") {
+            console.error(`[render-poll] Remotion render ${proj.remotionRenderId} failed`);
             proj.phase = "done";
             await saveProject(proj);
             return true;
           }
-        } catch {
+        } catch (error) {
+          console.error(`[render-poll] Render status check failed for ${proj.remotionRenderId}:`, error);
           proj.phase = "done";
           await saveProject(proj);
           return true;

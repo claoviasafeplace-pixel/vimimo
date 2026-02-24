@@ -237,7 +237,8 @@ export default function AdminDashboard() {
       } else {
         fetchProjects();
       }
-    } catch {
+    } catch (error) {
+      console.error("[Admin] Project action failed:", error);
       alert("Erreur réseau");
     } finally {
       setActionLoading(null);
@@ -261,7 +262,8 @@ export default function AdminDashboard() {
         const statsRes = await fetch("/api/admin");
         if (statsRes.ok) setStats(await statsRes.json());
       }
-    } catch {
+    } catch (error) {
+      console.error("[Admin] Pipeline action failed:", error);
       alert("Erreur réseau");
     } finally {
       setActionLoading(null);

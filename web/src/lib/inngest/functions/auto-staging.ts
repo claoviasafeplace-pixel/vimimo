@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject } from "@/lib/store";
+import { getProject, saveProject, refundCredits } from "@/lib/store";
 import {
   getPredictionStatus,
   extractOutputUrl,
@@ -8,12 +8,71 @@ import {
 } from "@/lib/services/replicate";
 import { generateStagingPrompts } from "@/lib/services/openai";
 import { startStudioRender } from "@/lib/services/remotion";
+import {
+  pipelinePreCheck,
+  CircuitOpenError,
+  CostThresholdError,
+  type ServiceName,
+} from "@/lib/circuit-breaker";
+
+async function autoRefund(project: {
+  userId?: string;
+  creditsUsed?: number;
+  creditsRefunded?: boolean;
+  id: string;
+}) {
+  if (project.userId && project.creditsUsed && !project.creditsRefunded) {
+    try {
+      await refundCredits(
+        project.userId,
+        project.creditsUsed,
+        project.id,
+        `Remboursement automatique — projet ${project.id} en erreur`,
+      );
+      project.creditsRefunded = true;
+    } catch (e) {
+      console.error("Auto-refund failed:", e);
+    }
+  }
+}
 
 export const autoStaging = inngest.createFunction(
   { id: "auto-staging", retries: 0 },
   { event: "project/triage.confirmed" },
   async ({ event, step }) => {
     const { projectId } = event.data;
+
+    // Pre-check: verify services availability
+    const preCheck = await step.run("pre-check", async () => {
+      const required: ServiceName[] = [
+        "openai",
+        "replicate",
+        "replicate_video",
+        "remotion",
+      ];
+      const { degraded } = await pipelinePreCheck(required);
+
+      // OpenAI or Replicate down → abort + refund
+      const critical = degraded.filter(
+        (s) => s === "openai" || s === "replicate",
+      );
+      if (critical.length > 0) {
+        const proj = await getProject(projectId);
+        if (proj) {
+          proj.phase = "error";
+          proj.error = `Services indisponibles : ${critical.join(", ")}`;
+          await autoRefund(proj);
+          await saveProject(proj);
+        }
+        return { ok: false, skipVideo: false };
+      }
+
+      // replicate_video down → skip video generation
+      const skipVideo = degraded.includes("replicate_video");
+      return { ok: true, skipVideo };
+    });
+
+    if (!preCheck.ok) return { projectId, status: "aborted-pre-check" };
 
     // Step 1: Build rooms
     await step.run("build-rooms", async () => {
@@ -58,12 +117,15 @@ export const autoStaging = inngest.createFunction(
             try {
               const result = await generateStagingPrompts(
                 room.cleanedPhotoUrl, room.roomType, room.roomLabel,
-                proj.style, proj.styleLabel, room.visionData);
+                proj.style, proj.styleLabel, room.visionData, projectId);
               const predictionId = await generateStagingOption(
                 room.cleanedPhotoUrl, result.prompts[0]);
               room.optionPredictionIds = [predictionId];
             } catch (error) {
               console.error(`Auto-staging failed for room ${room.index}:`, error);
+              if (error instanceof CircuitOpenError || error instanceof CostThresholdError) {
+                throw error; // propagate to abort
+              }
               room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
               room.selectedOptionIndex = 0;
             }
@@ -94,7 +156,10 @@ export const autoStaging = inngest.createFunction(
               room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
               room.selectedOptionIndex = 0;
             } else { allDone = false; }
-          } catch { allDone = false; }
+          } catch (error) {
+            console.error(`Staging prediction check failed for room ${room.index}:`, error);
+            allDone = false;
+          }
         }
         await saveProject(proj);
         return allDone;
@@ -104,10 +169,19 @@ export const autoStaging = inngest.createFunction(
       await step.sleep(`wait-staging-${attempt}`, "5s");
     }
 
-    // Step 4: Launch all videos
+    // Step 4: Launch all videos (skip if replicate_video is down)
     await step.run("launch-videos", async () => {
       const proj = await getProject(projectId);
       if (!proj || proj.phase !== "auto_staging") return;
+
+      if (preCheck.skipVideo) {
+        // Mark all rooms as no-video and finish
+        for (const room of proj.rooms) {
+          room.videoUrl = "";
+        }
+        await saveProject(proj);
+        return;
+      }
 
       const needsVideo = proj.rooms.filter(
         (r) => !r.videoPredictionId && r.options.length > 0);
@@ -129,7 +203,7 @@ export const autoStaging = inngest.createFunction(
       }
     });
 
-    // Step 5: Poll videos
+    // Step 5: Poll videos (skip if all rooms already have videoUrl)
     for (let attempt = 0; attempt < 180; attempt++) {
       const done = await step.run(`check-auto-videos-${attempt}`, async () => {
         const proj = await getProject(projectId);
@@ -148,7 +222,9 @@ export const autoStaging = inngest.createFunction(
               } else if (status.status === "failed" || status.status === "canceled") {
                 room.videoUrl = "";
               }
-            } catch { /* retry next */ }
+            } catch (error) {
+              console.error(`Video prediction check failed for room ${room.videoPredictionId}:`, error);
+            }
           }));
 
         const allDone = proj.rooms.every((r) => r.videoUrl !== undefined);

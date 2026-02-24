@@ -1,6 +1,7 @@
 import type { Project, MontageConfig } from "../types";
 import { STYLES } from "../types";
 import { withRetry, REMOTION_RETRY } from "../retry";
+import { withCircuitBreaker } from "../circuit-breaker";
 
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
 const REMOTION_TIMEOUT = 30_000; // 30 seconds
@@ -40,36 +41,40 @@ export async function startRender(project: Project): Promise<string> {
     rooms,
   };
 
-  return withRetry(async () => {
-    const response = await fetch(`${REMOTION_URL}/renders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        compositionId: "PropertyShowcase",
-        inputProps,
-      }),
-      signal: AbortSignal.timeout(REMOTION_TIMEOUT),
-    });
+  return withCircuitBreaker("remotion", () =>
+    withRetry(async () => {
+      const response = await fetch(`${REMOTION_URL}/renders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          compositionId: "PropertyShowcase",
+          inputProps,
+        }),
+        signal: AbortSignal.timeout(REMOTION_TIMEOUT),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Remotion render failed: ${response.status}`);
-    }
+      if (!response.ok) {
+        throw new Error(`Remotion render failed: ${response.status}`);
+      }
 
-    const data: RenderResponse = await response.json();
-    return data.id;
-  }, REMOTION_RETRY);
+      const data: RenderResponse = await response.json();
+      return data.id;
+    }, REMOTION_RETRY),
+  );
 }
 
 export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
-  return withRetry(async () => {
-    const response = await fetch(`${REMOTION_URL}/renders/${renderId}`, {
-      signal: AbortSignal.timeout(REMOTION_TIMEOUT),
-    });
-    if (!response.ok) {
-      throw new Error(`Remotion status check failed: ${response.status}`);
-    }
-    return response.json();
-  }, REMOTION_RETRY);
+  return withCircuitBreaker("remotion", () =>
+    withRetry(async () => {
+      const response = await fetch(`${REMOTION_URL}/renders/${renderId}`, {
+        signal: AbortSignal.timeout(REMOTION_TIMEOUT),
+      });
+      if (!response.ok) {
+        throw new Error(`Remotion status check failed: ${response.status}`);
+      }
+      return response.json();
+    }, REMOTION_RETRY),
+  );
 }
 
 export async function downloadRender(renderId: string): Promise<Buffer> {
@@ -117,22 +122,24 @@ export async function startStudioRender(
     musicUrl,
   };
 
-  return withRetry(async () => {
-    const response = await fetch(`${REMOTION_URL}/renders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        compositionId: "StudioMontage",
-        inputProps,
-      }),
-      signal: AbortSignal.timeout(REMOTION_TIMEOUT),
-    });
+  return withCircuitBreaker("remotion", () =>
+    withRetry(async () => {
+      const response = await fetch(`${REMOTION_URL}/renders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          compositionId: "StudioMontage",
+          inputProps,
+        }),
+        signal: AbortSignal.timeout(REMOTION_TIMEOUT),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Studio Montage render failed: ${response.status}`);
-    }
+      if (!response.ok) {
+        throw new Error(`Studio Montage render failed: ${response.status}`);
+      }
 
-    const data: RenderResponse = await response.json();
-    return data.id;
-  }, REMOTION_RETRY);
+      const data: RenderResponse = await response.json();
+      return data.id;
+    }, REMOTION_RETRY),
+  );
 }

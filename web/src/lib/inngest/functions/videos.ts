@@ -4,12 +4,33 @@ import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate"
 import { startRender } from "@/lib/services/remotion";
 import { uploadFromUrl } from "@/lib/services/storage";
 import { getRenderStatus } from "@/lib/services/remotion";
+import { pipelinePreCheck } from "@/lib/circuit-breaker";
 
 export const videosPoll = inngest.createFunction(
   { id: "videos-poll", retries: 0 },
   { event: "project/videos.start" },
   async ({ event, step }) => {
     const { projectId } = event.data;
+
+    // Pre-check: verify replicate_video availability
+    const preCheckOk = await step.run("pre-check", async () => {
+      const { degraded } = await pipelinePreCheck(["replicate_video"]);
+      if (degraded.includes("replicate_video")) {
+        const proj = await getProject(projectId);
+        if (proj) {
+          // Graceful degradation: mark all rooms as no-video and finish
+          for (const room of proj.rooms) {
+            if (!room.videoUrl) room.videoUrl = "";
+          }
+          proj.phase = "done";
+          await saveProject(proj);
+        }
+        return false;
+      }
+      return true;
+    });
+
+    if (!preCheckOk) return { projectId, status: "skipped-video-unavailable" };
 
     // Poll video predictions
     for (let attempt = 0; attempt < 180; attempt++) {
@@ -30,7 +51,10 @@ export const videosPoll = inngest.createFunction(
             } else {
               allDone = false;
             }
-          } catch { allDone = false; }
+          } catch (error) {
+            console.error(`Video prediction check failed for room ${room.videoPredictionId}:`, error);
+            allDone = false;
+          }
         }
 
         if (allDone) {
@@ -78,18 +102,21 @@ export const videosPoll = inngest.createFunction(
                 `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`,
                 "renders");
               proj.finalVideoUrl = videoUrl;
-            } catch {
+            } catch (error) {
+              console.error("Upload from Remotion failed, using direct URL:", error);
               proj.finalVideoUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`;
             }
             proj.phase = "done";
             await saveProject(proj);
             return true;
           } else if (renderStatus.status === "error") {
+            console.error(`Remotion render ${proj.remotionRenderId} failed`);
             proj.phase = "done";
             await saveProject(proj);
             return true;
           }
-        } catch {
+        } catch (error) {
+          console.error("Remotion render status check failed:", error);
           proj.phase = "done";
           await saveProject(proj);
           return true;

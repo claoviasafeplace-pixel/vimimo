@@ -8,6 +8,7 @@ import {
 } from "../prompts";
 import type { Project, TriageResult } from "../types";
 import { withRetry, OPENAI_RETRY } from "../retry";
+import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
 const OPENAI_TIMEOUT = 60_000; // 60 seconds
 
@@ -34,8 +35,11 @@ interface VisionAnalysis {
 export async function analyzePhotos(
   photoUrls: { index: number; url: string }[],
   style: string,
-  propertyType = "apartment"
+  propertyType = "apartment",
+  projectId?: string,
 ): Promise<VisionAnalysis> {
+  if (projectId) await costGuard(projectId, "gpt-4o-vision");
+
   const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
     {
       type: "text",
@@ -48,29 +52,37 @@ export async function analyzePhotos(
     content.push({ type: "image_url", image_url: { url: p.url } });
   }
 
-  return withRetry(async () => {
-    const response = await getClient().chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.3,
-      max_tokens: 4000,
-      messages: [
-        { role: "system", content: BATCH_VISION_SYSTEM_PROMPT },
-        { role: "user", content },
-      ],
-    });
+  const result = await withCircuitBreaker("openai", () =>
+    withRetry(async () => {
+      const response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.3,
+        max_tokens: 4000,
+        messages: [
+          { role: "system", content: BATCH_VISION_SYSTEM_PROMPT },
+          { role: "user", content },
+        ],
+      });
 
-    let raw = response.choices[0].message.content?.trim() || "";
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-    return JSON.parse(raw);
-  }, OPENAI_RETRY);
+      let raw = response.choices[0].message.content?.trim() || "";
+      if (raw.startsWith("```")) {
+        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+      return JSON.parse(raw);
+    }, OPENAI_RETRY),
+  );
+
+  if (projectId) await trackCost(projectId, "gpt-4o-vision");
+  return result;
 }
 
 export async function triagePhotos(
   photoUrls: { index: number; url: string }[],
-  style: string
+  style: string,
+  projectId?: string,
 ): Promise<TriageResult> {
+  if (projectId) await costGuard(projectId, "gpt-4o-vision");
+
   const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
     {
       type: "text",
@@ -83,23 +95,28 @@ export async function triagePhotos(
     content.push({ type: "image_url", image_url: { url: p.url, detail: "low" } });
   }
 
-  return withRetry(async () => {
-    const response = await getClient().chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.3,
-      max_tokens: 4000,
-      messages: [
-        { role: "system", content: TRIAGE_SYSTEM_PROMPT },
-        { role: "user", content },
-      ],
-    });
+  const result = await withCircuitBreaker("openai", () =>
+    withRetry(async () => {
+      const response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.3,
+        max_tokens: 4000,
+        messages: [
+          { role: "system", content: TRIAGE_SYSTEM_PROMPT },
+          { role: "user", content },
+        ],
+      });
 
-    let raw = response.choices[0].message.content?.trim() || "";
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-    return JSON.parse(raw);
-  }, OPENAI_RETRY);
+      let raw = response.choices[0].message.content?.trim() || "";
+      if (raw.startsWith("```")) {
+        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+      return JSON.parse(raw);
+    }, OPENAI_RETRY),
+  );
+
+  if (projectId) await trackCost(projectId, "gpt-4o-vision");
+  return result;
 }
 
 interface StagingPrompts {
@@ -113,40 +130,48 @@ export async function generateStagingPrompts(
   roomLabel: string,
   style: string,
   styleLabel: string,
-  visionData: Record<string, unknown>
+  visionData: Record<string, unknown>,
+  projectId?: string,
 ): Promise<StagingPrompts> {
-  return withRetry(async () => {
-    const response = await getClient().chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.5,
-      max_tokens: 2000,
-      messages: [
-        { role: "system", content: STAGING_PROMPT_SYSTEM },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: stagingPromptUser(
-                roomType,
-                roomLabel,
-                style,
-                styleLabel,
-                visionData
-              ),
-            },
-            { type: "image_url", image_url: { url: photoUrl } },
-          ],
-        },
-      ],
-    });
+  if (projectId) await costGuard(projectId, "gpt-4o-vision");
 
-    let raw = response.choices[0].message.content?.trim() || "";
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-    return JSON.parse(raw);
-  }, OPENAI_RETRY);
+  const result = await withCircuitBreaker("openai", () =>
+    withRetry(async () => {
+      const response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.5,
+        max_tokens: 2000,
+        messages: [
+          { role: "system", content: STAGING_PROMPT_SYSTEM },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: stagingPromptUser(
+                  roomType,
+                  roomLabel,
+                  style,
+                  styleLabel,
+                  visionData,
+                ),
+              },
+              { type: "image_url", image_url: { url: photoUrl } },
+            ],
+          },
+        ],
+      });
+
+      let raw = response.choices[0].message.content?.trim() || "";
+      if (raw.startsWith("```")) {
+        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+      return JSON.parse(raw);
+    }, OPENAI_RETRY),
+  );
+
+  if (projectId) await trackCost(projectId, "gpt-4o-vision");
+  return result;
 }
 
 export interface DescriptionResult {
@@ -155,8 +180,11 @@ export interface DescriptionResult {
 }
 
 export async function generateDescription(
-  project: Project
+  project: Project,
 ): Promise<DescriptionResult> {
+  const projectId = project.id;
+  await costGuard(projectId, "gpt-4o-text");
+
   const roomList = project.rooms
     .map((r) => `${r.roomLabel} (${r.roomType})`)
     .join(", ");
@@ -182,21 +210,26 @@ ${propertyDetails ? `- Bien : ${propertyDetails}` : ""}
 
 Génère les descriptions Instagram et TikTok.`;
 
-  return withRetry(async () => {
-    const response = await getClient().chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.7,
-      max_tokens: 1000,
-      messages: [
-        { role: "system", content: DESCRIPTION_SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-    });
+  const result = await withCircuitBreaker("openai", () =>
+    withRetry(async () => {
+      const response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.7,
+        max_tokens: 1000,
+        messages: [
+          { role: "system", content: DESCRIPTION_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+      });
 
-    let raw = response.choices[0].message.content?.trim() || "";
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    }
-    return JSON.parse(raw);
-  }, OPENAI_RETRY);
+      let raw = response.choices[0].message.content?.trim() || "";
+      if (raw.startsWith("```")) {
+        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+      return JSON.parse(raw);
+    }, OPENAI_RETRY),
+  );
+
+  await trackCost(projectId, "gpt-4o-text");
+  return result;
 }

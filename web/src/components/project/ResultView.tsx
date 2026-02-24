@@ -104,7 +104,8 @@ export default function ResultView({
       }
       setShowMontageForm(false);
       setSelectingForMontage(false);
-    } catch {
+    } catch (error) {
+      console.error("[ResultView] Montage request failed:", error);
       setMontageError("Erreur réseau. Vérifiez votre connexion.");
     } finally {
       setIsSubmitting(false);
@@ -128,7 +129,8 @@ export default function ResultView({
         return;
       }
       setDescription(data);
-    } catch {
+    } catch (error) {
+      console.error("[ResultView] Description generation failed:", error);
       setDescError("Erreur réseau. Vérifiez votre connexion.");
     } finally {
       setDescLoading(false);

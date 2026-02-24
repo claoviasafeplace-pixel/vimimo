@@ -32,7 +32,8 @@ export default function ProjectPage({
       } else {
         setActionError("Erreur lors de la sélection. Veuillez réessayer.");
       }
-    } catch {
+    } catch (error) {
+      console.error("[ProjectPage] Selection failed:", error);
       setActionError("Erreur réseau. Vérifiez votre connexion.");
     }
   };
@@ -50,7 +51,8 @@ export default function ProjectPage({
         const data = await res.json().catch(() => ({}));
         setActionError(data.error || "Erreur lors de la génération. Veuillez réessayer.");
       }
-    } catch {
+    } catch (error) {
+      console.error("[ProjectPage] Generate failed:", error);
       setActionError("Erreur réseau. Vérifiez votre connexion.");
     }
   };
@@ -70,7 +72,8 @@ export default function ProjectPage({
       } else {
         setActionError("Erreur lors de la validation du triage.");
       }
-    } catch {
+    } catch (error) {
+      console.error("[ProjectPage] Triage confirm failed:", error);
       setActionError("Erreur réseau. Vérifiez votre connexion.");
     } finally {
       setIsTriageSubmitting(false);

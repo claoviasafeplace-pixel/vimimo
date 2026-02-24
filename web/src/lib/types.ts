@@ -152,6 +152,7 @@ export interface Project {
   triageResult?: TriageResult;
   confirmedPhotoOrder?: ConfirmedPhoto[];
   propertyInfo?: PropertyInfo;
+  apiCostUsd?: number;
 }
 
 // --- Auth & Credits ---
