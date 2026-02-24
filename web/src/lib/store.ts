@@ -30,11 +30,28 @@ export async function updateProject(
   id: string,
   updates: Partial<Project>
 ): Promise<Project> {
-  const project = await getProject(id);
-  if (!project) throw new Error(`Project ${id} not found`);
-  const updated = { ...project, ...updates };
-  await saveProject(updated);
-  return updated;
+  const db = getSupabase();
+
+  // Atomic JSONB merge via RPC — no read-then-write race condition
+  const { error: rpcError } = await db.rpc("update_project_data", {
+    p_id: id,
+    p_partial: updates as Record<string, unknown>,
+  });
+
+  if (rpcError) {
+    // Fallback: read-then-write (for envs where RPC isn't deployed yet)
+    console.warn("update_project_data RPC failed, falling back:", rpcError.message);
+    const project = await getProject(id);
+    if (!project) throw new Error(`Project ${id} not found`);
+    const updated = { ...project, ...updates };
+    await saveProject(updated);
+    return updated;
+  }
+
+  // Re-read merged result
+  const merged = await getProject(id);
+  if (!merged) throw new Error(`Project ${id} not found after update`);
+  return merged;
 }
 
 export interface ProjectSummary {
@@ -276,6 +293,20 @@ export async function refundCredits(
 ): Promise<DbUser> {
   const db = getSupabase();
 
+  // Idempotency guard: check if refund already exists for this project
+  const { data: existingRefund } = await db
+    .from("credit_transactions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
+    .eq("type", "refund")
+    .single();
+
+  if (existingRefund) {
+    console.warn(`Refund already exists for project ${projectId}, skipping`);
+    return (await getUserById(userId))!;
+  }
+
   // Atomic increment via RPC
   const { error: rpcError } = await db.rpc("increment_credits", {
     user_id: userId,
@@ -291,9 +322,14 @@ export async function refundCredits(
     updatedUser = (await getUserById(userId))!;
   }
 
-  await recordTransaction(userId, "refund", amount, updatedUser.credits, description, {
-    projectId,
-  });
+  try {
+    await recordTransaction(userId, "refund", amount, updatedUser.credits, description, {
+      projectId,
+    });
+  } catch (txError) {
+    // Unique index violation = concurrent duplicate refund — safe to ignore
+    console.warn(`Refund transaction insert conflict for project ${projectId}:`, txError);
+  }
 
   return updatedUser;
 }

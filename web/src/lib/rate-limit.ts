@@ -41,6 +41,10 @@ export const RATE_LIMITS = {
   UPLOAD: { max: 10, windowMs: 60_000 },
   /** Description generation: 5 per minute */
   DESCRIPTION: { max: 5, windowMs: 60_000 },
+  /** AI pipeline actions (generate, triage, montage): 3 per minute */
+  AI_PIPELINE: { max: 3, windowMs: 60_000 },
+  /** Replicate polling: 30 per minute */
+  REPLICATE_POLL: { max: 30, windowMs: 60_000 },
   /** General API: 30 per minute */
   GENERAL: { max: 30, windowMs: 60_000 },
 } as const;

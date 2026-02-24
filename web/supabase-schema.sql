@@ -136,3 +136,29 @@ DO $$ BEGIN
     CREATE POLICY "Service role full access" ON prediction_map FOR ALL USING (true);
   END IF;
 END $$;
+
+-- ============================================
+-- RPC: Atomic JSONB merge for projects (PERF-01)
+-- Merges partial JSON into existing data column
+-- ============================================
+CREATE OR REPLACE FUNCTION update_project_data(p_id TEXT, p_partial JSONB)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE projects
+  SET data = data || p_partial,
+      updated_at = NOW()
+  WHERE id = p_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Project % not found', p_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- Unique index for refund idempotency (PAY-05)
+-- Prevents double refund for the same project
+-- ============================================
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_tx_refund_unique
+  ON credit_transactions (user_id, project_id)
+  WHERE type = 'refund';

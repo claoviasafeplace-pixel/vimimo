@@ -4,12 +4,22 @@ import { startStudioRender } from "@/lib/services/remotion";
 import { requireProjectOwner } from "@/lib/api-auth";
 import type { MontageConfig } from "@/lib/types";
 import { inngest } from "@/lib/inngest/client";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`montage:${ip}`, RATE_LIMITS.AI_PIPELINE);
+    if (rl.limited) {
+      return NextResponse.json(
+        { error: "Trop de requêtes. Réessayez dans quelques instants." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const { id } = await params;
 
     const ownerResult = await requireProjectOwner(id);
