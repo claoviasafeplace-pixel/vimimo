@@ -2,6 +2,23 @@ import type { Project, MontageConfig } from "../types";
 import { STYLES } from "../types";
 import { withRetry, REMOTION_RETRY } from "../retry";
 import { withCircuitBreaker } from "../circuit-breaker";
+import { getActiveSubscription } from "../store";
+
+type WatermarkType = "vimimo" | "custom" | "none";
+
+/**
+ * Resolve watermark type from user's active subscription.
+ * Pro/Agency → custom (marque blanche), Starter/guest/pack → vimimo.
+ */
+async function resolveWatermark(userId?: string): Promise<{ type: WatermarkType; agencyLogoUrl?: string }> {
+  if (!userId) return { type: "vimimo" };
+  const sub = await getActiveSubscription(userId);
+  if (!sub) return { type: "vimimo" };
+  if (sub.plan_id === "pro" || sub.plan_id === "agency") {
+    return { type: "custom" };
+  }
+  return { type: "vimimo" };
+}
 
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
 const REMOTION_TIMEOUT = 30_000; // 30 seconds
@@ -33,12 +50,15 @@ export async function startRender(project: Project): Promise<string> {
       roomLabel: r.roomLabel,
     }));
 
+  const watermark = await resolveWatermark(project.userId);
+
   const inputProps = {
     property: {
       title: "Virtual Staging",
       style: styleLabel,
     },
     rooms,
+    watermark,
   };
 
   return withCircuitBreaker("remotion", () =>
@@ -116,10 +136,17 @@ export async function startStudioRender(
     musicUrl = MUSIC_URLS[montageConfig.music];
   }
 
+  const watermark = await resolveWatermark(project.userId);
+  // For custom watermark, pass agency logo from montageConfig if available
+  if (watermark.type === "custom" && montageConfig.propertyInfo.agencyLogoUrl) {
+    watermark.agencyLogoUrl = montageConfig.propertyInfo.agencyLogoUrl;
+  }
+
   const inputProps = {
     propertyInfo: montageConfig.propertyInfo,
     rooms,
     musicUrl,
+    watermark,
   };
 
   return withCircuitBreaker("remotion", () =>

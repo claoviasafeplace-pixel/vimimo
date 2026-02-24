@@ -1,13 +1,22 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Img,
   interpolate,
   spring,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
 
-export const OutroCard: React.FC = () => {
+interface OutroCardProps {
+  watermarkType?: "vimimo" | "custom" | "none";
+  agencyLogoUrl?: string;
+}
+
+export const OutroCard: React.FC<OutroCardProps> = ({
+  watermarkType = "vimimo",
+  agencyLogoUrl,
+}) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -37,6 +46,45 @@ export const OutroCard: React.FC = () => {
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
+  // No watermark at all
+  if (watermarkType === "none") {
+    return (
+      <AbsoluteFill
+        style={{
+          backgroundColor: "#000",
+          opacity: fadeOut,
+        }}
+      />
+    );
+  }
+
+  // Custom agency logo
+  if (watermarkType === "custom" && agencyLogoUrl) {
+    return (
+      <AbsoluteFill
+        style={{
+          backgroundColor: "#000",
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
+          flexDirection: "column",
+          opacity: fadeOut,
+        }}
+      >
+        <Img
+          src={agencyLogoUrl}
+          style={{
+            maxHeight: 120,
+            maxWidth: 400,
+            opacity: brandOpacity,
+            transform: `scale(${brandScale.toFixed(4)})`,
+          }}
+        />
+      </AbsoluteFill>
+    );
+  }
+
+  // Default: VIMIMO watermark
   return (
     <AbsoluteFill
       style={{

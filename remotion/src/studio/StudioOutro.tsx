@@ -16,6 +16,7 @@ const CLAMP = {
 interface StudioOutroProps {
 	agencyName?: string;
 	agencyLogoUrl?: string;
+	watermarkType?: "vimimo" | "custom" | "none";
 }
 
 const VIMIMO_LETTERS = "VIMIMO".split("");
@@ -23,6 +24,7 @@ const VIMIMO_LETTERS = "VIMIMO".split("");
 export const StudioOutro: React.FC<StudioOutroProps> = ({
 	agencyName,
 	agencyLogoUrl,
+	watermarkType = "vimimo",
 }) => {
 	const frame = useCurrentFrame();
 	const { fps } = useVideoConfig();
@@ -74,103 +76,123 @@ export const StudioOutro: React.FC<StudioOutroProps> = ({
 					zIndex: 1,
 				}}
 			>
-				{/* VIMIMO — letter-by-letter 3D spring reveal [15-60] */}
-				<div
-					style={{
-						perspective: "1200px",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-					}}
-				>
-					{VIMIMO_LETTERS.map((letter, i) => {
-						const letterDelay = 15 + i * 4;
+				{/* Custom agency logo (marque blanche) */}
+				{watermarkType === "custom" && agencyLogoUrl && (
+					<Img
+						src={agencyLogoUrl}
+						style={{
+							maxHeight: 120,
+							maxWidth: 400,
+							opacity: interpolate(frame, [15, 35], [0, 1], CLAMP),
+							transform: `scale(${interpolate(frame, [15, 35], [0.9, 1], CLAMP).toFixed(4)})`,
+						}}
+					/>
+				)}
 
-						const progress = spring({
-							frame: frame - letterDelay,
-							fps,
-							config: {
-								damping: 12,
-								stiffness: 100,
-								mass: 0.7,
-							},
-						});
+				{/* Custom agency name without logo */}
+				{watermarkType === "custom" && !agencyLogoUrl && agencyName && (
+					<div
+						style={{
+							color: "#fff",
+							fontSize: 72,
+							fontFamily: "sans-serif",
+							fontWeight: 700,
+							letterSpacing: 6,
+							opacity: interpolate(frame, [15, 35], [0, 1], CLAMP),
+						}}
+					>
+						{agencyName}
+					</div>
+				)}
 
-						const rotateY = 90 * (1 - progress);
-						const translateZ = -100 * (1 - progress);
-
-						return (
-							<span
-								key={i}
-								style={{
-									display: "inline-block",
-									fontSize: 96,
-									fontFamily: "sans-serif",
-									fontWeight: 700,
-									color: "#fff",
-									letterSpacing: 12,
-									opacity: progress,
-									transform: `rotateY(${rotateY}deg) translateZ(${translateZ}px)`,
-								}}
-							>
-								{letter}
-							</span>
-						);
-					})}
-				</div>
-
-				{/* Subtitle — slide up [40-60] */}
-				<div
-					style={{
-						color: "rgba(255,255,255,0.6)",
-						fontSize: 32,
-						fontFamily: "sans-serif",
-						fontWeight: 400,
-						letterSpacing: 4,
-						opacity: subtitleOpacity,
-						transform: `translateY(${subtitleY}px)`,
-					}}
-				>
-					Virtual Staging IA
-				</div>
-
-				{/* Golden separator line [45-70] */}
-				<div
-					style={{
-						width: separatorWidth,
-						height: 2,
-						background:
-							"linear-gradient(90deg, transparent, #c8a45a, #e8d48b, #c8a45a, transparent)",
-						marginTop: 20,
-					}}
-				/>
-
-				{/* Agency credit [50-90] */}
-				{agencyName && (
+				{/* VIMIMO branding (Starter / guest / default) */}
+				{watermarkType === "vimimo" && (
 					<>
 						<div
 							style={{
-								color: "rgba(255,255,255,0.4)",
-								fontSize: 20,
-								fontFamily: "sans-serif",
-								fontWeight: 400,
-								marginTop: 30,
-								opacity: agencyOpacity,
+								perspective: "1200px",
+								display: "flex",
+								justifyContent: "center",
+								alignItems: "center",
 							}}
 						>
-							{`R\u00e9alis\u00e9 par VIMIMO pour ${agencyName}`}
+							{VIMIMO_LETTERS.map((letter, i) => {
+								const letterDelay = 15 + i * 4;
+								const progress = spring({
+									frame: frame - letterDelay,
+									fps,
+									config: {
+										damping: 12,
+										stiffness: 100,
+										mass: 0.7,
+									},
+								});
+								const rotateY = 90 * (1 - progress);
+								const translateZ = -100 * (1 - progress);
+								return (
+									<span
+										key={i}
+										style={{
+											display: "inline-block",
+											fontSize: 96,
+											fontFamily: "sans-serif",
+											fontWeight: 700,
+											color: "#fff",
+											letterSpacing: 12,
+											opacity: progress,
+											transform: `rotateY(${rotateY}deg) translateZ(${translateZ}px)`,
+										}}
+									>
+										{letter}
+									</span>
+								);
+							})}
 						</div>
-						{agencyLogoUrl && (
-							<Img
-								src={agencyLogoUrl}
-								style={{
-									maxHeight: 40,
-									marginTop: 12,
-									opacity: agencyOpacity,
-								}}
-							/>
-						)}
+
+						{/* Subtitle — slide up [40-60] */}
+						<div
+							style={{
+								color: "rgba(255,255,255,0.6)",
+								fontSize: 32,
+								fontFamily: "sans-serif",
+								fontWeight: 400,
+								letterSpacing: 4,
+								opacity: subtitleOpacity,
+								transform: `translateY(${subtitleY}px)`,
+							}}
+						>
+							Virtual Staging IA
+						</div>
 					</>
+				)}
+
+				{/* Golden separator line [45-70] — always shown unless none */}
+				{watermarkType !== "none" && (
+					<div
+						style={{
+							width: separatorWidth,
+							height: 2,
+							background:
+								"linear-gradient(90deg, transparent, #c8a45a, #e8d48b, #c8a45a, transparent)",
+							marginTop: 20,
+						}}
+					/>
+				)}
+
+				{/* "Vidéo générée par VIMIMO" for Starter watermark */}
+				{watermarkType === "vimimo" && (
+					<div
+						style={{
+							color: "rgba(255,255,255,0.4)",
+							fontSize: 20,
+							fontFamily: "sans-serif",
+							fontWeight: 400,
+							marginTop: 30,
+							opacity: agencyOpacity,
+						}}
+					>
+						Vidéo générée par VIMIMO
+					</div>
 				)}
 			</AbsoluteFill>
 		</AbsoluteFill>

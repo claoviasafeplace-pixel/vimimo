@@ -34,6 +34,7 @@ export const PropertyShowcase: React.FC<PropertyShowcaseProps> = ({
   property,
   rooms,
   musicUrl,
+  watermark,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -141,7 +142,10 @@ export const PropertyShowcase: React.FC<PropertyShowcaseProps> = ({
           durationInFrames={OUTRO_DUR}
           layout="none"
         >
-          <OutroCard />
+          <OutroCard
+            watermarkType={watermark?.type}
+            agencyLogoUrl={watermark?.agencyLogoUrl}
+          />
         </Sequence>
       </AbsoluteFill>
 

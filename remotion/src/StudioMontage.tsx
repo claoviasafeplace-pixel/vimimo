@@ -40,6 +40,7 @@ export const StudioMontage: React.FC<StudioMontageProps> = ({
   propertyInfo,
   rooms,
   musicUrl,
+  watermark,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
@@ -98,7 +99,8 @@ export const StudioMontage: React.FC<StudioMontageProps> = ({
       >
         <StudioOutro
           agencyName={propertyInfo.agencyName}
-          agencyLogoUrl={propertyInfo.agencyLogoUrl}
+          agencyLogoUrl={watermark?.type === "custom" ? (watermark.agencyLogoUrl || propertyInfo.agencyLogoUrl) : undefined}
+          watermarkType={watermark?.type}
         />
       </Sequence>
 

@@ -18,10 +18,16 @@ export const propertyConfigSchema = z.object({
   style: z.string().default("modern"),
 });
 
+export const watermarkSchema = z.object({
+  type: z.enum(["vimimo", "custom", "none"]).default("vimimo"),
+  agencyLogoUrl: z.string().url().optional(),
+});
+
 export const propertyShowcaseSchema = z.object({
   property: propertyConfigSchema.default({}),
   rooms: z.array(roomSchema).min(1).max(30),
   musicUrl: z.string().url().optional(),
+  watermark: watermarkSchema.default({}),
 });
 
 export type Room = z.infer<typeof roomSchema>;
@@ -53,6 +59,7 @@ export const studioMontageSchema = z.object({
   propertyInfo: studioPropertyInfoSchema,
   rooms: z.array(studioRoomSchema).min(2).max(30),
   musicUrl: z.string().url().optional(),
+  watermark: watermarkSchema.default({}),
 });
 
 export type StudioPropertyInfo = z.infer<typeof studioPropertyInfoSchema>;

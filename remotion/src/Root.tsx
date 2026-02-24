@@ -112,6 +112,7 @@ export const RemotionRoot: React.FC = () => {
         };
       }}
       defaultProps={{
+        watermark: { type: "vimimo" as const },
         property: {
           title: "Visite Virtuelle",
           address: "12 Rue de la Paix, Paris",
@@ -159,6 +160,7 @@ export const RemotionRoot: React.FC = () => {
         };
       }}
       defaultProps={{
+        watermark: { type: "custom" as const },
         propertyInfo: {
           title: "Appartement 3 pièces lumineux",
           city: "Lyon",
