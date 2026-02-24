@@ -184,6 +184,13 @@ export interface CreditPack {
 
 export const CREDIT_PACKS: CreditPack[] = [
   {
+    id: "test_1eur",
+    name: "TEST",
+    credits: 1,
+    priceEur: 1,
+    tagline: "Pack test — à supprimer",
+  },
+  {
     id: "single",
     name: "1 Bien",
     credits: 1,
