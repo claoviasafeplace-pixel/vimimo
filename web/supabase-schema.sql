@@ -162,3 +162,14 @@ $$ LANGUAGE plpgsql;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_tx_refund_unique
   ON credit_transactions (user_id, project_id)
   WHERE type = 'refund';
+
+-- ============================================
+-- CHECK constraint: credits can never go negative (PAY-11)
+-- ============================================
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'credits_non_negative'
+  ) THEN
+    ALTER TABLE users ADD CONSTRAINT credits_non_negative CHECK (credits >= 0);
+  END IF;
+END $$;

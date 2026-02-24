@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { getStripe } from "@/lib/stripe";
-import { getUserById, updateUser } from "@/lib/store";
+import { getUserById, updateUser, getActiveSubscription } from "@/lib/store";
 import { CREDIT_PACKS, SUBSCRIPTION_PLANS } from "@/lib/types";
 import { checkoutSchema } from "@/lib/validations";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
@@ -95,6 +95,15 @@ export async function POST(request: Request) {
       const plan = SUBSCRIPTION_PLANS.find((p) => p.id === planId);
       if (!plan) {
         return NextResponse.json({ error: "Plan invalide" }, { status: 400 });
+      }
+
+      // PAY-04: Block duplicate subscriptions
+      const existingSub = await getActiveSubscription(userId);
+      if (existingSub) {
+        return NextResponse.json(
+          { error: "Vous avez déjà un abonnement actif. Gérez-le depuis votre espace facturation." },
+          { status: 409 }
+        );
       }
 
       const isYearly = billing === "yearly";

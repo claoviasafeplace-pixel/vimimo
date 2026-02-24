@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
-import { saveProject, getUserById, deductCredits } from "@/lib/store";
+import { saveProject, getUserById, deductCredits, refundCredits } from "@/lib/store";
 import { cleanPhoto } from "@/lib/services/replicate";
 import { requireAuth } from "@/lib/api-auth";
 import type { Project, ProjectMode, MontageConfig } from "@/lib/types";
@@ -114,14 +114,32 @@ export async function POST(request: Request) {
       montageConfig,
     };
 
-    await saveProject(project);
+    try {
+      await saveProject(project);
 
-    // Emit Inngest event if enabled
-    if (process.env.USE_INNGEST === "true") {
-      await inngest.send({
-        name: "project/created",
-        data: { projectId: project.id },
-      });
+      if (process.env.USE_INNGEST === "true") {
+        await inngest.send({
+          name: "project/created",
+          data: { projectId: project.id },
+        });
+      }
+    } catch (pipelineError) {
+      // Auto-refund: credits were deducted but save/inngest failed
+      console.error("Pipeline failed after deduction, refunding:", pipelineError);
+      try {
+        await refundCredits(
+          userId,
+          creditsNeeded,
+          projectId,
+          `Remboursement auto — échec création projet ${projectId}`
+        );
+      } catch (refundError) {
+        console.error("CRITICAL: Auto-refund also failed:", refundError);
+      }
+      return NextResponse.json(
+        { error: "Erreur lors de la création du projet. Vos crédits ont été remboursés." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ projectId: project.id });

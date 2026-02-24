@@ -155,6 +155,39 @@ export async function POST(request: Request) {
         }
         break;
       }
+
+      // --- Invoice payment failed → mark subscription as past_due ---
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const subDetails = invoice.parent?.subscription_details;
+
+        if (!subDetails) break;
+
+        const subRef = subDetails.subscription;
+        const subId = typeof subRef === "string" ? subRef : subRef?.id;
+
+        if (!subId) break;
+
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const metadata = sub.metadata || {};
+        const userId = metadata.userId;
+        const planId = metadata.planId;
+
+        if (userId) {
+          await upsertSubscription({
+            userId,
+            stripeSubscriptionId: sub.id,
+            stripePriceId: getSubPriceId(sub),
+            planId: planId || "unknown",
+            status: "past_due",
+            creditsPerPeriod: 0,
+            currentPeriodEnd: getSubPeriodEnd(sub),
+            cancelAtPeriodEnd: sub.cancel_at_period_end ?? false,
+          });
+          console.log(`Payment failed: subscription ${sub.id} marked past_due for user ${userId}`);
+        }
+        break;
+      }
     }
   } catch (error) {
     console.error(`Webhook handler error for ${event.type}:`, error);
