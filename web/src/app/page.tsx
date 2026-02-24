@@ -151,13 +151,13 @@ const FAQS = [
 
 const COMPARISONS = [
   {
-    before: "https://images.unsplash.com/photo-1585128792020-803d29415281?w=960&q=85",
-    after: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=960&q=85",
+    before: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/Before-Empty-Livingroom-1.jpeg",
+    after: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/After-Virtually-Staged-Livingroom-in-Standard-Style-1.png",
     label: "Salon — Staging Moderne",
   },
   {
-    before: "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=960&q=85",
-    after: "https://images.unsplash.com/photo-1617325247661-675ab4b64ae2?w=960&q=85",
+    before: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/Before-Empty-Master-BedRoom-1.jpeg",
+    after: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/After-Virtually-Staged-Bedroom-in-Standard-Style-1.webp",
     label: "Chambre — Staging Contemporain",
   },
 ];
