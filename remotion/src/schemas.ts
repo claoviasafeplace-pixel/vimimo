@@ -21,6 +21,7 @@ export const propertyConfigSchema = z.object({
 export const propertyShowcaseSchema = z.object({
   property: propertyConfigSchema.default({}),
   rooms: z.array(roomSchema).min(1).max(30),
+  musicUrl: z.string().url().optional(),
 });
 
 export type Room = z.infer<typeof roomSchema>;

@@ -1,19 +1,24 @@
 import React from "react";
-import { interpolate } from "remotion";
-
-const CLAMP = {
-  extrapolateLeft: "clamp",
-  extrapolateRight: "clamp",
-} as const;
+import { interpolate, spring } from "remotion";
 
 interface RoomLabelProps {
   label: string;
   frame: number;
+  fps?: number;
 }
 
-export const RoomLabel: React.FC<RoomLabelProps> = ({ label, frame }) => {
-  const opacity = interpolate(frame, [0, 20], [0, 1], CLAMP);
-  const translateY = interpolate(frame, [0, 20], [12, 0], CLAMP);
+export const RoomLabel: React.FC<RoomLabelProps> = ({
+  label,
+  frame,
+  fps = 30,
+}) => {
+  const progress = spring({
+    frame,
+    fps,
+    config: { damping: 16, stiffness: 90 },
+  });
+  const opacity = progress;
+  const translateY = interpolate(progress, [0, 1], [18, 0]);
 
   return (
     <div
@@ -22,7 +27,7 @@ export const RoomLabel: React.FC<RoomLabelProps> = ({ label, frame }) => {
         bottom: 60,
         left: 48,
         opacity,
-        transform: `translateY(${translateY}px)`,
+        transform: `translateY(${translateY.toFixed(1)}px)`,
       }}
     >
       <div

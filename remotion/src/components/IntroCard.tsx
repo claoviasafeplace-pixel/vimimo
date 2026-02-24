@@ -1,10 +1,11 @@
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
-
-const CLAMP = {
-  extrapolateLeft: "clamp",
-  extrapolateRight: "clamp",
-} as const;
+import {
+  AbsoluteFill,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 
 interface IntroCardProps {
   title: string;
@@ -14,16 +15,20 @@ interface IntroCardProps {
 
 export const IntroCard: React.FC<IntroCardProps> = ({ title, address, price }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-  // Staggered fade-in with subtle slide-up
-  const titleOpacity = interpolate(frame, [15, 45], [0, 1], CLAMP);
-  const titleY = interpolate(frame, [15, 45], [30, 0], CLAMP);
+  // Spring-based staggered entrance (organic deceleration)
+  const titleProgress = spring({ frame: frame - 15, fps, config: { damping: 18, stiffness: 80 } });
+  const titleOpacity = titleProgress;
+  const titleY = interpolate(titleProgress, [0, 1], [40, 0]);
 
-  const addressOpacity = interpolate(frame, [35, 60], [0, 1], CLAMP);
-  const addressY = interpolate(frame, [35, 60], [20, 0], CLAMP);
+  const addressProgress = spring({ frame: frame - 35, fps, config: { damping: 18, stiffness: 80 } });
+  const addressOpacity = addressProgress;
+  const addressY = interpolate(addressProgress, [0, 1], [25, 0]);
 
-  const priceOpacity = interpolate(frame, [50, 75], [0, 1], CLAMP);
-  const priceScale = interpolate(frame, [50, 75], [0.85, 1], CLAMP);
+  const priceProgress = spring({ frame: frame - 50, fps, config: { damping: 14, stiffness: 100 } });
+  const priceOpacity = priceProgress;
+  const priceScale = interpolate(priceProgress, [0, 1], [0.8, 1]);
 
   // Responsive font size for long titles
   const titleSize = title.length > 35 ? 48 : title.length > 25 ? 58 : 72;

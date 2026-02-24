@@ -5,7 +5,9 @@ import {
   OffthreadVideo,
   Sequence,
   interpolate,
+  spring,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
 import type { Room } from "../schemas";
 import { RoomLabel } from "./RoomLabel";
@@ -53,6 +55,7 @@ const BadgePill: React.CSSProperties = {
 
 export const RoomSegment: React.FC<RoomSegmentProps> = ({ room }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
   const beforeUrl = room.beforePhotoUrl || room.originalPhotoUrl;
 
@@ -74,11 +77,16 @@ export const RoomSegment: React.FC<RoomSegmentProps> = ({ room }) => {
   const opVideoOut = interpolate(frame, [177, 182], [1, 0], CLAMP);
   const opStaged = interpolate(frame, [177, 182], [0, 1], CLAMP);
 
-  // Badge animations
-  const avantOpacity = interpolate(frame, [5, 15], [0, 1], CLAMP);
-  const apresOpacity = interpolate(frame, [185, 195], [0, 1], CLAMP);
+  // Badge animations — spring physics for organic entrance
+  const avantProgress = spring({ frame: frame - 5, fps, config: { damping: 16, stiffness: 100 } });
+  const avantOpacity = avantProgress;
+  const avantY = interpolate(avantProgress, [0, 1], [10, 0]);
 
-  // RoomLabel fade (relative to frame 185)
+  const apresProgress = spring({ frame: frame - 185, fps, config: { damping: 16, stiffness: 100 } });
+  const apresOpacity = apresProgress;
+  const apresY = interpolate(apresProgress, [0, 1], [10, 0]);
+
+  // RoomLabel entrance (relative to frame 190)
   const labelFrame = Math.max(0, frame - 190);
 
   return (
@@ -94,8 +102,8 @@ export const RoomSegment: React.FC<RoomSegmentProps> = ({ room }) => {
               transformOrigin: "center center",
             }}
           />
-          {/* AVANT badge */}
-          <div style={{ ...BadgeStyle, opacity: avantOpacity }}>
+          {/* AVANT badge — spring slide-down */}
+          <div style={{ ...BadgeStyle, opacity: avantOpacity, transform: `translateY(${avantY.toFixed(1)}px)` }}>
             <div
               style={{
                 ...BadgePill,
@@ -138,8 +146,8 @@ export const RoomSegment: React.FC<RoomSegmentProps> = ({ room }) => {
       <Sequence from={177} durationInFrames={33} layout="none">
         <AbsoluteFill style={{ opacity: opStaged }}>
           <Img src={room.stagedPhotoUrl} style={COVER} />
-          {/* APRES badge */}
-          <div style={{ ...BadgeStyle, opacity: apresOpacity }}>
+          {/* APRES badge — spring slide-down */}
+          <div style={{ ...BadgeStyle, opacity: apresOpacity, transform: `translateY(${apresY.toFixed(1)}px)` }}>
             <div
               style={{
                 ...BadgePill,
@@ -151,7 +159,7 @@ export const RoomSegment: React.FC<RoomSegmentProps> = ({ room }) => {
               APRES
             </div>
           </div>
-          <RoomLabel label={room.roomLabel} frame={labelFrame} />
+          <RoomLabel label={room.roomLabel} frame={labelFrame} fps={fps} />
         </AbsoluteFill>
       </Sequence>
     </AbsoluteFill>

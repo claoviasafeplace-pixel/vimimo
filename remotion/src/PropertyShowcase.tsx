@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   AbsoluteFill,
+  Audio,
   Sequence,
   interpolate,
   useCurrentFrame,
@@ -26,9 +27,13 @@ export const calculateDuration = (roomCount: number): number => {
   return INTRO_DUR + roomCount * ROOM_DUR - (roomCount - 1) * CROSSFADE + OUTRO_DUR;
 };
 
+const AUDIO_FADE_IN = 30; // 1 second fade-in
+const AUDIO_FADE_OUT = 60; // 2 seconds fade-out
+
 export const PropertyShowcase: React.FC<PropertyShowcaseProps> = ({
   property,
   rooms,
+  musicUrl,
 }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -41,10 +46,40 @@ export const PropertyShowcase: React.FC<PropertyShowcaseProps> = ({
     CLAMP,
   );
 
+  // Global fade-from-black at start (15 frames = 0.5s)
+  const globalFadeIn = interpolate(frame, [0, 15], [0, 1], CLAMP);
+
+  // Global fade-to-black at end (20 frames)
+  const globalFadeOut = interpolate(
+    frame,
+    [durationInFrames - 20, durationInFrames],
+    [1, 0],
+    CLAMP,
+  );
+
+  // Audio volume: fade-in at start, fade-out at end
+  const audioVolume = useCallback(
+    (f: number) => {
+      const fadeIn = interpolate(f, [0, AUDIO_FADE_IN], [0, 1], CLAMP);
+      const fadeOut = interpolate(
+        f,
+        [durationInFrames - AUDIO_FADE_OUT, durationInFrames],
+        [1, 0],
+        CLAMP,
+      );
+      return fadeIn * fadeOut * 0.8; // 80% max volume
+    },
+    [durationInFrames],
+  );
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      {/* Background music with fade-in/fade-out */}
+      {musicUrl && <Audio src={musicUrl} volume={audioVolume} />}
+
       <AbsoluteFill
         style={{
+          opacity: globalFadeIn * globalFadeOut,
           transform: `scale(${globalScale.toFixed(4)})`,
           transformOrigin: "center center",
         }}
