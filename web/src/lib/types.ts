@@ -179,27 +179,31 @@ export interface CreditPack {
   credits: number;
   priceEur: number;
   popular?: boolean;
+  tagline: string;
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
   {
-    id: "essential",
-    name: "Essentiel",
-    credits: 3,
-    priceEur: 24.99,
+    id: "urgence",
+    name: "L'urgence",
+    credits: 1,
+    priceEur: 9,
+    tagline: "Idéal pour un besoin urgent",
   },
   {
-    id: "standard",
-    name: "Standard",
-    credits: 10,
-    priceEur: 69.99,
+    id: "boost",
+    name: "Le boost",
+    credits: 5,
+    priceEur: 39,
     popular: true,
+    tagline: "Idéal pour booster vos annonces",
   },
   {
-    id: "pro",
-    name: "Pro",
-    credits: 25,
-    priceEur: 149.99,
+    id: "projet",
+    name: "Le projet complet",
+    credits: 10,
+    priceEur: 69,
+    tagline: "Idéal pour un bien complet",
   },
 ];
 

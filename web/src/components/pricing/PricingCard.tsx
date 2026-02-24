@@ -43,8 +43,9 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
       <div className="mb-6">
         <h3 className="text-lg font-bold">{pack.name}</h3>
         <p className="mt-1 text-sm text-muted">
-          {pack.credits} crédits
+          {pack.credits} crédit{pack.credits > 1 ? "s" : ""}
         </p>
+        <p className="mt-1.5 text-xs text-badge-gold-text">{pack.tagline}</p>
       </div>
 
       <div className="mb-6">
@@ -59,7 +60,7 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
       <ul className="mb-8 flex-1 space-y-2.5">
         <li className="flex items-center gap-2 text-sm text-feature-text">
           <Check className="h-4 w-4 text-icon-accent shrink-0" />
-          {pack.credits} pièces traitées
+          {pack.credits} photo{pack.credits > 1 ? "s" : ""} traitée{pack.credits > 1 ? "s" : ""}
         </li>
         <li className="flex items-center gap-2 text-sm text-feature-text">
           <Check className="h-4 w-4 text-icon-accent shrink-0" />
