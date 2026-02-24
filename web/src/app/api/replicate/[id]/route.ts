@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 import { getPredictionStatus } from "@/lib/services/replicate";
 
 export async function GET(
@@ -6,6 +7,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await requireAuth();
+    if (authResult.error) return authResult.error;
+
     const { id } = await params;
     const status = await getPredictionStatus(id);
     return NextResponse.json(status);

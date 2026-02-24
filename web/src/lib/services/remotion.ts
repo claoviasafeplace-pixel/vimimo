@@ -3,6 +3,7 @@ import { STYLES } from "../types";
 import { withRetry, REMOTION_RETRY } from "../retry";
 
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
+const REMOTION_TIMEOUT = 30_000; // 30 seconds
 
 interface RenderResponse {
   id: string;
@@ -47,6 +48,7 @@ export async function startRender(project: Project): Promise<string> {
         compositionId: "PropertyShowcase",
         inputProps,
       }),
+      signal: AbortSignal.timeout(REMOTION_TIMEOUT),
     });
 
     if (!response.ok) {
@@ -60,7 +62,9 @@ export async function startRender(project: Project): Promise<string> {
 
 export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
   return withRetry(async () => {
-    const response = await fetch(`${REMOTION_URL}/renders/${renderId}`);
+    const response = await fetch(`${REMOTION_URL}/renders/${renderId}`, {
+      signal: AbortSignal.timeout(REMOTION_TIMEOUT),
+    });
     if (!response.ok) {
       throw new Error(`Remotion status check failed: ${response.status}`);
     }
@@ -69,7 +73,9 @@ export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
 }
 
 export async function downloadRender(renderId: string): Promise<Buffer> {
-  const response = await fetch(`${REMOTION_URL}/renders/${renderId}/download`);
+  const response = await fetch(`${REMOTION_URL}/renders/${renderId}/download`, {
+    signal: AbortSignal.timeout(120_000), // 2 min for download
+  });
   if (!response.ok) {
     throw new Error(`Remotion download failed: ${response.status}`);
   }
@@ -119,6 +125,7 @@ export async function startStudioRender(
         compositionId: "StudioMontage",
         inputProps,
       }),
+      signal: AbortSignal.timeout(REMOTION_TIMEOUT),
     });
 
     if (!response.ok) {

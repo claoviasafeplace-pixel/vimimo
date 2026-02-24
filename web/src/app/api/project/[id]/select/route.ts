@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { saveProject } from "@/lib/store";
 import { requireProjectOwner } from "@/lib/api-auth";
+import { selectOptionSchema } from "@/lib/validations";
 
 export async function POST(
   request: Request,
@@ -21,12 +22,16 @@ export async function POST(
       );
     }
 
-    const { roomIndex, optionIndex } = await request.json();
+    const body = await request.json();
+    const parsed = selectOptionSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    }
+
+    const { roomIndex, optionIndex } = parsed.data;
 
     if (
-      roomIndex < 0 ||
       roomIndex >= project.rooms.length ||
-      optionIndex < 0 ||
       optionIndex >= project.rooms[roomIndex].options.length
     ) {
       return NextResponse.json({ error: "Index invalide" }, { status: 400 });

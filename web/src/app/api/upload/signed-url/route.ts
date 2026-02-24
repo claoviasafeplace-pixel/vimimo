@@ -14,8 +14,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "fileName requis" }, { status: 400 });
     }
 
+    const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "heic", "heif"];
     const id = nanoid(10);
-    const ext = fileName.split(".").pop() || "jpg";
+    const ext = (fileName.split(".").pop() || "jpg").toLowerCase();
+
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json(
+        { error: `Format non supporté: .${ext}` },
+        { status: 400 }
+      );
+    }
+
     const path = `uploads/${id}.${ext}`;
 
     const db = getSupabase();

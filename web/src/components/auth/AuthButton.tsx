@@ -40,6 +40,8 @@ export default function AuthButton() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
+        aria-label="Menu utilisateur"
+        aria-expanded={menuOpen}
         className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm transition-colors hover:bg-surface-hover cursor-pointer"
       >
         {session.user.image ? (

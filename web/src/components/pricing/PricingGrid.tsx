@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { AlertCircle } from "lucide-react";
 import PricingCard from "./PricingCard";
 import SubscriptionCard from "./SubscriptionCard";
 import { CREDIT_PACKS, SUBSCRIPTION_PLANS } from "@/lib/types";
@@ -15,34 +16,47 @@ export default function PricingGrid() {
   const { data: session } = useSession();
   const [tab, setTab] = useState<Tab>("subscriptions");
   const [billing, setBilling] = useState<Billing>("monthly");
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const handleCheckout = async (params: {
     packId?: string;
     planId?: string;
     billing?: Billing;
   }) => {
+    setCheckoutError(null);
     if (!session) {
       router.push("/login");
       return;
     }
 
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    });
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
 
-    if (!res.ok) {
-      console.error("Checkout error");
-      return;
+      if (!res.ok) {
+        setCheckoutError("Erreur lors de la création du paiement. Veuillez réessayer.");
+        return;
+      }
+
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch {
+      setCheckoutError("Erreur réseau. Vérifiez votre connexion.");
     }
-
-    const { url } = await res.json();
-    if (url) window.location.href = url;
   };
 
   return (
     <div>
+      {checkoutError && (
+        <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+          <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-sm text-red-400">{checkoutError}</p>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="mb-8 flex justify-center">
         <div className="inline-flex rounded-xl border border-border bg-surface p-1">

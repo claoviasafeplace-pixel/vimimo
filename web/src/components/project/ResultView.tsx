@@ -13,6 +13,7 @@ import {
   ArrowDown,
   Copy,
   Check,
+  AlertCircle,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -39,6 +40,8 @@ export default function ResultView({
   const [description, setDescription] = useState<{ instagram: string; tiktok: string } | null>(null);
   const [descTab, setDescTab] = useState<"instagram" | "tiktok">("instagram");
   const [copied, setCopied] = useState(false);
+  const [descError, setDescError] = useState<string | null>(null);
+  const [montageError, setMontageError] = useState<string | null>(null);
 
   const roomsWithVideo = project.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
 
@@ -84,6 +87,7 @@ export default function ResultView({
 
   const handleMontageSubmit = async (config: MontageConfig) => {
     setIsSubmitting(true);
+    setMontageError(null);
     try {
       const res = await fetch(`/api/project/${project.id}/montage`, {
         method: "POST",
@@ -94,13 +98,14 @@ export default function ResultView({
         }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Erreur");
+        const data = await res.json().catch(() => ({}));
+        setMontageError(data.error || "Erreur lors de la création du montage.");
+        return;
       }
       setShowMontageForm(false);
       setSelectingForMontage(false);
-    } catch (err) {
-      console.error("Montage submit error:", err);
+    } catch {
+      setMontageError("Erreur réseau. Vérifiez votre connexion.");
     } finally {
       setIsSubmitting(false);
     }
@@ -108,15 +113,23 @@ export default function ResultView({
 
   const handleGenerateDescription = async () => {
     setDescLoading(true);
+    setDescError(null);
     try {
       const res = await fetch(`/api/project/${project.id}/description`, {
         method: "POST",
       });
-      if (!res.ok) throw new Error("Erreur");
+      if (!res.ok) {
+        setDescError("Erreur lors de la génération. Veuillez réessayer.");
+        return;
+      }
       const data = await res.json();
+      if (!data.instagram || !data.tiktok) {
+        setDescError("Réponse incomplète. Veuillez réessayer.");
+        return;
+      }
       setDescription(data);
-    } catch (err) {
-      console.error("Description error:", err);
+    } catch {
+      setDescError("Erreur réseau. Vérifiez votre connexion.");
     } finally {
       setDescLoading(false);
     }
@@ -249,6 +262,12 @@ export default function ResultView({
                 )}
                 {descLoading ? "Génération en cours..." : "Générer description Insta & TikTok"}
               </Button>
+              {descError && (
+                <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-red-400">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {descError}
+                </p>
+              )}
             </div>
           ) : (
             <motion.div
@@ -380,6 +399,20 @@ export default function ResultView({
         </motion.div>
       )}
 
+      {/* Montage error */}
+      {montageError && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+          <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+          <p className="text-sm text-red-400">{montageError}</p>
+          <button
+            onClick={() => setMontageError(null)}
+            className="ml-auto text-xs text-red-400 hover:text-red-300 cursor-pointer"
+          >
+            Fermer
+          </button>
+        </div>
+      )}
+
       {/* Montage Form */}
       {showMontageForm && (
         <MontageForm
@@ -438,6 +471,7 @@ export default function ResultView({
                     <button
                       onClick={() => moveRoomUp(room.index)}
                       disabled={orderIdx === 0}
+                      aria-label="Monter dans l'ordre"
                       className="rounded-lg p-1.5 hover:bg-surface-hover disabled:opacity-30 transition-colors"
                     >
                       <ArrowUp className="h-4 w-4" />
@@ -445,6 +479,7 @@ export default function ResultView({
                     <button
                       onClick={() => moveRoomDown(room.index)}
                       disabled={orderIdx === selectedRoomIndices.length - 1}
+                      aria-label="Descendre dans l'ordre"
                       className="rounded-lg p-1.5 hover:bg-surface-hover disabled:opacity-30 transition-colors"
                     >
                       <ArrowDown className="h-4 w-4" />
@@ -452,6 +487,7 @@ export default function ResultView({
                     <button
                       onClick={() => toggleRoom(room.index)}
                       className="rounded-lg p-1.5 hover:bg-surface-hover text-red-400 transition-colors"
+                      aria-label="Retirer du montage"
                       title="Retirer"
                     >
                       <span className="text-xs font-medium">✕</span>

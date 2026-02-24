@@ -37,6 +37,64 @@ export async function updateProject(
   return updated;
 }
 
+export interface ProjectSummary {
+  id: string;
+  phase: string;
+  mode: string;
+  styleLabel: string;
+  roomCount: number;
+  thumbnailUrl: string | null;
+  finalVideoUrl: string | null;
+  studioMontageUrl: string | null;
+  createdAt: number;
+  error: string | null;
+}
+
+export async function getUserProjects(userId: string, limit = 50): Promise<ProjectSummary[]> {
+  const db = getSupabase();
+  const { data: rows } = await db
+    .from("projects")
+    .select("id, data, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (!rows) return [];
+
+  return rows.map((row) => {
+    const data = row.data as Record<string, unknown> | null;
+    const rooms = data?.rooms as Array<Record<string, unknown>> | undefined;
+    const photos = data?.photos as Array<Record<string, unknown>> | undefined;
+
+    // Get thumbnail: first room's selected option, or first photo
+    let thumbnailUrl: string | null = null;
+    if (rooms?.length) {
+      const room = rooms[0];
+      const options = room.options as Array<Record<string, unknown>> | undefined;
+      const selectedIdx = (room.selectedOptionIndex as number) ?? 0;
+      if (options?.[selectedIdx]?.url) {
+        thumbnailUrl = options[selectedIdx].url as string;
+      }
+    }
+    if (!thumbnailUrl && photos?.length) {
+      thumbnailUrl = (photos[0].originalUrl as string) || null;
+    }
+
+    return {
+      id: row.id,
+      phase: (data?.phase as string) || "unknown",
+      mode: (data?.mode as string) || "staging_piece",
+      styleLabel: (data?.styleLabel as string) || "",
+      roomCount: Array.isArray(rooms) ? rooms.length : 0,
+      thumbnailUrl,
+      finalVideoUrl: (data?.finalVideoUrl as string) || null,
+      studioMontageUrl: (data?.studioMontageUrl as string) || null,
+      createdAt: data?.createdAt as number || new Date(row.created_at).getTime(),
+      error: (data?.error as string) || null,
+    };
+  });
+}
+
 // =============================================
 // Users — Supabase (persistent)
 // =============================================
@@ -169,11 +227,39 @@ export async function deductCredits(
   projectId: string,
   description: string
 ): Promise<DbUser> {
-  const user = await getUserById(userId);
-  if (!user) throw new Error(`User ${userId} not found`);
-  if (user.credits < amount) throw new Error("Insufficient credits");
+  const db = getSupabase();
 
-  const updatedUser = await updateUser(userId, { credits: user.credits - amount });
+  // Idempotency: don't deduct twice for same project
+  const { data: existingTx } = await db
+    .from("credit_transactions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
+    .eq("type", "deduction")
+    .single();
+
+  if (existingTx) {
+    return (await getUserById(userId))!;
+  }
+
+  // Atomic decrement via RPC
+  const { data: rpcResult, error: rpcError } = await db.rpc("decrement_credits", {
+    p_user_id: userId,
+    p_amount: amount,
+  });
+
+  let updatedUser: DbUser;
+  if (rpcError) {
+    // Fallback: read-check-write (less safe but functional)
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    if (user.credits < amount) throw new Error("Insufficient credits");
+    updatedUser = await updateUser(userId, { credits: user.credits - amount });
+  } else {
+    // RPC returns new balance, -1 means insufficient
+    if (rpcResult === -1) throw new Error("Insufficient credits");
+    updatedUser = (await getUserById(userId))!;
+  }
 
   await recordTransaction(userId, "deduction", -amount, updatedUser.credits, description, {
     projectId,
@@ -188,10 +274,22 @@ export async function refundCredits(
   projectId: string,
   description: string
 ): Promise<DbUser> {
-  const user = await getUserById(userId);
-  if (!user) throw new Error(`User ${userId} not found`);
+  const db = getSupabase();
 
-  const updatedUser = await updateUser(userId, { credits: user.credits + amount });
+  // Atomic increment via RPC
+  const { error: rpcError } = await db.rpc("increment_credits", {
+    user_id: userId,
+    delta: amount,
+  });
+
+  let updatedUser: DbUser;
+  if (rpcError) {
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    updatedUser = await updateUser(userId, { credits: user.credits + amount });
+  } else {
+    updatedUser = (await getUserById(userId))!;
+  }
 
   await recordTransaction(userId, "refund", amount, updatedUser.credits, description, {
     projectId,

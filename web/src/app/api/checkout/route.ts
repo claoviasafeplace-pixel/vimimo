@@ -3,22 +3,34 @@ import { requireAuth } from "@/lib/api-auth";
 import { getStripe } from "@/lib/stripe";
 import { getUserById, updateUser } from "@/lib/store";
 import { CREDIT_PACKS, SUBSCRIPTION_PLANS } from "@/lib/types";
+import { checkoutSchema } from "@/lib/validations";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    // Rate limit
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`checkout:${ip}`, RATE_LIMITS.CHECKOUT);
+    if (rl.limited) {
+      return NextResponse.json(
+        { error: "Trop de requêtes. Réessayez dans quelques instants." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const result = await requireAuth();
     if (result.error) return result.error;
 
     const body = await request.json();
-    const { packId, planId, billing } = body as {
-      packId?: string;
-      planId?: string;
-      billing?: "monthly" | "yearly";
-    };
 
-    if (!packId && !planId) {
-      return NextResponse.json({ error: "Pack ou plan requis" }, { status: 400 });
+    // Zod validation
+    const parsed = checkoutSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Données invalides";
+      return NextResponse.json({ error: firstError }, { status: 400 });
     }
+
+    const { packId, planId, billing } = parsed.data;
 
     const stripe = getStripe();
     const userId = result.session.user.id;

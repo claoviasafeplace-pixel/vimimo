@@ -100,6 +100,80 @@ export async function GET() {
     }
   }
 
+  // Revenue by month (last 6 months)
+  const EUR_PER_CREDIT = 7; // approximate average: 3cr=24.99€, 10cr=69.99€, 25cr=149.99€
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const { data: purchaseHistory } = await db
+    .from("credit_transactions")
+    .select("amount, created_at")
+    .eq("type", "purchase")
+    .gte("created_at", sixMonthsAgo.toISOString())
+    .order("created_at", { ascending: true });
+
+  const revenueMap: Record<string, number> = {};
+  if (purchaseHistory) {
+    for (const tx of purchaseHistory) {
+      const month = new Date(tx.created_at).toISOString().slice(0, 7); // YYYY-MM
+      revenueMap[month] = (revenueMap[month] || 0) + (tx.amount || 0);
+    }
+  }
+
+  const revenueByMonth = Object.entries(revenueMap).map(([month, credits]) => ({
+    month,
+    credits,
+    estimatedEur: Math.round(credits * EUR_PER_CREDIT * 100) / 100,
+  }));
+
+  const totalRevenueEur = revenueByMonth.reduce((sum, m) => sum + m.estimatedEur, 0);
+
+  // Stuck projects (active phase + created > 30 min ago)
+  const activePhases = [
+    "cleaning", "analyzing", "generating_options", "generating_videos",
+    "rendering", "rendering_montage", "auto_staging", "triaging",
+  ];
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+
+  const { data: stuckRows } = await db
+    .from("projects")
+    .select("id, user_id, data, created_at")
+    .in("data->>phase", activePhases)
+    .lt("created_at", thirtyMinAgo)
+    .order("created_at", { ascending: true });
+
+  const stuckProjects = {
+    count: stuckRows?.length || 0,
+    projects: (stuckRows || []).map((row) => ({
+      id: row.id,
+      phase: ((row.data as Record<string, unknown>)?.phase as string) || "unknown",
+      userId: row.user_id,
+      createdAt: row.created_at,
+    })),
+  };
+
+  // Active projects (currently in any active phase)
+  const { data: activeRows } = await db
+    .from("projects")
+    .select("id, user_id, data, created_at")
+    .in("data->>phase", activePhases)
+    .order("created_at", { ascending: false });
+
+  const activeProjects = {
+    count: activeRows?.length || 0,
+    projects: (activeRows || []).map((row) => {
+      const data = row.data as Record<string, unknown> | null;
+      const rooms = data?.rooms as unknown[] | undefined;
+      return {
+        id: row.id,
+        phase: (data?.phase as string) || "unknown",
+        userId: row.user_id,
+        roomCount: Array.isArray(rooms) ? rooms.length : 0,
+        createdAt: row.created_at,
+      };
+    }),
+  };
+
   return NextResponse.json({
     projectsByPhase,
     recentProjects: recentProjects.map((p) => ({
@@ -109,5 +183,9 @@ export async function GET() {
     creditStats,
     subscriptionStats,
     totalUsers: totalUsers || 0,
+    revenueByMonth,
+    totalRevenueEur,
+    stuckProjects,
+    activeProjects,
   });
 }

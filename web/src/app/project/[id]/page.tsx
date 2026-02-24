@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import ProjectView from "@/components/project/ProjectView";
 import AuthButton from "@/components/auth/AuthButton";
@@ -16,8 +16,10 @@ export default function ProjectPage({
   const { id } = use(params);
   const { project, isLoading, error, mutate, refetch } = useProject(id);
   const [isTriageSubmitting, setIsTriageSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleSelect = async (roomIndex: number, optionIndex: number) => {
+    setActionError(null);
     try {
       const res = await fetch(`/api/project/${id}/select`, {
         method: "POST",
@@ -27,13 +29,16 @@ export default function ProjectPage({
       if (res.ok) {
         const { project: updated } = await res.json();
         mutate(updated);
+      } else {
+        setActionError("Erreur lors de la sélection. Veuillez réessayer.");
       }
-    } catch (err) {
-      console.error("Select error:", err);
+    } catch {
+      setActionError("Erreur réseau. Vérifiez votre connexion.");
     }
   };
 
   const handleConfirm = async () => {
+    setActionError(null);
     try {
       const res = await fetch(`/api/project/${id}/generate`, {
         method: "POST",
@@ -41,13 +46,17 @@ export default function ProjectPage({
       if (res.ok) {
         const { project: updated } = await res.json();
         mutate(updated);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error || "Erreur lors de la génération. Veuillez réessayer.");
       }
-    } catch (err) {
-      console.error("Generate error:", err);
+    } catch {
+      setActionError("Erreur réseau. Vérifiez votre connexion.");
     }
   };
 
   const handleTriageConfirm = async (confirmedPhotos: ConfirmedPhoto[]) => {
+    setActionError(null);
     setIsTriageSubmitting(true);
     try {
       const res = await fetch(`/api/project/${id}/triage`, {
@@ -58,9 +67,11 @@ export default function ProjectPage({
       if (res.ok) {
         const { project: updated } = await res.json();
         mutate(updated);
+      } else {
+        setActionError("Erreur lors de la validation du triage.");
       }
-    } catch (err) {
-      console.error("Triage confirm error:", err);
+    } catch {
+      setActionError("Erreur réseau. Vérifiez votre connexion.");
     } finally {
       setIsTriageSubmitting(false);
     }
@@ -109,6 +120,18 @@ export default function ProjectPage({
 
       {/* Content */}
       <main className="mx-auto max-w-5xl px-6 py-8">
+        {actionError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+            <p className="text-sm text-red-400">{actionError}</p>
+            <button
+              onClick={() => setActionError(null)}
+              className="ml-auto text-xs text-red-400 hover:text-red-300 cursor-pointer"
+            >
+              Fermer
+            </button>
+          </div>
+        )}
         <ProjectView
           project={project}
           onSelect={handleSelect}

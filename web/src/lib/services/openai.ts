@@ -9,8 +9,10 @@ import {
 import type { Project, TriageResult } from "../types";
 import { withRetry, OPENAI_RETRY } from "../retry";
 
+const OPENAI_TIMEOUT = 60_000; // 60 seconds
+
 function getClient() {
-  return new OpenAI();
+  return new OpenAI({ timeout: OPENAI_TIMEOUT });
 }
 
 interface VisionAnalysis {

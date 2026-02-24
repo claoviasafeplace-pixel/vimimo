@@ -12,6 +12,7 @@ import {
   RotateCcw,
   CreditCard,
   CalendarClock,
+  FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
 import AuthButton from "@/components/auth/AuthButton";
@@ -19,8 +20,22 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import ProjectHistoryCard from "@/components/dashboard/ProjectHistoryCard";
 import type { CreditTransaction } from "@/lib/types";
 import { SUBSCRIPTION_PLANS } from "@/lib/types";
+
+interface ProjectSummary {
+  id: string;
+  phase: string;
+  mode: string;
+  styleLabel: string;
+  roomCount: number;
+  thumbnailUrl: string | null;
+  finalVideoUrl: string | null;
+  studioMontageUrl: string | null;
+  createdAt: number;
+  error: string | null;
+}
 
 interface DashboardSubscription {
   plan_id: string;
@@ -35,6 +50,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [subscription, setSubscription] = useState<DashboardSubscription | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,6 +68,12 @@ export default function DashboardPage() {
         })
         .catch(console.error)
         .finally(() => setLoading(false));
+
+      fetch("/api/dashboard/projects")
+        .then((res) => res.json())
+        .then((data) => setProjects(data.projects || []))
+        .catch(console.error)
+        .finally(() => setProjectsLoading(false));
     }
   }, [session?.user?.id]);
 
@@ -171,8 +194,45 @@ export default function DashboardPage() {
           </Card>
         </div>
 
+        {/* Mes projets */}
+        <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
+          <FolderKanban className="h-5 w-5 text-amber-400" />
+          Mes projets
+        </h2>
+
+        {projectsLoading ? (
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-surface overflow-hidden animate-pulse">
+                <div className="aspect-video bg-surface-hover" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 w-2/3 rounded bg-surface-hover" />
+                  <div className="h-3 w-1/2 rounded bg-surface-hover" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
+          <Card className="mb-8">
+            <div className="text-center py-6">
+              <p className="text-sm text-muted mb-4">Aucun projet pour le moment</p>
+              <Link href="/">
+                <Button variant="primary" size="sm">
+                  Commencer
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        ) : (
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <ProjectHistoryCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+
         {/* Transactions */}
-        <h2 className="mb-4 text-lg font-semibold">Historique</h2>
+        <h2 className="mb-4 text-lg font-semibold">Historique des crédits</h2>
 
         {loading ? (
           <div className="flex justify-center py-8">
