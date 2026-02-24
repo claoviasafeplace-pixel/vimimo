@@ -44,6 +44,8 @@ export default function ResultView({
   const [montageError, setMontageError] = useState<string | null>(null);
 
   const roomsWithVideo = project.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
+  const roomsWithOptions = project.rooms.filter((r) => r.options.length > 0);
+  const hasAnyContent = roomsWithVideo.length > 0 || project.finalVideoUrl || project.studioMontageUrl || roomsWithOptions.length > 0;
 
   // Selection state: array of room indices in montage order
   const [selectedRoomIndices, setSelectedRoomIndices] = useState<number[]>(() =>
@@ -161,6 +163,36 @@ export default function ResultView({
               : "Téléchargez vos vidéos de staging"}
         </p>
       </div>
+
+      {/* Empty state — pipeline failed to generate content */}
+      {!hasAnyContent && !isRendering && !isRenderingMontage && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface p-8 text-center"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
+            <AlertCircle className="h-6 w-6 text-red-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">
+              Aucun contenu généré
+            </p>
+            <p className="mt-1 text-xs text-muted max-w-sm">
+              Le pipeline IA n&apos;a pas pu produire de résultat pour ce projet.
+              Cela peut être dû à un problème temporaire avec nos services.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="/new">
+              <Button size="sm">
+                <Plus className="mr-1.5 h-4 w-4" />
+                Nouveau projet
+              </Button>
+            </a>
+          </div>
+        </motion.div>
+      )}
 
       {/* Final video compilation */}
       {isRendering && (

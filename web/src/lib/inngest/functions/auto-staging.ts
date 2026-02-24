@@ -7,7 +7,7 @@ import {
   generateVideo,
 } from "@/lib/services/replicate";
 import { generateStagingPrompts } from "@/lib/services/openai";
-import { startStudioRender } from "@/lib/services/remotion";
+import { startRender, startStudioRender } from "@/lib/services/remotion";
 import {
   pipelinePreCheck,
   CircuitOpenError,
@@ -118,9 +118,13 @@ export const autoStaging = inngest.createFunction(
               const result = await generateStagingPrompts(
                 room.cleanedPhotoUrl, room.roomType, room.roomLabel,
                 proj.style, proj.styleLabel, room.visionData, projectId);
-              const predictionId = await generateStagingOption(
-                room.cleanedPhotoUrl, result.prompts[0]);
-              room.optionPredictionIds = [predictionId];
+              // Generate all available prompts (up to 5)
+              const predictionIds = await Promise.all(
+                result.prompts.map((prompt: string) =>
+                  generateStagingOption(room.cleanedPhotoUrl, prompt)
+                )
+              );
+              room.optionPredictionIds = predictionIds;
             } catch (error) {
               console.error(`Auto-staging failed for room ${room.index}:`, error);
               if (error instanceof CircuitOpenError || error instanceof CostThresholdError) {
@@ -142,23 +146,42 @@ export const autoStaging = inngest.createFunction(
 
         let allDone = true;
         for (const room of proj.rooms) {
-          if (room.options.length > 0) continue;
           if (!room.optionPredictionIds?.length) continue;
-          try {
-            const status = await getPredictionStatus(room.optionPredictionIds[0]);
-            if (status.status === "succeeded") {
-              const url = extractOutputUrl(status.output);
-              if (url) {
-                room.options = [{ url, predictionId: room.optionPredictionIds[0] }];
-                room.selectedOptionIndex = 0;
+          // Check if all predictions for this room are resolved
+          if (room.options.length >= room.optionPredictionIds.length) continue;
+
+          const resolvedIds = new Set(room.options.map((o) => o.predictionId));
+          let pendingCount = 0;
+          for (const predId of room.optionPredictionIds) {
+            if (resolvedIds.has(predId)) continue;
+            try {
+              const status = await getPredictionStatus(predId);
+              if (status.status === "succeeded") {
+                const url = extractOutputUrl(status.output);
+                if (url) {
+                  room.options.push({ url, predictionId: predId });
+                }
+              } else if (status.status === "failed" || status.status === "canceled") {
+                // Skip failed predictions
+              } else {
+                pendingCount++;
               }
-            } else if (status.status === "failed" || status.status === "canceled") {
-              room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
-              room.selectedOptionIndex = 0;
-            } else { allDone = false; }
-          } catch (error) {
-            console.error(`Staging prediction check failed for room ${room.index}:`, error);
-            allDone = false;
+            } catch (error) {
+              console.error(`Staging prediction check failed for room ${room.index}:`, error);
+              pendingCount++;
+            }
+          }
+
+          if (pendingCount > 0) allDone = false;
+
+          // If all predictions resolved and at least one succeeded, set selection
+          if (room.options.length > 0 && room.selectedOptionIndex === undefined) {
+            room.selectedOptionIndex = 0;
+          }
+          // If all predictions resolved but none succeeded, use fallback
+          if (pendingCount === 0 && room.options.length === 0) {
+            room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
+            room.selectedOptionIndex = 0;
           }
         }
         await saveProject(proj);
@@ -236,13 +259,15 @@ export const autoStaging = inngest.createFunction(
       await step.sleep(`wait-auto-videos-${attempt}`, "5s");
     }
 
-    // Step 6: Launch montage
-    await step.run("launch-montage", async () => {
+    // Step 6: Launch render (PropertyShowcase for staging_piece, StudioMontage for video_visite)
+    await step.run("launch-render", async () => {
       const proj = await getProject(projectId);
       if (!proj || proj.phase !== "auto_staging") return;
 
       const roomsWithVideo = proj.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
+
       if (roomsWithVideo.length >= 2 && proj.montageConfig) {
+        // video_visite mode: StudioMontage with montageConfig
         try {
           const renderId = await startStudioRender(proj, proj.montageConfig);
           proj.studioMontageRenderId = renderId;
@@ -251,7 +276,18 @@ export const autoStaging = inngest.createFunction(
           console.error("Auto montage render failed:", error);
           proj.phase = "done";
         }
+      } else if (roomsWithVideo.length >= 2) {
+        // staging_piece mode: PropertyShowcase compilation
+        try {
+          const renderId = await startRender(proj);
+          proj.remotionRenderId = renderId;
+          proj.phase = "rendering";
+        } catch (error) {
+          console.error("Auto PropertyShowcase render failed:", error);
+          proj.phase = "done";
+        }
       } else {
+        // Single room or no videos — mark done (individual videos already available)
         proj.phase = "done";
       }
       await saveProject(proj);
