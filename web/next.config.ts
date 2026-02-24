@@ -16,7 +16,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.replicate.delivery https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://*.supabase.co",
+      "img-src 'self' data: blob: https://*.replicate.delivery https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://*.supabase.co https://instahomevirtualstaging.com",
       "font-src 'self'",
       "connect-src 'self' https://api.stripe.com https://*.supabase.co https://*.replicate.com https://*.replicate.delivery",
       "frame-src https://js.stripe.com",

@@ -63,15 +63,15 @@ const FEATURES = [
   },
   {
     icon: Zap,
-    title: "Décrochez des mandats",
+    title: "Pipeline 100% automatisé",
     description:
-      "Différenciez-vous de la concurrence en proposant un service de staging virtuel à vos vendeurs. Justifiez vos honoraires.",
+      "Nettoyage IA des meubles existants, génération du staging, compilation vidéo — tout est automatisé de bout en bout.",
   },
   {
     icon: Shield,
-    title: "Vendez au prix fort",
+    title: "Projection immédiate",
     description:
-      "Les acheteurs se projettent instantanément. Coup de cœur garanti, moins de négociation, vente plus rapide.",
+      "Les acheteurs visualisent le potentiel de chaque pièce. Résultat : plus de visites, moins de négociation.",
   },
   {
     icon: Star,
@@ -96,32 +96,32 @@ const STEPS = [
   },
   {
     step: "03",
-    title: "Décrochez le mandat",
+    title: "Publiez et partagez",
     description:
-      "Présentez le résultat à votre vendeur. Publiez les photos et la vidéo sur vos annonces. Vendez plus vite, au prix fort.",
+      "Téléchargez les photos stagées et la vidéo de visite. Publiez sur vos annonces, réseaux sociaux ou envoyez à vos clients.",
   },
 ];
 
 const TESTIMONIALS = [
   {
-    name: "Sophie Martin",
-    role: "Directrice, Agence Prestige Immobilier",
+    name: "Sophie M.",
+    role: "Agent immobilier, Lyon",
     quote:
-      "Nos biens se vendent 40% plus vite depuis qu'on utilise VIMIMO. Les acquéreurs se projettent immédiatement.",
+      "J'uploade mes photos le matin, je reçois la vidéo avant/après dans les 10 minutes. Le gain de temps est énorme.",
     stars: 5,
   },
   {
-    name: "Thomas Durand",
-    role: "Agent indépendant, Paris 16e",
+    name: "Thomas D.",
+    role: "Agent indépendant, Paris",
     quote:
-      "J'économise 2 000€ par mois en staging physique. La qualité IA est bluffante, mes clients ne voient pas la différence.",
+      "La qualité du staging IA est bluffante. Mes clients ne voient pas la différence avec un vrai home staging.",
     stars: 5,
   },
   {
-    name: "Claire Benoit",
-    role: "Responsable marketing, Century 21",
+    name: "Claire B.",
+    role: "Directrice d'agence, Bordeaux",
     quote:
-      "Les vidéos avant/après sont notre meilleur outil marketing. Les vues sur nos annonces ont triplé.",
+      "Les 5 options de décoration par pièce, c'est ce qui m'a convaincue. On adapte le style à chaque cible d'acheteurs.",
     stars: 5,
   },
 ];
@@ -140,8 +140,8 @@ const FAQS = [
     a: "Oui. Achetez un pack ponctuel d'1 Bien à 19€ pour tester le service sans engagement. Si le résultat vous convainc, passez à l'abonnement.",
   },
   {
-    q: "Comment ça aide à décrocher des mandats exclusifs ?",
-    a: "Lors du R1 avec votre vendeur, montrez-lui ce que VIMIMO peut faire pour son bien. Un staging virtuel professionnel + vidéo pub est un argument concret que les autres agents ne proposent pas.",
+    q: "Comment fonctionne le pipeline IA ?",
+    a: "L'IA nettoie d'abord la photo (supprime les meubles existants), puis génère 5 options de décoration par pièce. Vous choisissez votre préférée. Enfin, une vidéo avant/après cinématique est compilée automatiquement.",
   },
   {
     q: "Si je supprime un projet, est-ce que je récupère mon crédit ?",
@@ -537,7 +537,7 @@ export default function LandingPage() {
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-badge-gold-border bg-badge-gold-bg/60 px-5 py-2 text-sm font-medium text-badge-gold-text backdrop-blur-sm">
             <Sparkles className="h-3.5 w-3.5" />
-            L'arme secrète des agents immobiliers
+            Staging virtuel propulsé par l&apos;IA
           </span>
         </motion.div>
 
@@ -548,10 +548,10 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 0.15, ease: [0.21, 0.47, 0.32, 0.98] as const }}
           className="relative z-10 max-w-5xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
         >
-          <span className="text-gradient-gold">Décrochez</span> des mandats.
+          <span className="text-gradient-gold">Pièce vide</span> en entrée.
           <br />
-          <span className="text-muted">Vendez</span>{" "}
-          <span className="text-gradient-gold">plus vite.</span>
+          <span className="text-muted">Vidéo</span>{" "}
+          <span className="text-gradient-gold">meublée en sortie.</span>
         </motion.h1>
 
         {/* Subtitle */}
@@ -561,8 +561,8 @@ export default function LandingPage() {
           transition={{ duration: 0.7, delay: 0.35, ease: [0.21, 0.47, 0.32, 0.98] as const }}
           className="relative z-10 mt-8 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl"
         >
-          Transformez chaque bien vide en vitrine irrésistible.
-          Staging IA photoréaliste + vidéo de visite cinématique — l'argument qui fait signer des mandats exclusifs.
+          Uploadez vos photos de pièces vides. L&apos;IA génère 5 options de décoration par pièce,
+          puis compile une vidéo de visite avant/après prête à publier.
         </motion.p>
 
         {/* CTAs */}
@@ -698,9 +698,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl">
           <SectionHeading
             badge="Fonctionnalités"
-            title="Décrochez des mandats,"
-            highlight="vendez plus vite"
-            subtitle="L&apos;outil complet qui vous différencie de la concurrence et aide vos vendeurs à vendre au prix fort."
+            title="Ce que VIMIMO"
+            highlight="fait pour vous"
+            subtitle="Un pipeline IA complet : du nettoyage de la photo au staging déco, jusqu&apos;à la vidéo de visite cinématique."
           />
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -884,12 +884,12 @@ export default function LandingPage() {
           className="relative z-10 mx-auto max-w-3xl text-center"
         >
           <h2 className="text-3xl font-bold sm:text-4xl lg:text-5xl">
-            Prêt à décrocher plus de{" "}
-            <span className="text-gradient-gold">mandats</span> ?
+            Prêt à tester le{" "}
+            <span className="text-gradient-gold">staging IA</span> ?
           </h2>
           <p className="mt-5 text-lg text-muted">
-            Proposez un service que vos concurrents n'ont pas.
-            Staging IA + vidéo pub pour chaque bien de votre portefeuille.
+            Uploadez vos premières photos et recevez vos visuels en quelques minutes.
+            Aucun engagement, aucun logiciel à installer.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <a
@@ -901,10 +901,10 @@ export default function LandingPage() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </a>
             <Link
-              href="#pricing"
+              href="/new"
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-7 py-4 text-base font-medium text-foreground backdrop-blur-sm transition-all hover:bg-surface-hover"
             >
-              Voir les tarifs
+              Essayer maintenant
             </Link>
           </div>
         </motion.div>
@@ -927,8 +927,8 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="text-sm leading-relaxed text-muted max-w-xs">
-                Le staging virtuel IA pour les professionnels de l&apos;immobilier.
-                Vendez plus vite, impressionnez vos clients.
+                Staging virtuel IA + vidéo de visite automatique
+                pour les professionnels de l&apos;immobilier.
               </p>
             </div>
 
