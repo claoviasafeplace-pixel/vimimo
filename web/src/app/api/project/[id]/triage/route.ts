@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { saveProject } from "@/lib/store";
 import { requireProjectOwner } from "@/lib/api-auth";
-import type { ConfirmedPhoto } from "@/lib/types";
 import { inngest } from "@/lib/inngest/client";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { triageConfirmSchema } from "@/lib/validations";
 
 export async function POST(
   request: Request,
@@ -34,14 +34,13 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { confirmedPhotos } = body as { confirmedPhotos: ConfirmedPhoto[] };
-
-    if (!confirmedPhotos?.length) {
-      return NextResponse.json(
-        { error: "Aucune photo confirmée" },
-        { status: 400 }
-      );
+    const parsed = triageConfirmSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Données invalides";
+      return NextResponse.json({ error: firstError }, { status: 400 });
     }
+
+    const { confirmedPhotos } = parsed.data;
 
     const includedCount = confirmedPhotos.filter((p) => p.included).length;
     if (includedCount < 2) {

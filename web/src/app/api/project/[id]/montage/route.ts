@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getProject, saveProject } from "@/lib/store";
 import { startStudioRender } from "@/lib/services/remotion";
 import { requireProjectOwner } from "@/lib/api-auth";
-import type { MontageConfig } from "@/lib/types";
 import { inngest } from "@/lib/inngest/client";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { montageSchema } from "@/lib/validations";
 
 export async function POST(
   request: Request,
@@ -53,16 +53,13 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { selectedRoomIndices, ...montageConfig } = body as MontageConfig & {
-      selectedRoomIndices?: number[];
-    };
-
-    if (!montageConfig.propertyInfo?.title) {
-      return NextResponse.json(
-        { error: "Le titre du bien est requis" },
-        { status: 400 },
-      );
+    const parsed = montageSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Données invalides";
+      return NextResponse.json({ error: firstError }, { status: 400 });
     }
+
+    const { selectedRoomIndices, ...montageConfig } = parsed.data;
 
     // If specific rooms are selected, reorder project.rooms before rendering
     if (selectedRoomIndices?.length) {

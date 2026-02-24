@@ -20,10 +20,12 @@ export async function GET(request: NextRequest) {
   // If search is provided, find matching user IDs first
   let searchUserIds: string[] | undefined;
   if (search) {
+    // Escape SQL wildcards to prevent injection via % and _
+    const sanitizedSearch = search.replace(/[%_\\]/g, "\\$&");
     const { data: matchingUsers } = await db
       .from("users")
       .select("id")
-      .ilike("email", `%${search}%`);
+      .ilike("email", `%${sanitizedSearch}%`);
     searchUserIds = matchingUsers?.map((u) => u.id) || [];
     // If no users match the search, return empty results immediately
     if (searchUserIds.length === 0) {

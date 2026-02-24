@@ -72,6 +72,20 @@ export const montageSchema = z.object({
   selectedRoomIndices: z.array(z.number().int().min(0)).min(2).optional(),
 });
 
+// --- Admin action ---
+export const adminActionSchema = z.object({
+  action: z.enum(["retry", "force_done", "refund"]),
+});
+
+// --- Signed URL upload ---
+export const signedUrlSchema = z.object({
+  fileName: z
+    .string()
+    .min(1, "fileName requis")
+    .regex(/^[a-zA-Z0-9._\-]+$/, "Caractères non autorisés dans le nom de fichier"),
+  contentType: z.string().optional(),
+});
+
 // --- Triage confirmation ---
 export const triageConfirmSchema = z.object({
   confirmedPhotos: z

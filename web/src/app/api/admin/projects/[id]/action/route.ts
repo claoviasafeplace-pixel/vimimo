@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getProject, updateProject, refundCredits } from "@/lib/store";
 import { inngest } from "@/lib/inngest/client";
+import { adminActionSchema } from "@/lib/validations";
 
 export async function POST(
   request: NextRequest,
@@ -17,7 +18,12 @@ export async function POST(
   }
 
   const body = await request.json();
-  const action = body.action as string;
+  const parsed = adminActionSchema.safeParse(body);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]?.message || "Action invalide";
+    return NextResponse.json({ error: firstError }, { status: 400 });
+  }
+  const { action } = parsed.data;
 
   switch (action) {
     case "retry": {
@@ -70,7 +76,5 @@ export async function POST(
       return NextResponse.json({ success: true, action: "refund", amount });
     }
 
-    default:
-      return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
   }
 }

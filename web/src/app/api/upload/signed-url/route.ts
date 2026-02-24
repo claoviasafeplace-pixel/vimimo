@@ -2,17 +2,21 @@ import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { getSupabase } from "@/lib/supabase";
+import { signedUrlSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
   try {
     const authResult = await requireAuth();
     if (authResult.error) return authResult.error;
 
-    const { fileName, contentType } = await request.json();
-
-    if (!fileName) {
-      return NextResponse.json({ error: "fileName requis" }, { status: 400 });
+    const body = await request.json();
+    const parsed = signedUrlSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Données invalides";
+      return NextResponse.json({ error: firstError }, { status: 400 });
     }
+
+    const { fileName } = parsed.data;
 
     const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "heic", "heif"];
     const id = nanoid(10);
@@ -51,10 +55,9 @@ export async function POST(request: Request) {
       publicUrl: urlData.publicUrl,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("Signed URL error:", message);
+    console.error("Signed URL error:", error);
     return NextResponse.json(
-      { error: `Erreur: ${message}` },
+      { error: "Erreur lors de la création de l'URL de téléversement" },
       { status: 500 },
     );
   }
