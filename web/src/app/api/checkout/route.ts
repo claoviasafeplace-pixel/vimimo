@@ -8,18 +8,19 @@ import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
-    // Rate limit
+    // Auth optional — guests can checkout too
+    const session = await auth();
+
+    // Rate limit — use userId if authenticated, IP otherwise
     const ip = getClientIp(request);
-    const rl = checkRateLimit(`checkout:${ip}`, RATE_LIMITS.CHECKOUT);
+    const rateLimitKey = session?.user?.id ? `checkout:user:${session.user.id}` : `checkout:ip:${ip}`;
+    const rl = checkRateLimit(rateLimitKey, RATE_LIMITS.CHECKOUT);
     if (rl.limited) {
       return NextResponse.json(
         { error: "Trop de requêtes. Réessayez dans quelques instants." },
         { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
       );
     }
-
-    // Auth optional — guests can checkout too
-    const session = await auth();
     const isGuest = !session?.user?.id;
 
     const body = await request.json();

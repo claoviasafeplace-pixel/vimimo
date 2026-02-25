@@ -35,8 +35,8 @@ export interface RateLimitConfig {
 export const RATE_LIMITS = {
   /** Project creation: 5 per minute */
   PROJECT_CREATE: { max: 5, windowMs: 60_000 },
-  /** Checkout: 3 per minute */
-  CHECKOUT: { max: 3, windowMs: 60_000 },
+  /** Checkout: 10 per minute */
+  CHECKOUT: { max: 10, windowMs: 60_000 },
   /** Upload: 10 per minute */
   UPLOAD: { max: 10, windowMs: 60_000 },
   /** Description generation: 5 per minute */
