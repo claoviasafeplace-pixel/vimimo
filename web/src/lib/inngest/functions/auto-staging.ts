@@ -260,9 +260,9 @@ export const autoStaging = inngest.createFunction(
     }
 
     // Step 6: Launch render (PropertyShowcase for staging_piece, StudioMontage for video_visite)
-    await step.run("launch-render", async () => {
+    const renderResult = await step.run("launch-render", async () => {
       const proj = await getProject(projectId);
-      if (!proj || proj.phase !== "auto_staging") return;
+      if (!proj || proj.phase !== "auto_staging") return { type: "skip" };
 
       const roomsWithVideo = proj.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
 
@@ -272,9 +272,13 @@ export const autoStaging = inngest.createFunction(
           const renderId = await startStudioRender(proj, proj.montageConfig);
           proj.studioMontageRenderId = renderId;
           proj.phase = "rendering_montage";
+          await saveProject(proj);
+          return { type: "montage", renderId };
         } catch (error) {
           console.error("Auto montage render failed:", error);
           proj.phase = "done";
+          await saveProject(proj);
+          return { type: "done" };
         }
       } else if (roomsWithVideo.length >= 2) {
         // staging_piece mode: PropertyShowcase compilation
@@ -282,16 +286,80 @@ export const autoStaging = inngest.createFunction(
           const renderId = await startRender(proj);
           proj.remotionRenderId = renderId;
           proj.phase = "rendering";
+          await saveProject(proj);
+          return { type: "render", renderId };
         } catch (error) {
           console.error("Auto PropertyShowcase render failed:", error);
           proj.phase = "done";
+          await saveProject(proj);
+          return { type: "done" };
         }
       } else {
         // Single room or no videos — mark done (individual videos already available)
         proj.phase = "done";
+        await saveProject(proj);
+        return { type: "done" };
       }
-      await saveProject(proj);
     });
+
+    // Step 7: Poll render until done
+    if (renderResult.type === "montage" || renderResult.type === "render") {
+      for (let attempt = 0; attempt < 120; attempt++) {
+        const done = await step.run(`check-render-${attempt}`, async () => {
+          const proj = await getProject(projectId);
+          if (!proj) return true;
+
+          const renderId = renderResult.type === "montage"
+            ? proj.studioMontageRenderId
+            : proj.remotionRenderId;
+          if (!renderId) return true;
+
+          try {
+            const { getRenderStatus } = await import("@/lib/services/remotion");
+            const status = await getRenderStatus(renderId);
+
+            if (status.status === "done") {
+              // Download and upload to Supabase
+              try {
+                const { downloadRender } = await import("@/lib/services/remotion");
+                const videoBuffer = await downloadRender(renderId);
+                const { uploadBuffer } = await import("@/lib/services/storage");
+                const prefix = renderResult.type === "montage" ? "montages" : "renders";
+                const videoUrl = await uploadBuffer(videoBuffer, prefix);
+                if (renderResult.type === "montage") {
+                  proj.studioMontageUrl = videoUrl;
+                } else {
+                  proj.finalVideoUrl = videoUrl;
+                }
+              } catch (uploadError) {
+                console.error(`[auto-staging] Upload failed for render ${renderId}:`, uploadError);
+                // Fallback: direct Remotion download URL
+                const directUrl = `${process.env.REMOTION_SERVER_URL}/renders/${renderId}/download`;
+                if (renderResult.type === "montage") {
+                  proj.studioMontageUrl = directUrl;
+                } else {
+                  proj.finalVideoUrl = directUrl;
+                }
+              }
+              proj.phase = "done";
+              await saveProject(proj);
+              return true;
+            } else if (status.status === "error") {
+              console.error(`[auto-staging] Render ${renderId} failed: ${status.error}`);
+              proj.phase = "done";
+              await saveProject(proj);
+              return true;
+            }
+          } catch (error) {
+            console.error(`[auto-staging] Render status check failed:`, error);
+          }
+          return false;
+        });
+
+        if (done) break;
+        await step.sleep(`wait-render-${attempt}`, "5s");
+      }
+    }
 
     return { projectId, status: "auto-staging-done" };
   },

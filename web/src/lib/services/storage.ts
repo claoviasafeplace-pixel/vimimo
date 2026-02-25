@@ -47,3 +47,24 @@ export async function uploadFromUrl(
   const { data } = db.storage.from("photos").getPublicUrl(path);
   return data.publicUrl;
 }
+
+export async function uploadBuffer(
+  buffer: Buffer,
+  prefix: string,
+): Promise<string> {
+  const db = getSupabase();
+  const id = nanoid(10);
+  const path = `${prefix}/${id}.mp4`;
+
+  const { error } = await db.storage
+    .from("photos")
+    .upload(path, buffer, {
+      contentType: "video/mp4",
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data } = db.storage.from("photos").getPublicUrl(path);
+  return data.publicUrl;
+}

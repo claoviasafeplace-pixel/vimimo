@@ -1,7 +1,7 @@
 import { inngest } from "../client";
 import { getProject, saveProject } from "@/lib/store";
-import { getRenderStatus } from "@/lib/services/remotion";
-import { uploadFromUrl } from "@/lib/services/storage";
+import { getRenderStatus, downloadRender } from "@/lib/services/remotion";
+import { uploadBuffer } from "@/lib/services/storage";
 
 export const montagePoll = inngest.createFunction(
   { id: "montage-poll", retries: 0 },
@@ -18,12 +18,11 @@ export const montagePoll = inngest.createFunction(
           const renderStatus = await getRenderStatus(proj.studioMontageRenderId);
           if (renderStatus.status === "done") {
             try {
-              const videoUrl = await uploadFromUrl(
-                `${process.env.REMOTION_SERVER_URL}/renders/${proj.studioMontageRenderId}/download`,
-                "montages");
+              const videoBuffer = await downloadRender(proj.studioMontageRenderId);
+              const videoUrl = await uploadBuffer(videoBuffer, "montages");
               proj.studioMontageUrl = videoUrl;
             } catch (error) {
-              console.error(`[montage-poll] Upload from Remotion failed for ${proj.studioMontageRenderId}:`, error);
+              console.error(`[montage-poll] Download/upload failed for ${proj.studioMontageRenderId}:`, error);
               proj.studioMontageUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.studioMontageRenderId}/download`;
             }
             proj.phase = "done";

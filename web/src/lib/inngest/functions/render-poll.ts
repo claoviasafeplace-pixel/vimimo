@@ -1,7 +1,7 @@
 import { inngest } from "../client";
 import { getProject, saveProject } from "@/lib/store";
-import { getRenderStatus } from "@/lib/services/remotion";
-import { uploadFromUrl } from "@/lib/services/storage";
+import { getRenderStatus, downloadRender } from "@/lib/services/remotion";
+import { uploadBuffer } from "@/lib/services/storage";
 
 export const renderPoll = inngest.createFunction(
   { id: "render-poll", retries: 0 },
@@ -18,12 +18,11 @@ export const renderPoll = inngest.createFunction(
           const renderStatus = await getRenderStatus(proj.remotionRenderId);
           if (renderStatus.status === "done") {
             try {
-              const videoUrl = await uploadFromUrl(
-                `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`,
-                "renders");
+              const videoBuffer = await downloadRender(proj.remotionRenderId);
+              const videoUrl = await uploadBuffer(videoBuffer, "renders");
               proj.finalVideoUrl = videoUrl;
             } catch (error) {
-              console.error(`[render-poll] Upload from Remotion failed for ${proj.remotionRenderId}:`, error);
+              console.error(`[render-poll] Download/upload failed for ${proj.remotionRenderId}:`, error);
               proj.finalVideoUrl = `${process.env.REMOTION_SERVER_URL}/renders/${proj.remotionRenderId}/download`;
             }
             proj.phase = "done";
