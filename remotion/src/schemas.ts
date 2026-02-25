@@ -65,3 +65,23 @@ export const studioMontageSchema = z.object({
 export type StudioPropertyInfo = z.infer<typeof studioPropertyInfoSchema>;
 export type StudioRoom = z.infer<typeof studioRoomSchema>;
 export type StudioMontageProps = z.infer<typeof studioMontageSchema>;
+
+// ─── Social Montage Schemas (Vertical 1080×1920) ────────────────────
+
+export const socialRoomSchema = z.object({
+  beforePhotoUrl: z.string().url(),
+  stagedPhotoUrl: z.string().url(),
+  videoUrl: z.string().url(),
+  roomType: z.string(),
+  roomLabel: z.string(),
+});
+
+export const socialMontageSchema = z.object({
+  hookText: z.string().default("Avant / Après IA ✨"),
+  rooms: z.array(socialRoomSchema).min(1).max(30),
+  watermark: watermarkSchema.default({}),
+  style: z.string().default("modern"),
+});
+
+export type SocialRoom = z.infer<typeof socialRoomSchema>;
+export type SocialMontageProps = z.infer<typeof socialMontageSchema>;

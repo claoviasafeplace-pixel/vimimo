@@ -181,3 +181,50 @@ export async function startStudioRender(
     }, REMOTION_RETRY),
   );
 }
+
+export async function startSocialRender(project: Project): Promise<string> {
+  const rooms = project.rooms
+    .filter((r) => r.videoUrl && r.options.length > 0)
+    .map((r) => ({
+      beforePhotoUrl: r.beforePhotoUrl,
+      stagedPhotoUrl: r.options[r.selectedOptionIndex ?? 0].url,
+      videoUrl: r.videoUrl!,
+      roomType: r.roomType,
+      roomLabel: r.roomLabel,
+    }));
+
+  const watermark = await resolveWatermark(project.userId);
+  const styleLabel =
+    STYLES.find((s) => s.id === project.style)?.label || project.style;
+
+  const inputProps = {
+    hookText: "Avant / Après IA ✨",
+    rooms,
+    watermark,
+    style: styleLabel,
+  };
+
+  return withCircuitBreaker("remotion", () =>
+    withRetry(async () => {
+      const response = await fetch(`${REMOTION_URL}/renders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RENDER_SECRET}`,
+        },
+        body: JSON.stringify({
+          compositionId: "SocialMontage",
+          inputProps,
+        }),
+        signal: AbortSignal.timeout(REMOTION_TIMEOUT),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Social Montage render failed: ${response.status}`);
+      }
+
+      const data: RenderResponse = await response.json();
+      return data.id;
+    }, REMOTION_RETRY),
+  );
+}

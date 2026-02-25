@@ -6,8 +6,8 @@ import {
   generateStagingOption,
   generateVideo,
 } from "@/lib/services/replicate";
-import { generateStagingPrompts } from "@/lib/services/openai";
-import { startRender, startStudioRender } from "@/lib/services/remotion";
+import { generateStagingPrompts, analyzePhotos } from "@/lib/services/openai";
+import { startRender, startStudioRender, startSocialRender } from "@/lib/services/remotion";
 import {
   pipelinePreCheck,
   CircuitOpenError,
@@ -101,6 +101,44 @@ export const autoStaging = inngest.createFunction(
         };
       });
       await saveProject(proj);
+    });
+
+    // Step 1b: Analyze rooms (populate visionData via GPT-4o Vision)
+    await step.run("analyze-rooms", async () => {
+      const proj = await getProject(projectId);
+      if (!proj || proj.phase !== "auto_staging") return;
+      // Skip if visionData already populated
+      const needsAnalysis = proj.rooms.some(
+        (r) => !r.visionData || Object.keys(r.visionData).length === 0,
+      );
+      if (!needsAnalysis) return;
+
+      try {
+        const photoUrls = proj.rooms.map((r, i) => ({
+          index: i + 1,
+          url: r.cleanedPhotoUrl,
+        }));
+        const analysis = await analyzePhotos(
+          photoUrls, proj.style, undefined, projectId,
+        );
+
+        // Merge visionData into existing rooms
+        for (const analyzed of analysis.rooms) {
+          const room = proj.rooms[analyzed.photoIndex - 1];
+          if (!room) continue;
+          room.visionData = {
+            dimensions: analyzed.dimensions,
+            existingMaterials: analyzed.existingMaterials,
+            lighting: analyzed.lighting,
+            cameraAngle: analyzed.cameraAngle,
+            notes: analyzed.notes,
+          };
+        }
+        await saveProject(proj);
+      } catch (error) {
+        console.error("[auto-staging] Room analysis failed:", error);
+        // Non-fatal: continue with empty visionData
+      }
     });
 
     // Step 2: Launch staging in batches
@@ -218,20 +256,25 @@ export const autoStaging = inngest.createFunction(
         (r) => !r.videoUrl && r.options.length > 0);
 
       if (needsVideo.length > 0) {
-        await Promise.allSettled(
-          needsVideo.map(async (room) => {
-            try {
-              const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
-              // Clear stale prediction ID before launching new one
-              room.videoPredictionId = undefined;
-              const predictionId = await generateVideo(
-                room.beforePhotoUrl, stagedUrl, proj.styleLabel, room.roomType);
-              room.videoPredictionId = predictionId;
-            } catch (error) {
-              console.error(`Video generation failed for room ${room.index}:`, error);
-              room.videoUrl = "";
-            }
-          }));
+        // Sequentialize in batches of 2 to avoid 429 rate limits
+        const videoBatchSize = 2;
+        for (let start = 0; start < needsVideo.length; start += videoBatchSize) {
+          const batch = needsVideo.slice(start, start + videoBatchSize);
+          await Promise.allSettled(
+            batch.map(async (room) => {
+              try {
+                const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
+                // Clear stale prediction ID before launching new one
+                room.videoPredictionId = undefined;
+                const predictionId = await generateVideo(
+                  room.beforePhotoUrl, stagedUrl, proj.styleLabel, room.roomType);
+                room.videoPredictionId = predictionId;
+              } catch (error) {
+                console.error(`Video generation failed for room ${room.index}:`, error);
+                room.videoUrl = "";
+              }
+            }));
+        }
         await saveProject(proj);
       }
     });
@@ -280,12 +323,28 @@ export const autoStaging = inngest.createFunction(
       await step.sleep(`wait-auto-videos-${attempt}`, "5s");
     }
 
-    // Step 6: Launch render (PropertyShowcase for staging_piece, StudioMontage for video_visite)
+    // Step 6: Launch render (PropertyShowcase / StudioMontage / SocialMontage depending on mode)
     const renderResult = await step.run("launch-render", async () => {
       const proj = await getProject(projectId);
       if (!proj || proj.phase !== "auto_staging") return { type: "skip" };
 
       const roomsWithVideo = proj.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
+
+      // social_reel mode: SocialMontage (vertical 1080x1920)
+      if (proj.mode === "social_reel" && roomsWithVideo.length >= 1) {
+        try {
+          const renderId = await startSocialRender(proj);
+          proj.studioMontageRenderId = renderId;
+          proj.phase = "rendering_montage";
+          await saveProject(proj);
+          return { type: "montage", renderId };
+        } catch (error) {
+          console.error("Auto social render failed:", error);
+          proj.phase = "done";
+          await saveProject(proj);
+          return { type: "done" };
+        }
+      }
 
       if (roomsWithVideo.length >= 2 && proj.montageConfig) {
         // video_visite mode: StudioMontage with montageConfig

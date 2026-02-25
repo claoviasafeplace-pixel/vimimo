@@ -4,9 +4,11 @@ import { z } from "zod";
 import { VirtualStaging } from "./Composition";
 import { PropertyShowcase, calculateDuration } from "./PropertyShowcase";
 import { StudioMontage } from "./StudioMontage";
-import { propertyShowcaseSchema, studioMontageSchema } from "./schemas";
-import type { PropertyShowcaseProps, StudioMontageProps } from "./schemas";
+import { SocialMontage } from "./SocialMontage";
+import { propertyShowcaseSchema, studioMontageSchema, socialMontageSchema } from "./schemas";
+import type { PropertyShowcaseProps, StudioMontageProps, SocialMontageProps } from "./schemas";
 import { calculateStudioDuration } from "./studio/utils/timeline";
+import { calculateSocialDuration } from "./social/timeline";
 
 // ─── Zod Schema (contrat n8n → Remotion) ──────────────────────────
 
@@ -194,6 +196,48 @@ export const RemotionRoot: React.FC = () => {
             roomLabel: "Cuisine",
           },
         ],
+      }}
+    />
+    <Composition
+      id="SocialMontage"
+      component={SocialMontage}
+      fps={FPS}
+      width={1080}
+      height={1920}
+      durationInFrames={calculateSocialDuration(3)}
+      schema={socialMontageSchema}
+      calculateMetadata={({ props }) => {
+        return {
+          durationInFrames: calculateSocialDuration(props.rooms.length),
+        };
+      }}
+      defaultProps={{
+        hookText: "Avant / Après IA ✨",
+        style: "modern",
+        rooms: [
+          {
+            beforePhotoUrl: "https://placehold.co/1080x1920/5a3a3a/ffffff?text=Salon+-+AVANT",
+            stagedPhotoUrl: "https://placehold.co/1080x1920/2d5a3d/ffffff?text=Salon+-+Staged",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            roomType: "living_room",
+            roomLabel: "Salon",
+          },
+          {
+            beforePhotoUrl: "https://placehold.co/1080x1920/5a3a3a/ffffff?text=Chambre+-+AVANT",
+            stagedPhotoUrl: "https://placehold.co/1080x1920/3d2d5a/ffffff?text=Chambre+-+Staged",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            roomType: "bedroom",
+            roomLabel: "Chambre 1",
+          },
+          {
+            beforePhotoUrl: "https://placehold.co/1080x1920/5a3a3a/ffffff?text=Cuisine+-+AVANT",
+            stagedPhotoUrl: "https://placehold.co/1080x1920/5a3d2d/ffffff?text=Cuisine+-+Staged",
+            videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+            roomType: "kitchen",
+            roomLabel: "Cuisine",
+          },
+        ],
+        watermark: { type: "vimimo" as const },
       }}
     />
     </>

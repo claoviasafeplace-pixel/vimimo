@@ -9,7 +9,7 @@ import { getSupabase } from "./supabase";
 const FAILURE_THRESHOLD = 5;
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const ALERT_DEBOUNCE_MS = 15 * 60 * 1000; // 15 minutes
-const COST_THRESHOLD_USD = parseFloat(process.env.COST_THRESHOLD_USD || "3.0");
+const COST_THRESHOLD_USD = parseFloat(process.env.COST_THRESHOLD_USD || "10.0");
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
 const RENDER_SECRET = process.env.RENDER_SECRET || "vimimo-dev-secret";
 const ADMIN_EMAIL = "claoviasafeplace@gmail.com";

@@ -66,7 +66,7 @@ export interface Room {
   videoPredictionId?: string;
 }
 
-export type ProjectMode = "staging_piece" | "video_visite";
+export type ProjectMode = "staging_piece" | "video_visite" | "social_reel";
 
 export type ProjectPhase =
   | "uploading"
