@@ -98,51 +98,71 @@ const SocialRoomSegment: React.FC<{
   index: number;
 }> = ({ room, index }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
 
-  // Phase timing within SOCIAL_ROOM_FRAMES (45 frames = 3 beats at 120 BPM)
-  // Beat 1 (0-15): Before photo with Ken Burns
-  // Beat 2 (15-30): AI video (accelerated 2.5x)
-  // Beat 3 (30-45): Staged beauty shot reveal
+  // Fallback: if cleanedPhotoUrl is missing, use beforePhotoUrl
+  const cleanedUrl = room.cleanedPhotoUrl || room.beforePhotoUrl;
 
-  const beforeOpacity = interpolate(frame, [0, 13, 16], [1, 1, 0], CLAMP);
-  const videoOpacity = interpolate(frame, [13, 16, 37, 40], [0, 1, 1, 0], CLAMP);
-  const stagedOpacity = interpolate(frame, [37, 40], [0, 1], CLAMP);
+  // 4-phase storytelling within SOCIAL_ROOM_FRAMES (60 frames = 4 beats at 120 BPM)
+  // Beat 1 (0-15):  Original photo (with furniture) — "AVANT"
+  // Beat 2 (15-30): Cleaned photo (empty room) — "NETTOYAGE IA"
+  // Beat 3 (30-45): AI video (Kling morph, accelerated 2x)
+  // Beat 4 (45-60): Final staged photo — "APRÈS"
 
-  // Ken Burns on before
-  const beforeScale = interpolate(frame, [0, 15], [1.0, 1.08], CLAMP);
+  // Phase opacities (3-frame crossfades between beats)
+  const originalOpacity = interpolate(frame, [0, 13, 16], [1, 1, 0], CLAMP);
+  const cleanedOpacity = interpolate(frame, [13, 16, 28, 31], [0, 1, 1, 0], CLAMP);
+  const videoOpacity = interpolate(frame, [28, 31, 43, 46], [0, 1, 1, 0], CLAMP);
+  const stagedOpacity = interpolate(frame, [43, 46], [0, 1], CLAMP);
+
+  // Ken Burns on original
+  const originalScale = interpolate(frame, [0, 15], [1.0, 1.06], CLAMP);
+
+  // Subtle zoom on cleaned
+  const cleanedScale = interpolate(frame, [15, 30], [1.04, 1.0], CLAMP);
 
   // Video zoom
-  const videoScale = interpolate(frame, [15, 38], [1.0, 1.04], CLAMP);
+  const videoScale = interpolate(frame, [30, 45], [1.0, 1.04], CLAMP);
 
-  // Staged reveal
-  const stagedScale = interpolate(frame, [37, 45], [1.06, 1.0], CLAMP);
+  // Staged reveal punch
+  const stagedScale = interpolate(frame, [45, 60], [1.06, 1.0], CLAMP);
 
-  // Label
-  const labelOpacity = interpolate(frame, [5, 8], [0, 1], CLAMP);
+  // Room label (always visible after initial entrance)
+  const labelOpacity = interpolate(frame, [3, 6], [0, 1], CLAMP);
 
-  // "AVANT" badge (visible during beat 1)
-  const avantOpacity = interpolate(frame, [2, 5, 13, 15], [0, 1, 1, 0], CLAMP);
-
-  // "APRES" badge (visible during beat 3)
-  const apresOpacity = interpolate(frame, [38, 41], [0, 1], CLAMP);
+  // Badge opacities — each badge visible during its beat
+  const avantOpacity = interpolate(frame, [2, 4, 12, 15], [0, 1, 1, 0], CLAMP);
+  const cleanBadgeOpacity = interpolate(frame, [17, 19, 27, 30], [0, 1, 1, 0], CLAMP);
+  const apresBadgeOpacity = interpolate(frame, [47, 49], [0, 1], CLAMP);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* Before photo */}
-      <AbsoluteFill style={{ opacity: beforeOpacity }}>
+      {/* Phase 1: Original photo (with furniture) */}
+      <AbsoluteFill style={{ opacity: originalOpacity }}>
         <Img
           src={room.beforePhotoUrl}
           style={{
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            transform: `scale(${beforeScale})`,
+            transform: `scale(${originalScale})`,
           }}
         />
       </AbsoluteFill>
 
-      {/* AI Video (accelerated) */}
+      {/* Phase 2: Cleaned photo (empty room — AI removal) */}
+      <AbsoluteFill style={{ opacity: cleanedOpacity }}>
+        <Img
+          src={cleanedUrl}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            transform: `scale(${cleanedScale})`,
+          }}
+        />
+      </AbsoluteFill>
+
+      {/* Phase 3: AI Video (Kling morph, accelerated) */}
       <AbsoluteFill style={{ opacity: videoOpacity }}>
         <Video
           src={room.videoUrl}
@@ -152,12 +172,12 @@ const SocialRoomSegment: React.FC<{
             objectFit: "cover",
             transform: `scale(${videoScale})`,
           }}
-          playbackRate={2.5}
+          playbackRate={2}
           startFrom={0}
         />
       </AbsoluteFill>
 
-      {/* Staged beauty shot */}
+      {/* Phase 4: Final staged photo */}
       <AbsoluteFill style={{ opacity: stagedOpacity }}>
         <Img
           src={room.stagedPhotoUrl}
@@ -170,7 +190,7 @@ const SocialRoomSegment: React.FC<{
         />
       </AbsoluteFill>
 
-      {/* AVANT badge */}
+      {/* AVANT badge (beat 1) */}
       <AbsoluteFill
         style={{
           display: "flex",
@@ -195,14 +215,39 @@ const SocialRoomSegment: React.FC<{
         </div>
       </AbsoluteFill>
 
-      {/* APRES badge */}
+      {/* NETTOYAGE IA badge (beat 2) */}
       <AbsoluteFill
         style={{
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "flex-start",
           padding: "0 40px 180px",
-          opacity: apresOpacity,
+          opacity: cleanBadgeOpacity,
+        }}
+      >
+        <div
+          style={{
+            background: "rgba(59,130,246,0.8)",
+            backdropFilter: "blur(8px)",
+            padding: "8px 24px",
+            borderRadius: 8,
+            border: "1px solid rgba(96,165,250,0.5)",
+          }}
+        >
+          <span style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: 3 }}>
+            NETTOYAGE IA
+          </span>
+        </div>
+      </AbsoluteFill>
+
+      {/* APRÈS badge (beat 4) */}
+      <AbsoluteFill
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "flex-start",
+          padding: "0 40px 180px",
+          opacity: apresBadgeOpacity,
         }}
       >
         <div
@@ -215,7 +260,7 @@ const SocialRoomSegment: React.FC<{
           }}
         >
           <span style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: 3 }}>
-            APRES
+            APRÈS
           </span>
         </div>
       </AbsoluteFill>

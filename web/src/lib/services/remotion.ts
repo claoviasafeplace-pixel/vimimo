@@ -131,6 +131,7 @@ export async function startStudioRender(
     .filter((r) => r.videoUrl && r.options.length > 0)
     .map((r) => ({
       beforePhotoUrl: r.beforePhotoUrl,
+      cleanedPhotoUrl: r.cleanedPhotoUrl || r.beforePhotoUrl,
       stagedPhotoUrl: r.options[r.selectedOptionIndex ?? 0].url,
       videoUrl: r.videoUrl!,
       roomType: r.roomType,
@@ -187,6 +188,7 @@ export async function startSocialRender(project: Project): Promise<string> {
     .filter((r) => r.videoUrl && r.options.length > 0)
     .map((r) => ({
       beforePhotoUrl: r.beforePhotoUrl,
+      cleanedPhotoUrl: r.cleanedPhotoUrl || r.beforePhotoUrl,
       stagedPhotoUrl: r.options[r.selectedOptionIndex ?? 0].url,
       videoUrl: r.videoUrl!,
       roomType: r.roomType,

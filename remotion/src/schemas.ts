@@ -49,6 +49,7 @@ export const studioPropertyInfoSchema = z.object({
 
 export const studioRoomSchema = z.object({
   beforePhotoUrl: z.string().url(),
+  cleanedPhotoUrl: z.string().url().optional(),
   stagedPhotoUrl: z.string().url(),
   videoUrl: z.string().url(),
   roomType: z.string(),
@@ -70,6 +71,7 @@ export type StudioMontageProps = z.infer<typeof studioMontageSchema>;
 
 export const socialRoomSchema = z.object({
   beforePhotoUrl: z.string().url(),
+  cleanedPhotoUrl: z.string().url().optional(),
   stagedPhotoUrl: z.string().url(),
   videoUrl: z.string().url(),
   roomType: z.string(),

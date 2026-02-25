@@ -217,6 +217,7 @@ export const RemotionRoot: React.FC = () => {
         rooms: [
           {
             beforePhotoUrl: "https://placehold.co/1080x1920/5a3a3a/ffffff?text=Salon+-+AVANT",
+            cleanedPhotoUrl: "https://placehold.co/1080x1920/3a3a3a/ffffff?text=Salon+-+VIDE",
             stagedPhotoUrl: "https://placehold.co/1080x1920/2d5a3d/ffffff?text=Salon+-+Staged",
             videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
             roomType: "living_room",
@@ -224,6 +225,7 @@ export const RemotionRoot: React.FC = () => {
           },
           {
             beforePhotoUrl: "https://placehold.co/1080x1920/5a3a3a/ffffff?text=Chambre+-+AVANT",
+            cleanedPhotoUrl: "https://placehold.co/1080x1920/3a3a3a/ffffff?text=Chambre+-+VIDE",
             stagedPhotoUrl: "https://placehold.co/1080x1920/3d2d5a/ffffff?text=Chambre+-+Staged",
             videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
             roomType: "bedroom",
@@ -231,6 +233,7 @@ export const RemotionRoot: React.FC = () => {
           },
           {
             beforePhotoUrl: "https://placehold.co/1080x1920/5a3a3a/ffffff?text=Cuisine+-+AVANT",
+            cleanedPhotoUrl: "https://placehold.co/1080x1920/3a3a3a/ffffff?text=Cuisine+-+VIDE",
             stagedPhotoUrl: "https://placehold.co/1080x1920/5a3d2d/ffffff?text=Cuisine+-+Staged",
             videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
             roomType: "kitchen",

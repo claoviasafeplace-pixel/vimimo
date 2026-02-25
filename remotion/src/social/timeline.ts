@@ -6,7 +6,7 @@ export const SOCIAL_FPS = 30;
 export const SOCIAL_BPM = 120;
 export const SOCIAL_BEAT_FRAMES = 15; // 1 beat at 120 BPM / 30fps
 export const SOCIAL_HOOK_FRAMES = 45; // 3 beats (1.5s) hook text
-export const SOCIAL_ROOM_FRAMES = 45; // 3 beats (1.5s) per room
+export const SOCIAL_ROOM_FRAMES = 60; // 4 beats (2s) per room: original → cleaned → video → staged
 export const SOCIAL_CUT_FRAMES = 15; // 1 beat (0.5s) flash cut
 export const SOCIAL_OUTRO_FRAMES = 45; // 3 beats (1.5s) outro
 
