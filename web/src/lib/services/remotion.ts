@@ -21,6 +21,7 @@ async function resolveWatermark(userId?: string): Promise<{ type: WatermarkType;
 }
 
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
+const RENDER_SECRET = process.env.RENDER_SECRET || "vimimo-dev-secret";
 const REMOTION_TIMEOUT = 30_000; // 30 seconds
 
 interface RenderResponse {
@@ -65,7 +66,10 @@ export async function startRender(project: Project): Promise<string> {
     withRetry(async () => {
       const response = await fetch(`${REMOTION_URL}/renders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RENDER_SECRET}`,
+        },
         body: JSON.stringify({
           compositionId: "PropertyShowcase",
           inputProps,
@@ -87,6 +91,7 @@ export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
   return withCircuitBreaker("remotion", () =>
     withRetry(async () => {
       const response = await fetch(`${REMOTION_URL}/renders/${renderId}`, {
+        headers: { Authorization: `Bearer ${RENDER_SECRET}` },
         signal: AbortSignal.timeout(REMOTION_TIMEOUT),
       });
       if (!response.ok) {
@@ -99,6 +104,7 @@ export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
 
 export async function downloadRender(renderId: string): Promise<Buffer> {
   const response = await fetch(`${REMOTION_URL}/renders/${renderId}/download`, {
+    headers: { Authorization: `Bearer ${RENDER_SECRET}` },
     signal: AbortSignal.timeout(120_000), // 2 min for download
   });
   if (!response.ok) {
@@ -153,7 +159,10 @@ export async function startStudioRender(
     withRetry(async () => {
       const response = await fetch(`${REMOTION_URL}/renders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RENDER_SECRET}`,
+        },
         body: JSON.stringify({
           compositionId: "StudioMontage",
           inputProps,
