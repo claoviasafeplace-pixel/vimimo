@@ -114,11 +114,13 @@ export async function downloadRender(renderId: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
+const SUPABASE_PUBLIC_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+
 const MUSIC_URLS: Record<string, string> = {
-  elegant: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/music/elegant.mp3`,
-  energetic: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/music/energetic.mp3`,
-  minimal: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/music/minimal.mp3`,
-  dramatic: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/music/dramatic.mp3`,
+  elegant: `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/assets/music/elegant.mp3`,
+  energetic: `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/assets/music/energetic.mp3`,
+  minimal: `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/assets/music/minimal.mp3`,
+  dramatic: `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/assets/music/dramatic.mp3`,
 };
 
 export async function startStudioRender(
