@@ -35,13 +35,21 @@ const HookScreen: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const bgScale = interpolate(frame, [0, SOCIAL_HOOK_FRAMES], [1.1, 1.0], CLAMP);
-  const textScale = spring({ frame, fps, config: { damping: 12, stiffness: 100, mass: 0.8 } });
-  const textOpacity = interpolate(frame, [0, 10], [0, 1], CLAMP);
+  const bgScale = interpolate(frame, [0, SOCIAL_HOOK_FRAMES], [1.15, 1.0], CLAMP);
+  const textScale = spring({ frame, fps, config: { damping: 8, stiffness: 200, mass: 0.5 } });
+
+  // Hard pop-in: invisible → full in 2 frames
+  const textOpacity = interpolate(frame, [0, 2], [0, 1], CLAMP);
+
+  // Vignette pulse
+  const vignetteOpacity = interpolate(
+    frame, [0, 10, 20, 30, SOCIAL_HOOK_FRAMES],
+    [0.9, 0.5, 0.7, 0.5, 0.8], CLAMP,
+  );
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* Blurred background */}
+      {/* Background image — dark, zoomed */}
       <AbsoluteFill>
         <Img
           src={firstImageUrl}
@@ -49,244 +57,209 @@ const HookScreen: React.FC<{
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            filter: "blur(20px) brightness(0.4)",
+            filter: "blur(12px) brightness(0.3) saturate(1.3)",
             transform: `scale(${bgScale})`,
           }}
         />
       </AbsoluteFill>
 
-      {/* Hook text */}
+      {/* Heavy vignette */}
+      <AbsoluteFill
+        style={{
+          background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,${vignetteOpacity}) 100%)`,
+        }}
+      />
+
+      {/* Hook text — MASSIVE, viral TikTok typography */}
       <AbsoluteFill
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "0 60px",
+          padding: "0 40px",
         }}
       >
         <div
           style={{
-            fontSize: 72,
+            fontSize: 96,
             fontWeight: 900,
             color: "#fff",
             textAlign: "center",
-            textShadow: "0 4px 30px rgba(0,0,0,0.8)",
+            textTransform: "uppercase",
             transform: `scale(${textScale})`,
             opacity: textOpacity,
-            lineHeight: 1.2,
-            letterSpacing: -1,
+            lineHeight: 1.05,
+            letterSpacing: -2,
+            // Triple text-shadow for maximum impact: glow + hard drop + outline
+            textShadow: [
+              "0 0 40px rgba(255,255,255,0.3)",
+              "0 6px 0 rgba(0,0,0,0.9)",
+              "0 8px 30px rgba(0,0,0,1)",
+              "2px 2px 0 rgba(0,0,0,0.8)",
+              "-2px -2px 0 rgba(0,0,0,0.8)",
+              "2px -2px 0 rgba(0,0,0,0.8)",
+              "-2px 2px 0 rgba(0,0,0,0.8)",
+            ].join(", "),
           }}
         >
           {hookText}
         </div>
       </AbsoluteFill>
-
-      {/* Bottom gradient */}
-      <AbsoluteFill
-        style={{
-          background: "linear-gradient(transparent 70%, rgba(0,0,0,0.8) 100%)",
-        }}
-      />
     </AbsoluteFill>
   );
 };
 
 // ─── Social Room Segment ────────────────────────────────────────────
 
+// ─── Micro Flash (1-2 frame white burst on hard cuts) ────────────────
+
+const MicroFlash: React.FC<{ at: number; currentFrame: number }> = ({ at, currentFrame }) => {
+  const dist = currentFrame - at;
+  if (dist < 0 || dist > 2) return null;
+  const opacity = dist === 0 ? 1 : 0.4;
+  return (
+    <AbsoluteFill
+      style={{ backgroundColor: "#fff", opacity, mixBlendMode: "screen" }}
+    />
+  );
+};
+
+// ─── Social Room Segment — TikTok Viral / Phonk Style ───────────────
+//
+// 60 frames total (4 beats at 120 BPM). Asymmetric speed ramp:
+//
+//   [0-7]   ORIGINAL  — 8fr flash (furniture visible)
+//   [8-15]  CLEANED   — 8fr flash (empty room)
+//   [16-35] VIDEO     — 20fr, playbackRate 3.5x (violent acceleration)
+//   [36-59] RESULT    — 24fr, punch zoom settle (hero shot to admire)
+//
+// Hard cuts at frames 8, 16, 36 with 2-frame white micro-flashes.
+// Zero crossfades. Zero badges. Pure impact.
+
 const SocialRoomSegment: React.FC<{
   room: SocialMontageProps["rooms"][0];
   index: number;
-}> = ({ room, index }) => {
+}> = ({ room }) => {
   const frame = useCurrentFrame();
-
-  // Fallback: if cleanedPhotoUrl is missing, use beforePhotoUrl
   const cleanedUrl = room.cleanedPhotoUrl || room.beforePhotoUrl;
 
-  // 4-phase storytelling within SOCIAL_ROOM_FRAMES (60 frames = 4 beats at 120 BPM)
-  // Beat 1 (0-15):  Original photo (with furniture) — "AVANT"
-  // Beat 2 (15-30): Cleaned photo (empty room) — "NETTOYAGE IA"
-  // Beat 3 (30-45): AI video (Kling morph, accelerated 2x)
-  // Beat 4 (45-60): Final staged photo — "APRÈS"
+  // Determine which phase is active (hard cuts, no crossfade)
+  const phase =
+    frame < 8 ? "original" :
+    frame < 16 ? "cleaned" :
+    frame < 36 ? "video" :
+    "result";
 
-  // Phase opacities (3-frame crossfades between beats)
-  const originalOpacity = interpolate(frame, [0, 13, 16], [1, 1, 0], CLAMP);
-  const cleanedOpacity = interpolate(frame, [13, 16, 28, 31], [0, 1, 1, 0], CLAMP);
-  const videoOpacity = interpolate(frame, [28, 31, 43, 46], [0, 1, 1, 0], CLAMP);
-  const stagedOpacity = interpolate(frame, [43, 46], [0, 1], CLAMP);
+  // Ken Burns on original (fast push-in during the 8-frame flash)
+  const originalScale = interpolate(frame, [0, 8], [1.0, 1.1], CLAMP);
 
-  // Ken Burns on original
-  const originalScale = interpolate(frame, [0, 15], [1.0, 1.06], CLAMP);
+  // Cleaned: subtle reverse zoom
+  const cleanedScale = interpolate(frame, [8, 16], [1.08, 1.0], CLAMP);
 
-  // Subtle zoom on cleaned
-  const cleanedScale = interpolate(frame, [15, 30], [1.04, 1.0], CLAMP);
+  // Video: slow push during accelerated playback
+  const videoScale = interpolate(frame, [16, 36], [1.0, 1.06], CLAMP);
 
-  // Video zoom
-  const videoScale = interpolate(frame, [30, 45], [1.0, 1.04], CLAMP);
+  // Result: PUNCH ZOOM — starts big, settles to 1.0
+  const resultScale = interpolate(frame, [36, 42, 60], [1.12, 1.02, 1.0], CLAMP);
 
-  // Staged reveal punch
-  const stagedScale = interpolate(frame, [45, 60], [1.06, 1.0], CLAMP);
-
-  // Room label (always visible after initial entrance)
-  const labelOpacity = interpolate(frame, [3, 6], [0, 1], CLAMP);
-
-  // Badge opacities — each badge visible during its beat
-  const avantOpacity = interpolate(frame, [2, 4, 12, 15], [0, 1, 1, 0], CLAMP);
-  const cleanBadgeOpacity = interpolate(frame, [17, 19, 27, 30], [0, 1, 1, 0], CLAMP);
-  const apresBadgeOpacity = interpolate(frame, [47, 49], [0, 1], CLAMP);
+  // Result brightness boost on punch (flash-to-settle)
+  const resultBrightness = interpolate(frame, [36, 40], [1.15, 1.0], CLAMP);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* Phase 1: Original photo (with furniture) */}
-      <AbsoluteFill style={{ opacity: originalOpacity }}>
-        <Img
-          src={room.beforePhotoUrl}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: `scale(${originalScale})`,
-          }}
-        />
-      </AbsoluteFill>
+      {/* Phase 1: Original — 8 frame flash */}
+      {phase === "original" && (
+        <AbsoluteFill>
+          <Img
+            src={room.beforePhotoUrl}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${originalScale})`,
+            }}
+          />
+        </AbsoluteFill>
+      )}
 
-      {/* Phase 2: Cleaned photo (empty room — AI removal) */}
-      <AbsoluteFill style={{ opacity: cleanedOpacity }}>
-        <Img
-          src={cleanedUrl}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: `scale(${cleanedScale})`,
-          }}
-        />
-      </AbsoluteFill>
+      {/* Phase 2: Cleaned — 8 frame flash */}
+      {phase === "cleaned" && (
+        <AbsoluteFill>
+          <Img
+            src={cleanedUrl}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${cleanedScale})`,
+            }}
+          />
+        </AbsoluteFill>
+      )}
 
-      {/* Phase 3: AI Video (Kling morph, accelerated) */}
-      <AbsoluteFill style={{ opacity: videoOpacity }}>
-        <Video
-          src={room.videoUrl}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: `scale(${videoScale})`,
-          }}
-          playbackRate={2}
-          startFrom={0}
-        />
-      </AbsoluteFill>
+      {/* Phase 3: AI Video — 20 frames, violent 3.5x acceleration */}
+      {phase === "video" && (
+        <AbsoluteFill>
+          <Video
+            src={room.videoUrl}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${videoScale})`,
+            }}
+            playbackRate={3.5}
+            startFrom={0}
+          />
+        </AbsoluteFill>
+      )}
 
-      {/* Phase 4: Final staged photo */}
-      <AbsoluteFill style={{ opacity: stagedOpacity }}>
-        <Img
-          src={room.stagedPhotoUrl}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: `scale(${stagedScale})`,
-          }}
-        />
-      </AbsoluteFill>
+      {/* Phase 4: Result hero shot — 24 frames with punch zoom */}
+      {phase === "result" && (
+        <AbsoluteFill>
+          <Img
+            src={room.stagedPhotoUrl}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${resultScale})`,
+              filter: `brightness(${resultBrightness})`,
+            }}
+          />
+        </AbsoluteFill>
+      )}
 
-      {/* AVANT badge (beat 1) */}
+      {/* Micro-flashes on each hard cut (beat-synced white bursts) */}
+      <MicroFlash at={8} currentFrame={frame} />
+      <MicroFlash at={16} currentFrame={frame} />
+      <MicroFlash at={36} currentFrame={frame} />
+
+      {/* Room label — minimal, bottom-left, always visible */}
       <AbsoluteFill
         style={{
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "flex-start",
-          padding: "0 40px 180px",
-          opacity: avantOpacity,
+          padding: "0 36px 100px",
         }}
       >
         <div
           style={{
-            background: "rgba(0,0,0,0.7)",
-            backdropFilter: "blur(8px)",
-            padding: "8px 24px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.2)",
+            fontSize: 36,
+            fontWeight: 900,
+            color: "#fff",
+            textTransform: "uppercase",
+            letterSpacing: 4,
+            textShadow: [
+              "0 2px 0 rgba(0,0,0,0.9)",
+              "0 4px 20px rgba(0,0,0,0.8)",
+              "1px 1px 0 rgba(0,0,0,0.7)",
+              "-1px -1px 0 rgba(0,0,0,0.7)",
+            ].join(", "),
           }}
         >
-          <span style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: 3 }}>
-            AVANT
-          </span>
-        </div>
-      </AbsoluteFill>
-
-      {/* NETTOYAGE IA badge (beat 2) */}
-      <AbsoluteFill
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "flex-start",
-          padding: "0 40px 180px",
-          opacity: cleanBadgeOpacity,
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(59,130,246,0.8)",
-            backdropFilter: "blur(8px)",
-            padding: "8px 24px",
-            borderRadius: 8,
-            border: "1px solid rgba(96,165,250,0.5)",
-          }}
-        >
-          <span style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: 3 }}>
-            NETTOYAGE IA
-          </span>
-        </div>
-      </AbsoluteFill>
-
-      {/* APRÈS badge (beat 4) */}
-      <AbsoluteFill
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "flex-start",
-          padding: "0 40px 180px",
-          opacity: apresBadgeOpacity,
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(200,164,90,0.8)",
-            backdropFilter: "blur(8px)",
-            padding: "8px 24px",
-            borderRadius: 8,
-            border: "1px solid rgba(255,215,130,0.5)",
-          }}
-        >
-          <span style={{ color: "#fff", fontSize: 28, fontWeight: 700, letterSpacing: 3 }}>
-            APRÈS
-          </span>
-        </div>
-      </AbsoluteFill>
-
-      {/* Room label */}
-      <AbsoluteFill
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "flex-start",
-          padding: "0 40px 120px",
-          opacity: labelOpacity,
-        }}
-      >
-        <div
-          style={{
-            background: "rgba(255,255,255,0.1)",
-            backdropFilter: "blur(12px)",
-            padding: "6px 20px",
-            borderRadius: 6,
-            border: "1px solid rgba(255,255,255,0.15)",
-          }}
-        >
-          <span style={{ color: "#fff", fontSize: 22, fontWeight: 500 }}>
-            {room.roomLabel}
-          </span>
+          {room.roomLabel}
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -351,21 +324,24 @@ const SocialOutro: React.FC<{
 
 const FlashCut: React.FC = () => {
   const frame = useCurrentFrame();
-  const opacity = interpolate(
+
+  // Aggressive flash: instant full white → black → slight afterglow → gone
+  const flashOpacity = interpolate(
     frame,
-    [0, 2, 4, SOCIAL_CUT_FRAMES],
-    [0, 0.8, 0.4, 0],
+    [0, 1, 3, 5, SOCIAL_CUT_FRAMES],
+    [1, 0.9, 0, 0.15, 0],
     CLAMP,
   );
 
   return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: "#fff",
-        opacity,
-        mixBlendMode: "screen",
-      }}
-    />
+    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      <AbsoluteFill
+        style={{
+          backgroundColor: "#fff",
+          opacity: flashOpacity,
+        }}
+      />
+    </AbsoluteFill>
   );
 };
 
