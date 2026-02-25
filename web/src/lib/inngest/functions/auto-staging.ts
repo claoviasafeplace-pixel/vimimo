@@ -14,6 +14,7 @@ import {
   CostThresholdError,
   type ServiceName,
 } from "@/lib/circuit-breaker";
+import { persistFromUrl } from "@/lib/services/storage";
 
 async function autoRefund(project: {
   userId?: string;
@@ -159,7 +160,14 @@ export const autoStaging = inngest.createFunction(
               if (status.status === "succeeded") {
                 const url = extractOutputUrl(status.output);
                 if (url) {
-                  room.options.push({ url, predictionId: predId });
+                  // Persist to Supabase (Replicate URLs expire)
+                  let persistedUrl = url;
+                  try {
+                    persistedUrl = await persistFromUrl(url, "staging", "image/webp");
+                  } catch (e) {
+                    console.error(`[auto-staging] Failed to persist staging image:`, e);
+                  }
+                  room.options.push({ url: persistedUrl, predictionId: predId });
                 }
               } else if (status.status === "failed" || status.status === "canceled") {
                 // Skip failed predictions
@@ -241,7 +249,18 @@ export const autoStaging = inngest.createFunction(
             try {
               const status = await getPredictionStatus(room.videoPredictionId!);
               if (status.status === "succeeded") {
-                room.videoUrl = extractOutputUrl(status.output) || undefined;
+                const replicateUrl = extractOutputUrl(status.output);
+                if (replicateUrl) {
+                  // Persist to Supabase (Replicate URLs expire)
+                  try {
+                    room.videoUrl = await persistFromUrl(replicateUrl, "videos", "video/mp4");
+                  } catch (e) {
+                    console.error(`[auto-staging] Failed to persist video:`, e);
+                    room.videoUrl = replicateUrl; // fallback to ephemeral URL
+                  }
+                } else {
+                  room.videoUrl = undefined;
+                }
               } else if (status.status === "failed" || status.status === "canceled") {
                 room.videoUrl = "";
               }

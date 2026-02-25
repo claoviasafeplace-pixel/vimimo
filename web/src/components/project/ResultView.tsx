@@ -20,6 +20,22 @@ import Badge from "@/components/ui/Badge";
 import MontageForm from "./MontageForm";
 import type { Project, MontageConfig } from "@/lib/types";
 
+/**
+ * If the video URL is a direct VPS/Remotion URL (not a public Supabase URL),
+ * route it through our API proxy that adds the auth header.
+ */
+function getVideoSrc(url: string, projectId?: string): string {
+  // Supabase and other public URLs work directly
+  if (url.includes("supabase.co") || url.includes("replicate.delivery")) {
+    return url;
+  }
+  // VPS Remotion URLs need proxying — use our API route
+  if (projectId) {
+    return `/api/project/${projectId}/video`;
+  }
+  return url;
+}
+
 interface ResultViewProps {
   project: Project;
   isRendering: boolean;
@@ -205,7 +221,7 @@ export default function ResultView({
       {project.finalVideoUrl && (
         <div className="overflow-hidden rounded-2xl border border-badge-gold-border bg-surface">
           <video
-            src={project.finalVideoUrl}
+            src={getVideoSrc(project.finalVideoUrl, project.id)}
             className="aspect-video w-full"
             controls
             playsInline
@@ -218,7 +234,7 @@ export default function ResultView({
                 {project.rooms.length} pièces - {project.styleLabel}
               </p>
             </div>
-            <a href={project.finalVideoUrl} download>
+            <a href={getVideoSrc(project.finalVideoUrl, project.id)} download>
               <Button size="md">
                 <Download className="mr-2 h-4 w-4" />
                 Télécharger
@@ -253,7 +269,7 @@ export default function ResultView({
             </span>
           </div>
           <video
-            src={project.studioMontageUrl}
+            src={getVideoSrc(project.studioMontageUrl, project.id)}
             className="aspect-video w-full"
             controls
             playsInline
@@ -268,7 +284,7 @@ export default function ResultView({
                 {roomsWithVideo.length} pièces - Montage cinématique
               </p>
             </div>
-            <a href={project.studioMontageUrl} download>
+            <a href={getVideoSrc(project.studioMontageUrl, project.id)} download>
               <Button size="md">
                 <Download className="mr-2 h-4 w-4" />
                 Télécharger
