@@ -47,6 +47,9 @@ export async function POST(request: Request) {
         const checkoutSession = await stripe.checkout.sessions.create({
           mode: "payment",
           customer_creation: "always",
+          billing_address_collection: "required",
+          tax_id_collection: { enabled: true },
+          invoice_creation: { enabled: true },
           line_items: [
             {
               price_data: {
@@ -90,6 +93,8 @@ export async function POST(request: Request) {
 
         const checkoutSession = await stripe.checkout.sessions.create({
           mode: "subscription",
+          billing_address_collection: "required",
+          tax_id_collection: { enabled: true },
           line_items: [
             {
               price_data: {
@@ -159,13 +164,16 @@ export async function POST(request: Request) {
       const checkoutSession = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "payment",
+        billing_address_collection: "required",
+        tax_id_collection: { enabled: true },
+        invoice_creation: { enabled: true },
         line_items: [
           {
             price_data: {
               currency: "eur",
               product_data: {
                 name: `VIMIMO — Pack ${pack.name}`,
-                description: `${pack.credits} crédits de staging IA`,
+                description: `${pack.credits} biens de staging IA`,
               },
               unit_amount: Math.round(pack.priceEur * 100),
             },
@@ -213,6 +221,8 @@ export async function POST(request: Request) {
       const checkoutSession = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "subscription",
+        billing_address_collection: "required",
+        tax_id_collection: { enabled: true },
         line_items: [
           {
             price_data: {

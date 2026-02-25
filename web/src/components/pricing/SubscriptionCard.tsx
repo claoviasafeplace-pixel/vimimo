@@ -31,6 +31,7 @@ export default function SubscriptionCard({ plan, billing, onSubscribe }: Subscri
     ? plan.priceEur * 12 - plan.priceEurYearly
     : 0;
   const pricePerCredit = (displayPrice / plan.creditsPerMonth).toFixed(2);
+  const displayPriceTTC = (displayPrice * 1.2).toFixed(2).replace(".", ",");
 
   return (
     <div
@@ -58,20 +59,23 @@ export default function SubscriptionCard({ plan, billing, onSubscribe }: Subscri
       <div className="mb-6">
         <div className="flex items-baseline gap-1">
           <span className="text-4xl font-bold">{displayPrice}€</span>
-          <span className="text-sm text-muted"> / mois</span>
+          <span className="text-sm font-medium text-muted">HT / mois</span>
         </div>
+        <p className="mt-1 text-xs text-muted">
+          soit {displayPriceTTC}€ TTC / mois
+        </p>
         {isYearly && (
           <>
             <p className="mt-1 text-sm text-muted line-through">
-              {plan.priceEur}€ / mois
+              {plan.priceEur}€ HT / mois
             </p>
             <p className="mt-0.5 text-xs font-semibold text-green-400">
-              Économisez {savings}€ / an
+              Économisez {savings}€ HT / an
             </p>
           </>
         )}
         <p className="mt-1 text-xs text-muted">
-          soit {pricePerCredit.replace(".", ",")}€ / bien
+          soit {pricePerCredit.replace(".", ",")}€ HT / bien
         </p>
       </div>
 

@@ -120,7 +120,7 @@ export default function PricingPage() {
           transition={{ delay: 0.8 }}
           className="mt-10 text-center text-xs text-muted"
         >
-          Paiement sécurisé par Stripe. Annulez votre abonnement à tout moment.
+          Prix affichés HT. TVA 20% appliquée au paiement. Paiement sécurisé par Stripe. Annulez à tout moment.
         </motion.p>
       </main>
     </div>

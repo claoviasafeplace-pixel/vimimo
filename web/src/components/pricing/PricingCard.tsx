@@ -23,6 +23,7 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
   };
 
   const pricePerCredit = (pack.priceEur / pack.credits).toFixed(2);
+  const priceTTC = (pack.priceEur * 1.2).toFixed(2).replace(".", ",");
 
   return (
     <div
@@ -49,12 +50,15 @@ export default function PricingCard({ pack, onBuy }: PricingCardProps) {
       </div>
 
       <div className="mb-6">
-        <span className="text-4xl font-bold">
-          {pack.priceEur.toFixed(2).replace(".", ",")}€
-        </span>
-        <span className="ml-2 text-sm text-muted">
-          soit {pricePerCredit.replace(".", ",")}€ / bien
-        </span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-4xl font-bold">
+            {pack.priceEur.toFixed(2).replace(".", ",")}€
+          </span>
+          <span className="text-sm font-medium text-muted">HT</span>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          soit {priceTTC}€ TTC — {pricePerCredit.replace(".", ",")}€ HT / bien
+        </p>
       </div>
 
       <ul className="mb-8 flex-1 space-y-2.5">
