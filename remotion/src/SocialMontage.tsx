@@ -26,6 +26,24 @@ const CLAMP = {
   extrapolateRight: "clamp",
 } as const;
 
+// ─── TikTok / Reels Safe Zones (1080×1920) ──────────────────────────
+// These margins prevent text from being hidden by native UI overlays.
+const SAFE = {
+  top: 250,     // Username, Follow button, status bar
+  bottom: 500,  // Caption, music ticker, description
+  right: 200,   // Like/Comment/Share/Bookmark buttons
+  left: 50,     // Minimal left margin
+} as const;
+
+/** Container style for safe-zone-constrained overlays */
+const safeZoneStyle: React.CSSProperties = {
+  position: "absolute",
+  top: SAFE.top,
+  bottom: SAFE.bottom,
+  left: SAFE.left,
+  right: SAFE.right,
+};
+
 // ─── Hook Screen ────────────────────────────────────────────────────
 
 const HookScreen: React.FC<{
@@ -70,13 +88,13 @@ const HookScreen: React.FC<{
         }}
       />
 
-      {/* Hook text — MASSIVE, viral TikTok typography */}
-      <AbsoluteFill
+      {/* Hook text — MASSIVE, viral TikTok typography (safe zone) */}
+      <div
         style={{
+          ...safeZoneStyle,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "0 40px",
         }}
       >
         <div
@@ -104,7 +122,7 @@ const HookScreen: React.FC<{
         >
           {hookText}
         </div>
-      </AbsoluteFill>
+      </div>
     </AbsoluteFill>
   );
 };
@@ -235,13 +253,13 @@ const SocialRoomSegment: React.FC<{
       <MicroFlash at={16} currentFrame={frame} />
       <MicroFlash at={36} currentFrame={frame} />
 
-      {/* Room label — minimal, bottom-left, always visible */}
-      <AbsoluteFill
+      {/* Room label — minimal, bottom-left, within safe zone */}
+      <div
         style={{
+          ...safeZoneStyle,
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "flex-start",
-          padding: "0 36px 100px",
         }}
       >
         <div
@@ -261,7 +279,7 @@ const SocialRoomSegment: React.FC<{
         >
           {room.roomLabel}
         </div>
-      </AbsoluteFill>
+      </div>
     </AbsoluteFill>
   );
 };
@@ -285,34 +303,40 @@ const SocialOutro: React.FC<{
     <AbsoluteFill
       style={{
         backgroundColor: "#000",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         opacity: fadeIn,
       }}
     >
       {watermarkType !== "none" && (
-        <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 64,
-              fontWeight: 900,
-              color: "#fff",
-              letterSpacing: 8,
-              transform: `scale(${textScale})`,
-            }}
-          >
-            VIMIMO
-          </div>
-          <div
-            style={{
-              fontSize: 24,
-              color: "rgba(255,255,255,0.5)",
-              marginTop: 12,
-              opacity: interpolate(frame, [15, 30], [0, 1], CLAMP),
-            }}
-          >
-            Virtual Staging IA
+        <div
+          style={{
+            ...safeZoneStyle,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: 64,
+                fontWeight: 900,
+                color: "#fff",
+                letterSpacing: 8,
+                transform: `scale(${textScale})`,
+              }}
+            >
+              VIMIMO
+            </div>
+            <div
+              style={{
+                fontSize: 24,
+                color: "rgba(255,255,255,0.5)",
+                marginTop: 12,
+                opacity: interpolate(frame, [15, 30], [0, 1], CLAMP),
+              }}
+            >
+              Virtual Staging IA
+            </div>
           </div>
         </div>
       )}
