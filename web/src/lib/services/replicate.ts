@@ -5,7 +5,10 @@ import {
   STAGING_QUALITY_SUFFIX,
   klingVideoPrompt,
   KLING_NEGATIVE_PROMPT,
+  klingSocialVideoPrompt,
+  SOCIAL_NEGATIVE_PROMPT,
 } from "../prompts";
+import type { ProjectMode } from "../types";
 import { withRetry, REPLICATE_RETRY } from "../retry";
 import { savePredictionMap } from "../store";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
@@ -119,8 +122,17 @@ export async function generateVideo(
   style: string,
   roomType: string,
   ctx?: PredictionContext,
+  projectMode?: ProjectMode,
 ): Promise<string> {
   if (ctx?.projectId) await costGuard(ctx.projectId, "kling-v2.1-pro");
+
+  const isSocial = projectMode === "social_reel";
+  const prompt = isSocial
+    ? klingSocialVideoPrompt(style, roomType)
+    : klingVideoPrompt(style, roomType);
+  const negativePrompt = isSocial
+    ? SOCIAL_NEGATIVE_PROMPT
+    : KLING_NEGATIVE_PROMPT;
 
   const result = await withCircuitBreaker("replicate_video", () =>
     withRetry(async () => {
@@ -128,13 +140,13 @@ export async function generateVideo(
       const prediction = await getClient().predictions.create({
         model: "kwaivgi/kling-v2.1",
         input: {
-          prompt: klingVideoPrompt(style, roomType),
+          prompt,
           start_image: originalUrl,
           end_image: stagedUrl,
           mode: "pro",
           duration: 5,
-          cfg_scale: 0.8,
-          negative_prompt: KLING_NEGATIVE_PROMPT,
+          cfg_scale: isSocial ? 0.7 : 0.8,
+          negative_prompt: negativePrompt,
         },
         ...(webhookUrl ? { webhook: webhookUrl, webhook_events_filter: ["completed"] } : {}),
       });

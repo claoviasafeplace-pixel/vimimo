@@ -267,7 +267,8 @@ export const autoStaging = inngest.createFunction(
                 // Clear stale prediction ID before launching new one
                 room.videoPredictionId = undefined;
                 const predictionId = await generateVideo(
-                  room.beforePhotoUrl, stagedUrl, proj.styleLabel, room.roomType);
+                  room.beforePhotoUrl, stagedUrl, proj.styleLabel, room.roomType,
+                  undefined, proj.mode);
                 room.videoPredictionId = predictionId;
               } catch (error) {
                 console.error(`Video generation failed for room ${room.index}:`, error);

@@ -50,6 +50,7 @@ export async function POST(
             project.style,
             room.roomType,
             { projectId: project.id, predictionType: "video", roomIndex: room.index },
+            project.mode,
           );
           room.videoPredictionId = predictionId;
         } catch (error) {

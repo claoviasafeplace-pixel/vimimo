@@ -213,6 +213,56 @@ export const KLING_NEGATIVE_PROMPT = [
   "text, watermark, logo, signature.",
 ].join(" ");
 
+// ─── Social Reel video prompts (dynamic FPV camera) ───
+
+/**
+ * Camera tokens for social_reel mode — fast, energetic, immersive.
+ * Designed for TikTok/Reels viral before/after content.
+ */
+export const SOCIAL_CAMERA_PROMPT = [
+  "Dynamic FPV drone push-in with smooth acceleration,",
+  "fast energetic forward camera movement through the room,",
+  "immersive first-person walkthrough cinematography,",
+  "dramatic reveal of furnished space, bold camera motion,",
+  "camera height sweeping from low to eye level.",
+].join(" ");
+
+/**
+ * Quality suffix for social_reel — allows dynamic motion, still enforces coherence.
+ */
+export const SOCIAL_QUALITY_SUFFIX = [
+  "4K cinematic vertical video, viral real estate content,",
+  "strict temporal consistency, frame-to-frame coherence,",
+  "no morphing, no melting, no warping, no object flickering,",
+  "all furniture physically stable and stationary throughout,",
+  "walls, floor, windows, doors structurally rigid in every frame,",
+  "natural indoor lighting with consistent shadows,",
+  "social media cinematic quality, smooth 24fps motion.",
+].join(" ");
+
+/**
+ * Negative prompt for social_reel — does NOT block fast camera movement.
+ */
+export const SOCIAL_NEGATIVE_PROMPT = [
+  "blurry, out of focus, low quality, low resolution, grainy,",
+  "warped walls, warped floor, warped windows, bent doorframes, curved ceiling,",
+  "changed room proportions, room shape shift, structural deformation,",
+  "furniture sliding, furniture floating, furniture morphing, objects melting,",
+  "fisheye distortion, extreme lens flare,",
+  "flickering lights, inconsistent shadows, temporal artifacts,",
+  "text, watermark, logo, signature.",
+].join(" ");
+
+export function klingSocialVideoPrompt(style: string, roomType: string): string {
+  return [
+    SOCIAL_CAMERA_PROMPT,
+    `Dramatic reveal from empty ${roomType} to stunning ${style} ${roomType}.`,
+    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL in every frame.",
+    "Furniture appears in a cinematic reveal — fast, bold, immersive.",
+    SOCIAL_QUALITY_SUFFIX,
+  ].join(" ");
+}
+
 // ─── Quality boosters & negative prompts for Flux Kontext staging ───
 
 /**
