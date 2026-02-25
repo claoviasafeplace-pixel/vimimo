@@ -304,7 +304,7 @@ async function probeReplicate(): Promise<ServiceHealth> {
 async function probeRemotion(): Promise<ServiceHealth> {
   const service = "remotion" as const;
   try {
-    const response = await fetch(`${REMOTION_URL}/renders`, {
+    const response = await fetch(`${REMOTION_URL}/health`, {
       headers: { Authorization: `Bearer ${RENDER_SECRET}` },
       signal: AbortSignal.timeout(10_000),
     });
