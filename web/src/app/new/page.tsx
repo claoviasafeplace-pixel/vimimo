@@ -155,6 +155,8 @@ export default function NewProjectPage() {
                     <Sparkles className="mr-2 h-5 w-5" />
                     {mode === "video_visite"
                       ? "Lancer la Video Visite (1 bien)"
+                      : mode === "social_reel"
+                      ? "Lancer le Social Reel (1 bien)"
                       : "Lancer le staging (1 bien)"}
                   </>
                 )}

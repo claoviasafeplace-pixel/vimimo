@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, LayoutGrid, Video } from "lucide-react";
+import { Check, LayoutGrid, Video, Smartphone } from "lucide-react";
 import type { ProjectMode } from "@/lib/types";
 
 interface ModeSelectorProps {
@@ -24,13 +24,20 @@ const MODES = [
     detail: "1 bien",
     icon: Video,
   },
+  {
+    id: "social_reel" as ProjectMode,
+    label: "Social Reel",
+    description: "Format vertical 9:16, idéal pour TikTok et Instagram Reels",
+    detail: "1 bien",
+    icon: Smartphone,
+  },
 ];
 
 export default function ModeSelector({ selected, onSelect }: ModeSelectorProps) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-muted">Mode de projet</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         {MODES.map((mode, i) => {
           const isSelected = selected === mode.id;
           const Icon = mode.icon;

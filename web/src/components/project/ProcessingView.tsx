@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Check, Loader2, ImageIcon, Brain, Palette, ScanSearch } from "lucide-react";
+import { Check, Loader2, ImageIcon, Brain, Palette, ScanSearch, Video } from "lucide-react";
 import type { ProjectPhase, ProjectMode } from "@/lib/types";
 import ProgressBar from "@/components/ui/ProgressBar";
 
@@ -36,6 +36,27 @@ const STAGING_PIECE_STEPS: StepDef[] = [
     label: "Génération des options",
     description: "5 options de staging par pièce via Flux Kontext Pro",
     icon: Palette,
+  },
+];
+
+const SOCIAL_REEL_STEPS: StepDef[] = [
+  {
+    key: "cleaning",
+    label: "Nettoyage des photos",
+    description: "Suppression du mobilier existant pour préparer le staging",
+    icon: ImageIcon,
+  },
+  {
+    key: "triaging",
+    label: "Triage IA",
+    description: "Identification des pièces et ordre optimal",
+    icon: ScanSearch,
+  },
+  {
+    key: "auto_staging",
+    label: "Staging + Vidéos",
+    description: "Staging IA, vidéos FPV dynamiques et montage vertical 9:16",
+    icon: Video,
   },
 ];
 
@@ -78,7 +99,12 @@ function getProgress(phase: ProjectPhase, phaseOrder: string[]): number {
 
 export default function ProcessingView({ phase, mode }: ProcessingViewProps) {
   const steps = useMemo(
-    () => (mode === "video_visite" ? VIDEO_VISITE_STEPS : STAGING_PIECE_STEPS),
+    () =>
+      mode === "video_visite"
+        ? VIDEO_VISITE_STEPS
+        : mode === "social_reel"
+        ? SOCIAL_REEL_STEPS
+        : STAGING_PIECE_STEPS,
     [mode]
   );
   const phaseOrder = useMemo(() => steps.map((s) => s.key), [steps]);

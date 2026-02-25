@@ -18,7 +18,7 @@ export const createProjectSchema = z.object({
     "classic_french",
     "bohemian",
   ]),
-  mode: z.enum(["staging_piece", "video_visite"]).optional(),
+  mode: z.enum(["staging_piece", "video_visite", "social_reel"]).optional(),
   propertyInfo: z
     .object({
       title: z.string().min(1).max(200),
