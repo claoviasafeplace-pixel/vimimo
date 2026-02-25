@@ -215,13 +215,15 @@ export const autoStaging = inngest.createFunction(
       }
 
       const needsVideo = proj.rooms.filter(
-        (r) => !r.videoPredictionId && r.options.length > 0);
+        (r) => !r.videoUrl && r.options.length > 0);
 
       if (needsVideo.length > 0) {
         await Promise.allSettled(
           needsVideo.map(async (room) => {
             try {
               const stagedUrl = room.options[room.selectedOptionIndex ?? 0].url;
+              // Clear stale prediction ID before launching new one
+              room.videoPredictionId = undefined;
               const predictionId = await generateVideo(
                 room.beforePhotoUrl, stagedUrl, proj.styleLabel, room.roomType);
               room.videoPredictionId = predictionId;
@@ -241,7 +243,7 @@ export const autoStaging = inngest.createFunction(
         if (!proj || proj.phase !== "auto_staging") return true;
 
         const pending = proj.rooms.filter(
-          (r) => r.videoUrl === undefined && r.videoPredictionId);
+          (r) => !r.videoUrl && r.videoPredictionId);
         if (pending.length === 0) return true;
 
         await Promise.allSettled(
@@ -269,7 +271,7 @@ export const autoStaging = inngest.createFunction(
             }
           }));
 
-        const allDone = proj.rooms.every((r) => r.videoUrl !== undefined);
+        const allDone = proj.rooms.every((r) => !!r.videoUrl || r.videoUrl === "");
         await saveProject(proj);
         return allDone;
       });
