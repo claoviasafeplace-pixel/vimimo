@@ -1,6 +1,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Audio,
   Sequence,
   Img,
   Video,
@@ -15,6 +16,7 @@ import {
   SOCIAL_ROOM_FRAMES,
   SOCIAL_CUT_FRAMES,
   SOCIAL_OUTRO_FRAMES,
+  calculateSocialDuration,
   getSocialRoomStart,
   getSocialOutroStart,
 } from "./social/timeline";
@@ -98,33 +100,32 @@ const SocialRoomSegment: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Phase timing within SOCIAL_ROOM_FRAMES (40 frames)
-  // Before photo: 0-10 (0.33s)
-  // Wipe reveal: 10-18 (0.27s)
-  // Video: 12-35 (0.77s, accelerated)
-  // Staged beauty: 33-40 (0.23s)
+  // Phase timing within SOCIAL_ROOM_FRAMES (45 frames = 3 beats at 120 BPM)
+  // Beat 1 (0-15): Before photo with Ken Burns
+  // Beat 2 (15-30): AI video (accelerated 2.5x)
+  // Beat 3 (30-45): Staged beauty shot reveal
 
-  const beforeOpacity = interpolate(frame, [0, 10, 12], [1, 1, 0], CLAMP);
-  const videoOpacity = interpolate(frame, [10, 12, 33, 36], [0, 1, 1, 0], CLAMP);
-  const stagedOpacity = interpolate(frame, [33, 36], [0, 1], CLAMP);
+  const beforeOpacity = interpolate(frame, [0, 13, 16], [1, 1, 0], CLAMP);
+  const videoOpacity = interpolate(frame, [13, 16, 37, 40], [0, 1, 1, 0], CLAMP);
+  const stagedOpacity = interpolate(frame, [37, 40], [0, 1], CLAMP);
 
   // Ken Burns on before
-  const beforeScale = interpolate(frame, [0, 12], [1.0, 1.08], CLAMP);
+  const beforeScale = interpolate(frame, [0, 15], [1.0, 1.08], CLAMP);
 
   // Video zoom
-  const videoScale = interpolate(frame, [12, 35], [1.0, 1.04], CLAMP);
+  const videoScale = interpolate(frame, [15, 38], [1.0, 1.04], CLAMP);
 
   // Staged reveal
-  const stagedScale = interpolate(frame, [33, 40], [1.06, 1.0], CLAMP);
+  const stagedScale = interpolate(frame, [37, 45], [1.06, 1.0], CLAMP);
 
   // Label
   const labelOpacity = interpolate(frame, [5, 8], [0, 1], CLAMP);
 
-  // "AVANT" badge
-  const avantOpacity = interpolate(frame, [2, 5, 10, 12], [0, 1, 1, 0], CLAMP);
+  // "AVANT" badge (visible during beat 1)
+  const avantOpacity = interpolate(frame, [2, 5, 13, 15], [0, 1, 1, 0], CLAMP);
 
-  // "APRES" badge
-  const apresOpacity = interpolate(frame, [34, 37], [0, 1], CLAMP);
+  // "APRES" badge (visible during beat 3)
+  const apresOpacity = interpolate(frame, [38, 41], [0, 1], CLAMP);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -325,15 +326,41 @@ const FlashCut: React.FC = () => {
 
 // ─── Main Composition ───────────────────────────────────────────────
 
+// ─── Audio with Fade-Out ─────────────────────────────────────────────
+
+const SocialAudio: React.FC<{ musicUrl: string; totalFrames: number }> = ({
+  musicUrl,
+  totalFrames,
+}) => {
+  const frame = useCurrentFrame();
+  const fadeOutStart = totalFrames - SOCIAL_OUTRO_FRAMES;
+
+  const volume = interpolate(
+    frame,
+    [0, 5, fadeOutStart, totalFrames],
+    [0, 0.85, 0.85, 0],
+    CLAMP,
+  );
+
+  return <Audio src={musicUrl} volume={volume} />;
+};
+
+// ─── Main Composition ───────────────────────────────────────────────
+
 export const SocialMontage: React.FC<SocialMontageProps> = ({
   hookText,
   rooms,
+  musicUrl,
   watermark,
 }) => {
   const outroStart = getSocialOutroStart(rooms.length);
+  const totalFrames = calculateSocialDuration(rooms.length);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      {/* Beat-synced audio track with fade-out during outro */}
+      {musicUrl && <SocialAudio musicUrl={musicUrl} totalFrames={totalFrames} />}
+
       {/* Hook screen */}
       <Sequence from={0} durationInFrames={SOCIAL_HOOK_FRAMES} layout="none">
         <HookScreen hookText={hookText} firstImageUrl={rooms[0].stagedPhotoUrl} />

@@ -197,9 +197,13 @@ export async function startSocialRender(project: Project): Promise<string> {
   const styleLabel =
     STYLES.find((s) => s.id === project.style)?.label || project.style;
 
+  // Default to "energetic" music for social reels (fast-paced, beat-friendly)
+  const musicUrl = MUSIC_URLS["energetic"];
+
   const inputProps = {
     hookText: "Avant / Après IA ✨",
     rooms,
+    musicUrl,
     watermark,
     style: styleLabel,
   };

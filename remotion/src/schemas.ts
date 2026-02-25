@@ -79,6 +79,7 @@ export const socialRoomSchema = z.object({
 export const socialMontageSchema = z.object({
   hookText: z.string().default("Avant / Après IA ✨"),
   rooms: z.array(socialRoomSchema).min(1).max(30),
+  musicUrl: z.string().url().optional(),
   watermark: watermarkSchema.default({}),
   style: z.string().default("modern"),
 });
