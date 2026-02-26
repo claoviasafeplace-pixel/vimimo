@@ -5,13 +5,7 @@ export async function GET() {
   try {
     const report = await runHealthCheck();
 
-    return NextResponse.json({
-      ...report,
-      env: {
-        USE_MOCK_AI: process.env.USE_MOCK_AI || "NOT_SET",
-        USE_INNGEST: process.env.USE_INNGEST || "NOT_SET",
-      },
-    }, {
+    return NextResponse.json(report, {
       status: report.healthy ? 200 : 503,
       headers: { "Cache-Control": "no-cache" },
     });
