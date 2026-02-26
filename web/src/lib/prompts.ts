@@ -213,31 +213,66 @@ export const KLING_NEGATIVE_PROMPT = [
   "text, watermark, logo, signature.",
 ].join(" ");
 
-// ─── Social Reel video prompts (dynamic FPV camera) ───
+// ─── Social Reel video prompts (Ultra-Wide Architectural Camera) ───
 
 /**
- * Camera tokens for social_reel mode — fast, energetic, immersive.
- * Designed for TikTok/Reels viral before/after content.
+ * 3 camera movement styles drawn from top-tier real estate video creators.
+ * Each simulates a different pro lens + motion combo that Kling v2.1 interprets well.
+ *
+ * Key insight: specifying the exact lens (14mm, 13mm, 0.5x) + motion type
+ * produces dramatically more cinematic results than generic "dolly" instructions.
  */
-export const SOCIAL_CAMERA_PROMPT = [
-  "Dynamic FPV drone push-in with smooth acceleration,",
-  "fast energetic forward camera movement through the room,",
-  "immersive first-person walkthrough cinematography,",
-  "dramatic reveal of furnished space, bold camera motion,",
-  "camera height sweeping from low to eye level.",
-].join(" ");
+export const SOCIAL_CAMERA_MOVEMENTS = [
+  // Style A — 45° diagonal sweep (the viral TikTok favourite)
+  {
+    id: "diagonal_sweep",
+    camera: [
+      "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens,",
+      "45-degree diagonal spatial movement sweeping from low-left corner to upper-right,",
+      "smooth accelerating dolly with subtle parallax between foreground furniture and back wall,",
+      "immersive first-person real estate walkthrough,",
+      "dramatic depth reveal showing full room volume,",
+      "camera starts at knee height and rises to eye level during movement.",
+    ].join(" "),
+  },
+  // Style B — 90° straight-on architectural push-in (magazine cover shot)
+  {
+    id: "frontal_push",
+    camera: [
+      "Shot on iPhone 15 Pro at 0.5x ultra-wide lens, 13mm equivalent,",
+      "90-degree straight-on architectural perspective push-in,",
+      "perfectly centered symmetrical composition,",
+      "slow controlled forward glide from doorway threshold into the center of the room,",
+      "seamless spatial motion revealing layered depth planes,",
+      "camera locked at chest height, zero vertical tilt, zero rotation.",
+    ].join(" "),
+  },
+  // Style C — lateral tracking shot (cinematic real estate B-roll)
+  {
+    id: "lateral_track",
+    camera: [
+      "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens,",
+      "smooth lateral tracking shot from left wall to right wall,",
+      "stabilized gimbal movement parallel to the back wall,",
+      "foreground objects create cinematic parallax depth separation,",
+      "gentle 15-degree inward arc revealing room volume,",
+      "camera at eye level, constant height, fluid horizontal motion.",
+    ].join(" "),
+  },
+] as const;
 
 /**
- * Quality suffix for social_reel — allows dynamic motion, still enforces coherence.
+ * Quality suffix for social_reel — enforces architectural lens look + coherence.
  */
 export const SOCIAL_QUALITY_SUFFIX = [
   "4K cinematic vertical video, viral real estate content,",
+  "ultra-wide 14mm rectilinear lens rendering, zero barrel distortion,",
   "strict temporal consistency, frame-to-frame coherence,",
   "no morphing, no melting, no warping, no object flickering,",
   "all furniture physically stable and stationary throughout,",
   "walls, floor, windows, doors structurally rigid in every frame,",
   "natural indoor lighting with consistent shadows,",
-  "social media cinematic quality, smooth 24fps motion.",
+  "photorealistic architectural interior cinematography, smooth 24fps motion.",
 ].join(" ");
 
 /**
@@ -248,17 +283,28 @@ export const SOCIAL_NEGATIVE_PROMPT = [
   "warped walls, warped floor, warped windows, bent doorframes, curved ceiling,",
   "changed room proportions, room shape shift, structural deformation,",
   "furniture sliding, furniture floating, furniture morphing, objects melting,",
-  "fisheye distortion, extreme lens flare,",
+  "fisheye distortion, barrel distortion, extreme lens flare,",
   "flickering lights, inconsistent shadows, temporal artifacts,",
+  "shaky camera, handheld shake, rolling shutter,",
   "text, watermark, logo, signature.",
 ].join(" ");
 
+/**
+ * Build the social video prompt with a randomly selected camera movement style.
+ * Each room in a project gets a different movement for visual variety.
+ * The selected style ID is logged for debugging.
+ */
 export function klingSocialVideoPrompt(style: string, roomType: string): string {
+  const movement = SOCIAL_CAMERA_MOVEMENTS[
+    Math.floor(Math.random() * SOCIAL_CAMERA_MOVEMENTS.length)
+  ];
+  console.log(`[PROMPT] Social camera style: ${movement.id} for ${roomType}`);
+
   return [
-    SOCIAL_CAMERA_PROMPT,
+    movement.camera,
     `Dramatic reveal from empty ${roomType} to stunning ${style} ${roomType}.`,
     "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL in every frame.",
-    "Furniture appears in a cinematic reveal — fast, bold, immersive.",
+    "Furniture appears in a cinematic reveal — bold, immersive, spatially coherent.",
     SOCIAL_QUALITY_SUFFIX,
   ].join(" ");
 }
