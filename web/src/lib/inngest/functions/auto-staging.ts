@@ -156,7 +156,7 @@ export const autoStaging = inngest.createFunction(
             try {
               const result = await generateStagingPrompts(
                 room.cleanedPhotoUrl, room.roomType, room.roomLabel,
-                proj.style, proj.styleLabel, room.visionData, projectId);
+                proj.style, proj.styleLabel, room.visionData, projectId, proj.mode);
               // Generate all available prompts (up to 5)
               const predictionIds = await Promise.all(
                 result.prompts.map((prompt: string) =>

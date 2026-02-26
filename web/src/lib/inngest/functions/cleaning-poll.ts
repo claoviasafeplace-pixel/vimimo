@@ -185,6 +185,7 @@ export const cleaningPoll = inngest.createFunction(
                 proj.styleLabel,
                 room.visionData,
                 projectId,
+                proj.mode,
               );
               const predictionIds = await Promise.all(
                 result.prompts.map((prompt) =>

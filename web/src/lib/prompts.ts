@@ -309,6 +309,172 @@ export function klingSocialVideoPrompt(style: string, roomType: string): string 
   ].join(" ");
 }
 
+// ─── Lifestyle Prompts (social_reel — human presence + cinematic scenes) ───
+
+/**
+ * Room-type → lifestyle scenario mapping.
+ * Each entry provides thematic direction that GPT-4o uses to generate
+ * scene descriptions with human presence, events, and dramatic lighting.
+ */
+const LIFESTYLE_SCENES: Record<string, string> = {
+  living_room: `LIVING ROOM LIFESTYLE SCENARIOS:
+- Couple relaxing: one reading on the sofa, another bringing coffee/wine from the kitchen
+- Friends gathering: 3-4 people chatting, drinks in hand, warm ambient lighting
+- Solo morning: person doing yoga or stretching, golden hour light streaming through windows
+- Movie night: couple under a throw blanket, dimmed lights, candles on coffee table
+- Holiday: Christmas tree with gifts, fireplace glow, hot cocoa scene`,
+
+  bedroom: `BEDROOM LIFESTYLE SCENARIOS:
+- Morning wake-up: person stretching in bed, sunlight through curtains, coffee on nightstand
+- Getting ready: person choosing outfit in front of mirror, clothes laid on bed
+- Cozy evening: person reading in bed with warm lamp, pet curled up at foot
+- Couple: breakfast in bed scene, tray with croissants and flowers
+- Self-care: person journaling or meditating, candles, peaceful atmosphere`,
+
+  kitchen: `KITCHEN LIFESTYLE SCENARIOS:
+- Couple cooking: one chopping vegetables, the other stirring a pot, wine glasses on counter
+- Brunch prep: person making pancakes, fresh juice, morning light
+- Friends aperitivo: 2-3 people around kitchen island, cheese board, cocktails
+- Solo barista: person using espresso machine, steam rising, morning ritual
+- Family baking: parent and child decorating cookies, flour dust in air`,
+
+  bathroom: `BATHROOM LIFESTYLE SCENARIOS:
+- Spa evening: person in bathtub with candles, eucalyptus branches, glass of wine
+- Morning routine: person at vanity mirror applying skincare, bright clean light
+- Luxury shower: steam-filled glass shower, fluffy towels and robe ready
+- Self-care: bath bombs fizzing, book on bath tray, plants surrounding tub`,
+
+  dining_room: `DINING ROOM LIFESTYLE SCENARIOS:
+- Dinner party: 4-6 people seated, candelabra centerpiece, wine being poured
+- Romantic dinner: couple at table, candlelight, flowers, intimate atmosphere
+- Sunday brunch: family gathered, pastries and fresh flowers, sunlight flooding in
+- Celebration: birthday or anniversary setup, champagne toast, festive table setting`,
+
+  office: `OFFICE LIFESTYLE SCENARIOS:
+- Focused work: person at desk with laptop, coffee, warm desk lamp glow
+- Creative session: artist or designer at desk, mood board visible, afternoon light
+- Video call: person on screen, professional backdrop, ring light reflection in eyes
+- Late night hustle: desk lamp as sole light source, city view through window at night`,
+
+  balcony: `BALCONY/TERRACE LIFESTYLE SCENARIOS:
+- Golden hour apéro: couple sipping drinks at sunset, string lights overhead
+- Morning coffee: person wrapped in blanket with steaming mug, sunrise view
+- Summer dinner: small table set for two, candles, lanterns, twilight sky
+- Night scene: city lights below, starry sky, person leaning on railing with wine`,
+
+  exterior: `EXTERIOR/FACADE LIFESTYLE SCENARIOS:
+- Summer evening: warm golden hour light on facade, couple arriving home
+- Winter snow: light dusting of snow on roof and garden, warm light glowing from windows
+- Autumn: golden leaves in yard, person walking toward front door with groceries
+- Night: exterior lit with warm landscape lighting, starry sky, inviting entrance glow
+- Festive: holiday lights on facade, wreath on door, warm interior glow through windows`,
+};
+
+const LIFESTYLE_DEFAULT_SCENE = `GENERAL LIFESTYLE SCENARIOS:
+- Person entering the room with natural curiosity, discovering the space
+- Couple interacting naturally with the furnished environment
+- Solo moment of relaxation, reading, or enjoying the view
+- Warm ambient evening lighting with candles and soft light sources`;
+
+/**
+ * System prompt for GPT-4o when generating lifestyle staging prompts (social_reel mode).
+ * Key differences from classic STAGING_PROMPT_SYSTEM:
+ * - REQUIRES human presence in every scene
+ * - Enforces strict demographic diversity and anti-repetition
+ * - Adds cinematic lighting / event / seasonal variations
+ * - Still preserves room structure (anti-distortion rules remain)
+ */
+export const LIFESTYLE_SYSTEM_PROMPT = `You are a WORLD-CLASS CINEMATIC LIFESTYLE DIRECTOR writing image editing prompts for Flux Kontext Pro + Kling v2.1 video generation. You create viral social media real estate content — the kind of before/after that gets millions of views on TikTok and Instagram Reels.
+
+You will receive a PHOTO of an empty room. Analyze the room's architecture, lighting, and atmosphere. Then write 5 EDITING prompts that transform it into a LIVED-IN CINEMATIC SCENE with human presence.
+
+═══════════════════════════════════════════════════════════════════
+CRITICAL RULE #1: HUMAN PRESENCE IS MANDATORY
+═══════════════════════════════════════════════════════════════════
+Every single prompt MUST include at least 1-2 realistic human figures actively using the space.
+People must be:
+- Performing a NATURAL ACTION appropriate to the room (cooking, reading, working, relaxing, hosting)
+- Wearing REALISTIC CONTEMPORARY CLOTHING (not posing, not stock-photo stiff)
+- Interacting with the furniture and environment (touching surfaces, holding objects, sitting naturally)
+- Photographed from behind, in profile, or at 3/4 angle (NEVER direct frontal eye-contact — this is lifestyle, not portrait)
+
+═══════════════════════════════════════════════════════════════════
+CRITICAL RULE #2: ABSOLUTE DEMOGRAPHIC DIVERSITY (ZERO REPETITION)
+═══════════════════════════════════════════════════════════════════
+You MUST randomize the human figures across ALL 5 prompts. NEVER repeat the same profile twice.
+
+For EACH prompt, explicitly specify:
+- AGE: vary across 25-35, 35-45, 45-60, 20-30
+- ETHNICITY: rotate through diverse backgrounds (East Asian, Black, Middle Eastern, South Asian, Latino, White European, mixed) — NEVER default to the same ethnicity twice in a row
+- BODY TYPE: vary between slim, athletic, average, curvy — realistic proportions
+- HAIR: vary length, color, texture (curly, straight, braids, short crop, long, bun, natural afro)
+- OUTFIT: specific clothing described (linen shirt, cashmere sweater, silk robe, denim apron, tailored blazer, oversized knit)
+- GROUP DYNAMIC: vary between solo person, couple, friends (2-3), family
+
+ANTI-PATTERN WARNING: If you catch yourself writing "a young woman" or "a man in his 30s" without full demographic specification, STOP and add specifics.
+
+═══════════════════════════════════════════════════════════════════
+PROMPT STRUCTURE (follow this exactly)
+═══════════════════════════════════════════════════════════════════
+Each prompt must follow this template:
+1. "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical."
+2. FURNITURE: Premium furniture with exact material/color/texture (same quality as classic staging)
+3. HUMAN SCENE: 1-2 people described with full demographics + action + clothing + positioning
+4. LIGHTING: Cinematic lighting setup (golden hour, candlelight, morning sun, moody evening, dramatic shadows)
+5. ATMOSPHERE: Sensory details (steam from coffee, wine in glass, book pages, fabric textures, plant movement)
+6. "Keep all walls, floor, windows, doors, ceiling, and fixed elements exactly unchanged. Ultra-photorealistic, shot on Canon EOS R5 at 35mm f/1.4, cinematic depth of field, 8K."
+
+═══════════════════════════════════════════════════════════════════
+THE 5 PROMPTS — MANDATORY VARIATIONS
+═══════════════════════════════════════════════════════════════════
+- Prompt 1: GOLDEN HOUR — Warm sunset light, relaxed solo or couple scene, aspirational lifestyle
+- Prompt 2: SOCIAL GATHERING — Multiple people, drinks/food, conversation, warm ambient lighting
+- Prompt 3: INTIMATE EVENING — Moody candlelit or dimmed scene, 1-2 people, cozy atmosphere
+- Prompt 4: ENERGETIC MORNING — Bright natural light, person in motion (yoga, cooking, getting ready)
+- Prompt 5: SEASONAL/EVENT — Pick ONE: holiday decor (Christmas, autumn), celebration (birthday, housewarming), or dramatic weather (rain outside, snow on windows)
+
+ANTI-DISTORTION RULES (same as classic staging — HIGHEST PRIORITY):
+1. NEVER describe the room structure. Only add furniture, people, lighting, and decor.
+2. Walls, floor, ceiling, windows, doors remain PIXEL-PERFECT unchanged.
+3. ALL furniture must obey gravity. People must cast shadows consistent with lighting.
+4. Spatial coherence: people must fit naturally in the room's proportions.
+
+Respond in JSON: { "analysis": "Brief 1-line description", "prompts": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"] }
+No markdown, ONLY valid JSON.`;
+
+/**
+ * User prompt for lifestyle mode — includes room-specific scenario suggestions.
+ */
+export function lifestylePromptUser(
+  roomType: string,
+  roomLabel: string,
+  style: string,
+  styleLabel: string,
+  visionData: Record<string, unknown>,
+): string {
+  const sceneGuide = LIFESTYLE_SCENES[roomType] || LIFESTYLE_DEFAULT_SCENE;
+
+  return `Room: ${roomType} (${roomLabel}). Style: ${style} (${styleLabel}).
+
+${sceneGuide}
+
+STRUCTURAL INVENTORY (from prior analysis — DO NOT modify these):
+${JSON.stringify(visionData, null, 2)}
+
+Generate 5 LIFESTYLE editing prompts for this ${roomLabel}.
+
+MANDATORY CHECKLIST — every prompt MUST include ALL of these:
+✅ Premium furniture with exact material/color/texture (same quality as classic staging)
+✅ 1-2 HUMAN FIGURES with full demographic description (age, ethnicity, hair, body type, outfit)
+✅ People performing a NATURAL ACTION appropriate to this ${roomType}
+✅ Cinematic lighting setup (specify light source, color temperature, shadow direction)
+✅ Atmospheric details (steam, reflections, fabric movement, plant life)
+✅ Decorative objects on every surface (same richness as classic staging)
+✅ NO two prompts may have the same human profile — rotate demographics completely
+
+Use the ${styleLabel} design aesthetic for furniture. People's clothing should match the interior style (casual-luxe for modern, warm layers for Scandinavian, eclectic for bohemian, etc).`;
+}
+
 // ─── Quality boosters & negative prompts for Flux Kontext staging ───
 
 /**
