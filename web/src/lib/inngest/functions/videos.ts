@@ -2,7 +2,7 @@ import { inngest } from "../client";
 import { getProject, saveProject, refundCredits } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { startRender } from "@/lib/services/remotion";
-import { uploadFromUrl } from "@/lib/services/storage";
+import { uploadFromUrl, persistFromUrl } from "@/lib/services/storage";
 import { getRenderStatus } from "@/lib/services/remotion";
 import { pipelinePreCheck } from "@/lib/circuit-breaker";
 
@@ -45,7 +45,18 @@ export const videosPoll = inngest.createFunction(
           try {
             const status = await getPredictionStatus(room.videoPredictionId);
             if (status.status === "succeeded") {
-              room.videoUrl = extractOutputUrl(status.output) || undefined;
+              const replicateUrl = extractOutputUrl(status.output);
+              if (replicateUrl) {
+                // Persist to Supabase (Replicate URLs expire)
+                try {
+                  room.videoUrl = await persistFromUrl(replicateUrl, "videos", "video/mp4");
+                } catch (e) {
+                  console.error(`[videos-poll] Failed to persist video:`, e);
+                  room.videoUrl = replicateUrl; // fallback to ephemeral URL
+                }
+              } else {
+                room.videoUrl = undefined;
+              }
             } else if (status.status === "failed" || status.status === "canceled") {
               room.videoUrl = "";
             } else {

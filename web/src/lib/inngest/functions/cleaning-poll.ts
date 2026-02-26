@@ -3,6 +3,7 @@ import { getProject, saveProject, refundCredits } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { analyzePhotos, triagePhotos, generateStagingPrompts } from "@/lib/services/openai";
 import { generateStagingOption } from "@/lib/services/replicate";
+import { persistFromUrl } from "@/lib/services/storage";
 import {
   pipelinePreCheck,
   CircuitOpenError,
@@ -70,7 +71,18 @@ export const cleaningPoll = inngest.createFunction(
           try {
             const status = await getPredictionStatus(photo.cleanPredictionId);
             if (status.status === "succeeded") {
-              photo.cleanedUrl = extractOutputUrl(status.output) || photo.originalUrl;
+              const replicateUrl = extractOutputUrl(status.output);
+              if (replicateUrl) {
+                // Persist to Supabase (Replicate URLs expire)
+                try {
+                  photo.cleanedUrl = await persistFromUrl(replicateUrl, "cleaned", "image/jpeg");
+                } catch (e) {
+                  console.error(`[cleaning-poll] Failed to persist cleaned image:`, e);
+                  photo.cleanedUrl = replicateUrl; // fallback to ephemeral URL
+                }
+              } else {
+                photo.cleanedUrl = photo.originalUrl;
+              }
             } else if (status.status === "failed" || status.status === "canceled") {
               photo.cleanedUrl = photo.originalUrl;
             } else {
@@ -239,8 +251,17 @@ export const cleaningPoll = inngest.createFunction(
               try {
                 const status = await getPredictionStatus(room.optionPredictionIds[i]);
                 if (status.status === "succeeded") {
-                  const url = extractOutputUrl(status.output);
-                  if (url) resolvedOptions.push({ url, predictionId: room.optionPredictionIds[i] });
+                  const replicateUrl = extractOutputUrl(status.output);
+                  if (replicateUrl) {
+                    // Persist to Supabase (Replicate URLs expire)
+                    let persistedUrl = replicateUrl;
+                    try {
+                      persistedUrl = await persistFromUrl(replicateUrl, "staging", "image/webp");
+                    } catch (e) {
+                      console.error(`[cleaning-poll] Failed to persist staging image:`, e);
+                    }
+                    resolvedOptions.push({ url: persistedUrl, predictionId: room.optionPredictionIds[i] });
+                  }
                 } else if (status.status !== "failed" && status.status !== "canceled") {
                   allDone = false;
                 }
