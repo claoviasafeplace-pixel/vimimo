@@ -223,66 +223,115 @@ export const KLING_NEGATIVE_PROMPT = [
  * produces dramatically more cinematic results than generic "dolly" instructions.
  */
 export const SOCIAL_CAMERA_MOVEMENTS = [
-  // Style A — 45° diagonal sweep (the viral TikTok favourite)
+  // Style A — Slow cinematic zoom-out revealing the assembly
   {
-    id: "diagonal_sweep",
+    id: "slow_zoom_out",
     camera: [
       "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens,",
-      "45-degree diagonal spatial movement sweeping from low-left corner to upper-right,",
-      "smooth accelerating dolly with subtle parallax between foreground furniture and back wall,",
-      "immersive first-person real estate walkthrough,",
-      "dramatic depth reveal showing full room volume,",
-      "camera starts at knee height and rises to eye level during movement.",
+      "very slow imperceptible cinematic zoom-out from room center,",
+      "locked tripod, zero shake, zero rotation,",
+      "camera stays perfectly still to let the magical furniture assembly be the star,",
+      "wide architectural framing showing the entire room volume.",
     ].join(" "),
   },
-  // Style B — 90° straight-on architectural push-in (magazine cover shot)
+  // Style B — Subtle push-in while objects fly into place
   {
-    id: "frontal_push",
+    id: "gentle_push_in",
     camera: [
       "Shot on iPhone 15 Pro at 0.5x ultra-wide lens, 13mm equivalent,",
-      "90-degree straight-on architectural perspective push-in,",
-      "perfectly centered symmetrical composition,",
-      "slow controlled forward glide from doorway threshold into the center of the room,",
-      "seamless spatial motion revealing layered depth planes,",
-      "camera locked at chest height, zero vertical tilt, zero rotation.",
+      "extremely slow gentle push-in from doorway threshold,",
+      "90-degree straight-on symmetrical architectural perspective,",
+      "near-static camera with barely perceptible forward drift,",
+      "the room fills itself while the camera barely moves.",
     ].join(" "),
   },
-  // Style C — lateral tracking shot (cinematic real estate B-roll)
+  // Style C — Static locked shot (pure VFX focus)
   {
-    id: "lateral_track",
+    id: "static_locked",
     camera: [
       "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens,",
-      "smooth lateral tracking shot from left wall to right wall,",
-      "stabilized gimbal movement parallel to the back wall,",
-      "foreground objects create cinematic parallax depth separation,",
-      "gentle 15-degree inward arc revealing room volume,",
-      "camera at eye level, constant height, fluid horizontal motion.",
+      "completely static locked-off camera on tripod,",
+      "zero camera movement throughout entire sequence,",
+      "45-degree corner composition showing two walls and full floor,",
+      "all visual energy comes from the magical object animation, not camera motion.",
     ].join(" "),
   },
 ] as const;
 
 /**
- * Quality suffix for social_reel — enforces architectural lens look + coherence.
+ * Magical furniture assembly animation directives.
+ * 3 assembly styles rotated randomly per room for variety.
+ * Kling v2.1 responds well to explicit VFX vocabulary.
+ */
+const ASSEMBLY_STYLES = [
+  // Objects fly in from above and land in place
+  {
+    id: "fly_in",
+    directive: [
+      "VFX magical stop-motion buildup animation:",
+      "furniture pieces fly in from above the frame and land precisely into their final positions,",
+      "sofa drops in with a soft bounce, table slides into place from the side,",
+      "cushions and decorative objects pop into existence one by one,",
+      "rugs unfurl and flatten magically onto the floor,",
+      "curtains cascade down from the rod like flowing water,",
+      "lamps materialize with a warm glow igniting as they appear,",
+      "plants grow rapidly from pots that slide in from off-screen.",
+    ].join(" "),
+  },
+  // Objects slide in from all directions along the floor
+  {
+    id: "slide_assemble",
+    directive: [
+      "VFX hyper-fast room assembly animation:",
+      "all furniture slides into the room simultaneously from every direction,",
+      "sofa glides in smoothly from the left wall, coffee table from the right,",
+      "chairs spin once and lock into position at the table,",
+      "rug rolls out across the floor in a fast satisfying motion,",
+      "shelves assemble piece by piece like a time-lapse construction,",
+      "books, candles, and decorative objects pop in rapid-fire sequence,",
+      "final piece clicks into place with a satisfying visual snap.",
+    ].join(" "),
+  },
+  // Objects materialize with a cinematic particle/glow effect
+  {
+    id: "materialize",
+    directive: [
+      "VFX cinematic materialization animation:",
+      "furniture assembles from thin air with a subtle golden particle shimmer,",
+      "each piece fades in from transparent to solid, largest pieces first,",
+      "sofa materializes in a warm glow, then table, then smaller decor,",
+      "objects appear in a choreographed cascade from back of room to foreground,",
+      "decorative items pop in like stop-motion with satisfying micro-pauses,",
+      "final arrangement settles with a soft ambient light bloom,",
+      "the empty room transforms into a luxury interior in one magical sequence.",
+    ].join(" "),
+  },
+] as const;
+
+/**
+ * Quality suffix for social_reel — hyper-design ultra-luxury + VFX coherence.
  */
 export const SOCIAL_QUALITY_SUFFIX = [
-  "4K cinematic vertical video, viral real estate content,",
+  "4K cinematic vertical video, viral real estate VFX content,",
+  "hyper-realistic luxury interior design, bespoke designer furniture,",
+  "Architectural Digest editorial quality, ultra-premium materials visible,",
   "ultra-wide 14mm rectilinear lens rendering, zero barrel distortion,",
-  "strict temporal consistency, frame-to-frame coherence,",
-  "no morphing, no melting, no warping, no object flickering,",
-  "all furniture physically stable and stationary throughout,",
-  "walls, floor, windows, doors structurally rigid in every frame,",
-  "natural indoor lighting with consistent shadows,",
-  "photorealistic architectural interior cinematography, smooth 24fps motion.",
+  "strict temporal consistency, frame-to-frame VFX coherence,",
+  "walls, floor, windows, doors structurally rigid and unchanged in every frame,",
+  "each piece of furniture has weight, shadow, and physical presence when it lands,",
+  "natural indoor lighting with volumetric rays and consistent shadows,",
+  "cinematic color grading, warm luxurious tones, smooth 24fps motion.",
 ].join(" ");
 
 /**
- * Negative prompt for social_reel — does NOT block fast camera movement.
+ * Negative prompt for social_reel — allows magical object animation,
+ * blocks structural deformation and cheap VFX artifacts.
  */
 export const SOCIAL_NEGATIVE_PROMPT = [
   "blurry, out of focus, low quality, low resolution, grainy,",
   "warped walls, warped floor, warped windows, bent doorframes, curved ceiling,",
   "changed room proportions, room shape shift, structural deformation,",
-  "furniture sliding, furniture floating, furniture morphing, objects melting,",
+  "cheap CGI, plastic looking furniture, unrealistic materials,",
   "fisheye distortion, barrel distortion, extreme lens flare,",
   "flickering lights, inconsistent shadows, temporal artifacts,",
   "shaky camera, handheld shake, rolling shutter,",
@@ -290,21 +339,26 @@ export const SOCIAL_NEGATIVE_PROMPT = [
 ].join(" ");
 
 /**
- * Build the social video prompt with a randomly selected camera movement style.
- * Each room in a project gets a different movement for visual variety.
- * The selected style ID is logged for debugging.
+ * Build the social video prompt with:
+ * 1. A randomly selected CAMERA style (near-static to focus on VFX)
+ * 2. A randomly selected ASSEMBLY style (fly-in, slide, materialize)
+ * Logs both selections for debugging.
  */
 export function klingSocialVideoPrompt(style: string, roomType: string): string {
   const movement = SOCIAL_CAMERA_MOVEMENTS[
     Math.floor(Math.random() * SOCIAL_CAMERA_MOVEMENTS.length)
   ];
-  console.log(`[PROMPT] Social camera style: ${movement.id} for ${roomType}`);
+  const assembly = ASSEMBLY_STYLES[
+    Math.floor(Math.random() * ASSEMBLY_STYLES.length)
+  ];
+  console.log(`[PROMPT] Social camera: ${movement.id} | assembly: ${assembly.id} | room: ${roomType}`);
 
   return [
     movement.camera,
-    `Dramatic reveal from empty ${roomType} to stunning ${style} ${roomType}.`,
-    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL in every frame.",
-    "Furniture appears in a cinematic reveal — bold, immersive, spatially coherent.",
+    assembly.directive,
+    `Magical transformation of empty ${roomType} into a stunning hyper-designed ${style} ${roomType}.`,
+    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL and unmoved in every frame.",
+    "Only the furniture and decor animate — the architecture is a rigid stage.",
     SOCIAL_QUALITY_SUFFIX,
   ].join(" ");
 }
