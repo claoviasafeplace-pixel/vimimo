@@ -336,20 +336,11 @@ export const autoStaging = inngest.createFunction(
 
       const roomsWithVideo = proj.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
 
-      // social_reel mode: SocialMontage (vertical 1080x1920)
-      if (proj.mode === "social_reel" && roomsWithVideo.length >= 1) {
-        try {
-          const renderId = await startSocialRender(proj);
-          proj.studioMontageRenderId = renderId;
-          proj.phase = "rendering_montage";
-          await saveProject(proj);
-          return { type: "montage", renderId };
-        } catch (error) {
-          console.error("Auto social render failed:", error);
-          proj.phase = "done";
-          await saveProject(proj);
-          return { type: "done" };
-        }
+      // social_reel mode: skip Remotion — user edits raw Kling videos in CapCut
+      if (proj.mode === "social_reel") {
+        proj.phase = "done";
+        await saveProject(proj);
+        return { type: "done" };
       }
 
       if (roomsWithVideo.length >= 2 && proj.montageConfig) {
