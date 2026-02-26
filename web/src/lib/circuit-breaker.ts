@@ -245,6 +245,10 @@ export async function withCircuitBreaker<T>(
   service: ServiceName,
   fn: () => Promise<T>,
 ): Promise<T> {
+  // In mock mode, skip circuit breaker entirely
+  if (process.env.USE_MOCK_AI === "true") {
+    return fn();
+  }
   await checkCircuit(service);
 
   try {
@@ -431,6 +435,10 @@ export async function runHealthCheck(): Promise<HealthReport> {
 export async function pipelinePreCheck(
   requiredServices: ServiceName[],
 ): Promise<PreCheckResult> {
+  // In mock mode, all services are available
+  if (process.env.USE_MOCK_AI === "true") {
+    return { available: [...requiredServices], degraded: [] };
+  }
   const available: ServiceName[] = [];
   const degraded: ServiceName[] = [];
 
@@ -466,6 +474,8 @@ export async function costGuard(
   projectId: string,
   operation: string,
 ): Promise<void> {
+  // In mock mode, skip cost guard
+  if (process.env.USE_MOCK_AI === "true") return;
   const { getProject } = await import("./store");
   const project = await getProject(projectId);
   if (!project) return;

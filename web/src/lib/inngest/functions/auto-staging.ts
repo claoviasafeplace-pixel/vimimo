@@ -165,7 +165,10 @@ export const autoStaging = inngest.createFunction(
               );
               room.optionPredictionIds = predictionIds;
             } catch (error) {
-              console.error(`Auto-staging failed for room ${room.index}:`, error);
+              const errMsg = error instanceof Error ? error.message : String(error);
+              console.error(`Auto-staging failed for room ${room.index}:`, errMsg);
+              // Store debug info in room for diagnostics
+              room.visionData = { ...room.visionData, _stagingError: errMsg };
               if (error instanceof CircuitOpenError || error instanceof CostThresholdError) {
                 throw error; // propagate to abort
               }
@@ -271,7 +274,9 @@ export const autoStaging = inngest.createFunction(
                   undefined, proj.mode);
                 room.videoPredictionId = predictionId;
               } catch (error) {
-                console.error(`Video generation failed for room ${room.index}:`, error);
+                const errMsg = error instanceof Error ? error.message : String(error);
+                console.error(`Video generation failed for room ${room.index}:`, errMsg);
+                room.visionData = { ...room.visionData, _videoError: errMsg };
                 room.videoUrl = "";
               }
             }));
