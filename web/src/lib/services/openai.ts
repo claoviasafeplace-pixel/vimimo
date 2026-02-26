@@ -12,7 +12,9 @@ import type { Project, TriageResult, ProjectMode } from "../types";
 import { withRetry, OPENAI_RETRY } from "../retry";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
-const IS_MOCK = process.env.USE_MOCK_AI === "true";
+function isMock(): boolean {
+  return process.env.USE_MOCK_AI === "true";
+}
 
 const OPENAI_TIMEOUT = 60_000; // 60 seconds
 
@@ -42,7 +44,7 @@ export async function analyzePhotos(
   propertyType = "apartment",
   projectId?: string,
 ): Promise<VisionAnalysis> {
-  if (IS_MOCK) {
+  if (isMock()) {
     console.log(`[MOCK_AI] analyzePhotos → ${photoUrls.length} rooms (skipped GPT-4o Vision)`);
     const ROOM_TYPES = ["living_room", "bedroom", "kitchen", "bathroom", "office"];
     const ROOM_LABELS = ["Salon", "Chambre", "Cuisine", "Salle de bain", "Bureau"];
@@ -105,7 +107,7 @@ export async function triagePhotos(
   style: string,
   projectId?: string,
 ): Promise<TriageResult> {
-  if (IS_MOCK) {
+  if (isMock()) {
     console.log(`[MOCK_AI] triagePhotos → ${photoUrls.length} photos (skipped GPT-4o Vision)`);
     const ROOM_TYPES = ["living_room", "bedroom", "kitchen", "bathroom", "office"];
     const ROOM_LABELS = ["Salon", "Chambre", "Cuisine", "Salle de bain", "Bureau"];
@@ -179,7 +181,7 @@ export async function generateStagingPrompts(
 ): Promise<StagingPrompts> {
   const isLifestyle = mode === "social_reel";
 
-  if (IS_MOCK) {
+  if (isMock()) {
     const label = isLifestyle ? "lifestyle" : "staging";
     console.log(`[MOCK_AI] generateStagingPrompts (${label}) → 5 prompts for ${roomLabel} (skipped GPT-4o)`);
     return {
@@ -241,7 +243,7 @@ export interface DescriptionResult {
 export async function generateDescription(
   project: Project,
 ): Promise<DescriptionResult> {
-  if (IS_MOCK) {
+  if (isMock()) {
     console.log(`[MOCK_AI] generateDescription → mock descriptions (skipped GPT-4o)`);
     return {
       instagram: `✨ Transformation incroyable de ce ${project.styleLabel || "modern"} ! Avant/Après qui donne des frissons 🏠\n\n#VirtualStaging #ImmobilierIA #HomeStaging #VIMIMO`,

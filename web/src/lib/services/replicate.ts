@@ -13,7 +13,9 @@ import { withRetry, REPLICATE_RETRY } from "../retry";
 import { savePredictionMap } from "../store";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
-const IS_MOCK = process.env.USE_MOCK_AI === "true";
+function isMock(): boolean {
+  return process.env.USE_MOCK_AI === "true";
+}
 
 // ─── Mock Constants (B1 test assets in web/public/B1/) ──────────────
 // Files served by Next.js from public/B1/. Full URL built from APP_URL
@@ -68,7 +70,7 @@ export async function cleanPhoto(
   photoUrl: string,
   ctx?: PredictionContext,
 ): Promise<string> {
-  if (IS_MOCK) {
+  if (isMock()) {
     const id = mockPredictionId("clean");
     console.log(`[MOCK_AI] cleanPhoto → ${id} (skipped Flux Kontext Pro)`);
     return id;
@@ -113,7 +115,7 @@ export async function generateStagingOption(
   prompt: string,
   ctx?: PredictionContext,
 ): Promise<string> {
-  if (IS_MOCK) {
+  if (isMock()) {
     const id = mockPredictionId("staging");
     console.log(`[MOCK_AI] generateStagingOption → ${id} (skipped Flux Kontext Pro)`);
     return id;
@@ -161,7 +163,7 @@ export async function generateVideo(
   ctx?: PredictionContext,
   projectMode?: ProjectMode,
 ): Promise<string> {
-  if (IS_MOCK) {
+  if (isMock()) {
     const id = mockPredictionId("video");
     console.log(`[MOCK_AI] generateVideo → ${id} (skipped Kling v2.1 Pro)`);
     return id;
@@ -211,7 +213,7 @@ export async function generateVideo(
 }
 
 export async function getPredictionStatus(id: string): Promise<PredictionStatus> {
-  if (IS_MOCK) {
+  if (isMock()) {
     let mockUrl: string;
     if (id.includes("-video-")) {
       mockUrl = `${mockBaseUrl()}/B1/${MOCK_VIDEO}`;
