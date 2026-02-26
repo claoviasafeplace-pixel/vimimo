@@ -54,6 +54,15 @@ YOUR RULES:
 - Nightstands must have objects ON them (lamp, small plant, book, ceramic dish)
 - Shelves must be STYLED (books, ceramics, small art, plant)
 
+DIRECTIONAL LIGHTING MASTERY (for rooms with natural light):
+If the room has visible windows, large glass doors, or is an exterior/balcony/terrace, you MUST use the lighting data from the STRUCTURAL INVENTORY (visionData.lighting) to craft physically accurate lighting. Apply this rule:
+- Read the "lightDirection" or "orientation" field (e.g., "south", "west", "east").
+- For Prompt 1 (GOLDEN HOUR) and Prompt 5 (SHOWROOM LUXE), add a TWILIGHT LIGHTING SENTENCE using this exact formula:
+  "Change the scene to early twilight. The sun appears to the [LEFT/RIGHT/CENTER] side of the frame based on original window orientation, casting warm-orange highlights on furniture surfaces and long gentle shadows across the floor. Well-exposed sky visible through windows, balanced interior-exterior exposure."
+- Determine LEFT vs RIGHT: if light comes from the left side of the photo, sun is LEFT. If from the right, sun is RIGHT. If the photo faces the windows directly, sun is CENTER-BEHIND.
+- For interior rooms WITHOUT visible windows or natural light (bathrooms, hallways, basements), do NOT add twilight — use warm artificial lighting instead.
+- NEVER invent a light direction. ONLY use what visionData.lighting tells you.
+
 ANTI-DISTORTION RULES (HIGHEST PRIORITY — violating these ruins the image):
 1. NEVER describe the room itself (walls, floor, windows, ceiling). Describing structure CAUSES DISTORTION.
 2. Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT — zero modifications.
@@ -158,6 +167,10 @@ MANDATORY CHECKLIST — every prompt MUST include ALL of these:
 ✅ Decorative objects on every surface (books, candles, vases with flowers, trays, ceramics)
 ✅ Textiles: throw blanket + cushions with fabric/color + curtains if windows are visible
 ✅ Every item must have: material + color + texture (never just "a lamp" or "a sofa")
+✅ For Prompt 1 and Prompt 5: if the room has windows/natural light, add a TWILIGHT SENTENCE (see Directional Lighting rules)
+
+LIGHTING DATA FOR THIS ROOM (use this for sun direction in twilight prompts):
+${JSON.stringify(visionData.lighting || "no lighting data available", null, 2)}
 
 Use the style guide above for the exact aesthetic. Place furniture logically (avoid blocking windows/doors).`;
 }
@@ -487,6 +500,18 @@ THE 5 PROMPTS — MANDATORY VARIATIONS
 - Prompt 4: ENERGETIC MORNING — Bright natural light, person in motion (yoga, cooking, getting ready)
 - Prompt 5: SEASONAL/EVENT — Pick ONE: holiday decor (Christmas, autumn), celebration (birthday, housewarming), or dramatic weather (rain outside, snow on windows)
 
+═══════════════════════════════════════════════════════════════════
+CRITICAL RULE #3: DIRECTIONAL TWILIGHT LIGHTING (rooms with natural light)
+═══════════════════════════════════════════════════════════════════
+If the room has visible windows, glass doors, or is an exterior/balcony/terrace:
+- Read visionData.lighting from the STRUCTURAL INVENTORY (lightDirection, orientation, windowCount).
+- For Prompt 1 (GOLDEN HOUR) and Prompt 3 (INTIMATE EVENING), you MUST include a TWILIGHT SENTENCE using this exact formula:
+  "Change the scene to early twilight. The sun appears to the [LEFT/RIGHT/CENTER] side of the frame based on original window orientation, casting warm-orange highlights on furniture surfaces and long gentle shadows across the floor. Well-exposed brighter sky visible through windows, balanced interior-exterior exposure."
+- How to determine sun position: if original light enters from the left of the frame → sun is LEFT. From the right → sun is RIGHT. If the camera faces the windows → sun is CENTER-BEHIND the viewer.
+- For EXTERIOR rooms (facade, garden, terrace): ALWAYS apply twilight. Add: "Golden hour sky gradient from warm amber at horizon to deep blue above. Facade warmly lit by low-angle sunlight. Landscape shadows stretch dramatically."
+- For rooms WITHOUT windows or natural light (windowless bathrooms, basements, hallways): do NOT use twilight. Use warm artificial lighting (candles, lamps, pendants) instead.
+- NEVER guess a light direction. ONLY use what visionData.lighting provides.
+
 ANTI-DISTORTION RULES (same as classic staging — HIGHEST PRIORITY):
 1. NEVER describe the room structure. Only add furniture, people, lighting, and decor.
 2. Walls, floor, ceiling, windows, doors remain PIXEL-PERFECT unchanged.
@@ -525,6 +550,10 @@ MANDATORY CHECKLIST — every prompt MUST include ALL of these:
 ✅ Atmospheric details (steam, reflections, fabric movement, plant life)
 ✅ Decorative objects on every surface (same richness as classic staging)
 ✅ NO two prompts may have the same human profile — rotate demographics completely
+✅ For rooms with windows/natural light: use visionData.lighting to craft a TWILIGHT SENTENCE (see Rule #3)
+
+LIGHTING DATA FOR THIS ROOM (use this to determine sun direction):
+${JSON.stringify((visionData as Record<string, unknown>).lighting || "no lighting data available", null, 2)}
 
 Use the ${styleLabel} design aesthetic for furniture. People's clothing should match the interior style (casual-luxe for modern, warm layers for Scandinavian, eclectic for bohemian, etc).`;
 }
