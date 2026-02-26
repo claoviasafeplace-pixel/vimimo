@@ -13,7 +13,7 @@ import { withRetry, OPENAI_RETRY } from "../retry";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
 function isMock(): boolean {
-  return process.env.USE_MOCK_AI === "true";
+  return process.env.USE_MOCK_AI?.trim() === "true";
 }
 
 const OPENAI_TIMEOUT = 60_000; // 60 seconds

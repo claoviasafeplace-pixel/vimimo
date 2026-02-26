@@ -14,7 +14,7 @@ import { savePredictionMap } from "../store";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
 function isMock(): boolean {
-  return process.env.USE_MOCK_AI === "true";
+  return process.env.USE_MOCK_AI?.trim() === "true";
 }
 
 // ─── Mock Constants (B1 test assets in web/public/B1/) ──────────────
