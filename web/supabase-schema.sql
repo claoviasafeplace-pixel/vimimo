@@ -81,6 +81,9 @@ CREATE TABLE IF NOT EXISTS projects (
 -- Admin column
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Password hash (for email/password auth — nullable for OAuth/magic-link users)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
 -- Prediction map (for Replicate webhooks)
 CREATE TABLE IF NOT EXISTS prediction_map (
   prediction_id TEXT PRIMARY KEY,

@@ -86,6 +86,19 @@ export const signedUrlSchema = z.object({
   contentType: z.string().optional(),
 });
 
+// --- Auth: registration ---
+export const registerSchema = z.object({
+  name: z.string().min(2, "Nom requis (min 2 caractères)").max(100),
+  email: z.string().email("Email invalide"),
+  password: z.string().min(8, "Minimum 8 caractères"),
+});
+
+// --- Auth: login ---
+export const loginSchema = z.object({
+  email: z.string().email("Email invalide"),
+  password: z.string().min(1, "Mot de passe requis"),
+});
+
 // --- Triage confirmation ---
 export const triageConfirmSchema = z.object({
   confirmedPhotos: z

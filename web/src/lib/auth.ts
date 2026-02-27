@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import type { Provider } from "next-auth/providers";
 import Google from "next-auth/providers/google";
 import Resend from "next-auth/providers/resend";
+import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { SupabaseAdapter } from "@/lib/supabase-adapter";
 import { getSupabase } from "@/lib/supabase";
 
@@ -9,6 +11,32 @@ const providers: Provider[] = [
   Resend({
     apiKey: process.env.AUTH_RESEND_KEY!,
     from: "VIMIMO <onboarding@resend.dev>",
+  }),
+  Credentials({
+    name: "credentials",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Mot de passe", type: "password" },
+    },
+    async authorize(credentials) {
+      const email = credentials?.email as string | undefined;
+      const password = credentials?.password as string | undefined;
+      if (!email || !password) return null;
+
+      const db = getSupabase();
+      const { data: user } = await db
+        .from("users")
+        .select("id, name, email, image, password_hash")
+        .eq("email", email)
+        .single();
+
+      if (!user?.password_hash) return null;
+
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) return null;
+
+      return { id: user.id, name: user.name, email: user.email, image: user.image };
+    },
   }),
 ];
 
