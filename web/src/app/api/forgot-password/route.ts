@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   const baseUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "https://vimimo.fr";
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
-  await fetch("https://api.resend.com/emails", {
+  const resendRes = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${resendKey}`,
@@ -84,6 +84,13 @@ export async function POST(request: Request) {
       `,
     }),
   });
+
+  const resendData = await resendRes.json();
+  if (!resendRes.ok) {
+    console.error("[forgot-password] Resend error:", resendData);
+  } else {
+    console.log("[forgot-password] Email sent:", resendData.id);
+  }
 
   return NextResponse.json({ success: true });
 }
