@@ -10,7 +10,7 @@ import { getSupabase } from "@/lib/supabase";
 const providers: Provider[] = [
   Resend({
     apiKey: process.env.AUTH_RESEND_KEY!,
-    from: "VIMIMO <onboarding@resend.dev>",
+    from: "VIMIMO <noreply@vimimo.fr>",
   }),
   Credentials({
     name: "credentials",

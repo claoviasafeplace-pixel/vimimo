@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "VIMIMO <onboarding@resend.dev>",
+      from: "VIMIMO <noreply@vimimo.fr>",
       to: [email],
       subject: "Réinitialisation de votre mot de passe VIMIMO",
       html: `

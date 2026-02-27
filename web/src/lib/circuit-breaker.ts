@@ -549,7 +549,7 @@ async function sendAlert(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "VIMIMO Alerts <onboarding@resend.dev>",
+        from: "VIMIMO Alerts <noreply@vimimo.fr>",
         to: ADMIN_EMAIL,
         subject: subjects[type],
         text: `Alert: ${type}\nService: ${service}\nDetails: ${details}\nTime: ${new Date().toISOString()}`,
