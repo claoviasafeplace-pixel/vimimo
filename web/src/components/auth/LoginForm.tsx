@@ -211,19 +211,27 @@ export default function LoginForm() {
               Se connecter
             </Button>
           </form>
-          <div className="flex items-center justify-between text-sm">
-            <button
-              onClick={() => switchView("register")}
-              className="text-icon-accent hover:underline cursor-pointer"
+          <div className="flex flex-col gap-2 text-sm">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => switchView("register")}
+                className="text-icon-accent hover:underline cursor-pointer"
+              >
+                Créer un compte
+              </button>
+              <button
+                onClick={() => switchView("magic")}
+                className="text-muted hover:underline cursor-pointer"
+              >
+                Lien magique
+              </button>
+            </div>
+            <a
+              href="/forgot-password"
+              className="text-muted hover:underline cursor-pointer text-center"
             >
-              Créer un compte
-            </button>
-            <button
-              onClick={() => switchView("magic")}
-              className="text-muted hover:underline cursor-pointer"
-            >
-              Lien magique
-            </button>
+              Mot de passe oublié ?
+            </a>
           </div>
         </>
       )}

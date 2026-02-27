@@ -99,6 +99,17 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Mot de passe requis"),
 });
 
+// --- Auth: forgot password ---
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Email invalide"),
+});
+
+// --- Auth: reset password ---
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token requis"),
+  password: z.string().min(8, "Minimum 8 caractères"),
+});
+
 // --- Triage confirmation ---
 export const triageConfirmSchema = z.object({
   confirmedPhotos: z
