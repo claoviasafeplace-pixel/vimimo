@@ -7,17 +7,13 @@ import { registerSchema } from "@/lib/validations";
 export async function POST(request: Request) {
   let body: unknown;
   try {
-    const text = await request.text();
-    console.log("[register] raw body:", text);
-    body = JSON.parse(text);
-  } catch (err) {
-    console.error("[register] JSON parse error:", err);
+    body = await request.json();
+  } catch {
     return NextResponse.json({ error: "Body JSON invalide" }, { status: 400 });
   }
 
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
-    console.error("[register] Validation error:", JSON.stringify(parsed.error));
     const message = parsed.error.issues[0]?.message ?? "Données invalides";
     return NextResponse.json({ error: message }, { status: 400 });
   }
