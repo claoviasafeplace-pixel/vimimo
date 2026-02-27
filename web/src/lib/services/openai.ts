@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import {
   BATCH_VISION_SYSTEM_PROMPT,
+  GLOBAL_CONTEXT_SYSTEM_PROMPT,
   STAGING_PROMPT_SYSTEM,
   LIFESTYLE_SYSTEM_PROMPT,
   TRIAGE_SYSTEM_PROMPT,
@@ -20,6 +21,56 @@ const OPENAI_TIMEOUT = 60_000; // 60 seconds
 
 function getClient() {
   return new OpenAI({ timeout: OPENAI_TIMEOUT });
+}
+
+export async function analyzeGlobalProperty(
+  photoUrls: { index: number; url: string }[],
+  style: string,
+  projectId?: string,
+): Promise<string> {
+  if (isMock()) {
+    console.log(`[MOCK_AI] analyzeGlobalProperty → ${photoUrls.length} photos (skipped GPT-4o Vision)`);
+    return "Modern European apartment, light oak herringbone parquet throughout, white painted walls with simple crown molding, double-glazed windows overlooking residential street with mature trees, 2.7m ceilings, warm natural daylight from south-west, chrome light switches, white radiators under windows.";
+  }
+
+  if (projectId) await costGuard(projectId, "gpt-4o-vision");
+
+  const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+    {
+      type: "text",
+      text: `Analyze ALL ${photoUrls.length} photos of this property together. Style: ${style}. Extract the shared visual DNA.`,
+    },
+  ];
+
+  for (const p of photoUrls) {
+    content.push({ type: "text", text: `Photo ${p.index}:` });
+    content.push({ type: "image_url", image_url: { url: p.url, detail: "low" } });
+  }
+
+  const result = await withCircuitBreaker("openai", () =>
+    withRetry(async () => {
+      const response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0.2,
+        max_tokens: 500,
+        messages: [
+          { role: "system", content: GLOBAL_CONTEXT_SYSTEM_PROMPT },
+          { role: "user", content },
+        ],
+      });
+
+      let raw = response.choices[0].message.content?.trim() || "";
+      if (raw.startsWith("```")) {
+        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+      const parsed = JSON.parse(raw);
+      return parsed.globalContext as string;
+    }, OPENAI_RETRY),
+  );
+
+  if (projectId) await trackCost(projectId, "gpt-4o-vision");
+  console.log(`[GLOBAL_CONTEXT] Generated for project ${projectId}: ${result.substring(0, 100)}...`);
+  return result;
 }
 
 interface VisionAnalysis {
@@ -178,6 +229,7 @@ export async function generateStagingPrompts(
   visionData: Record<string, unknown>,
   projectId?: string,
   mode?: ProjectMode,
+  globalContext?: string,
 ): Promise<StagingPrompts> {
   const isLifestyle = mode === "social_reel";
 
@@ -196,8 +248,8 @@ export async function generateStagingPrompts(
 
   const systemPrompt = isLifestyle ? LIFESTYLE_SYSTEM_PROMPT : STAGING_PROMPT_SYSTEM;
   const userText = isLifestyle
-    ? lifestylePromptUser(roomType, roomLabel, style, styleLabel, visionData)
-    : stagingPromptUser(roomType, roomLabel, style, styleLabel, visionData);
+    ? lifestylePromptUser(roomType, roomLabel, style, styleLabel, visionData, globalContext)
+    : stagingPromptUser(roomType, roomLabel, style, styleLabel, visionData, globalContext);
 
   if (isLifestyle) {
     console.log(`[LIFESTYLE] Generating lifestyle prompts for ${roomLabel} (${roomType})`);

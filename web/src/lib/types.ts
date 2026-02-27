@@ -153,6 +153,7 @@ export interface Project {
   confirmedPhotoOrder?: ConfirmedPhoto[];
   propertyInfo?: PropertyInfo;
   apiCostUsd?: number;
+  globalContext?: string;
 }
 
 // --- Auth & Credits ---

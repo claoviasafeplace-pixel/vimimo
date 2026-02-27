@@ -1,5 +1,27 @@
 export const CLEAN_PHOTO_PROMPT =
-  "Edit this exact photo, keep camera angle, perspective, and structure 100% identical: Remove ALL movable furniture, beds, sofas, tables, chairs, boxes, clothes, clutter, and decorations. Keep ONLY the bare room structure: walls, floor texture and material unchanged, ceiling, windows, doors, radiators, electrical outlets, light switches, ceiling lights, built-in closets, and all fixed architectural elements. The room must appear completely empty but structurally identical. Photorealistic, exact room proportions, exact floor material, no distortion, camera locked.";
+  "Edit this exact photo, keep camera angle, perspective, and structure 100% identical. Remove ALL movable furniture, beds, sofas, tables, chairs, boxes, clothes, clutter, and decorations. Keep the EXACT original floor material and color, EXACT wall colors and textures, EXACT ceiling, windows, doors, radiators, electrical outlets, light switches, ceiling lights, built-in closets, and all fixed architectural elements unchanged. The room must appear completely empty but structurally and materially identical to the original. Photorealistic, exact room proportions, no distortion, camera locked.";
+
+export const GLOBAL_CONTEXT_SYSTEM_PROMPT = `You are an expert architectural analyst. You receive ALL photos of a single property. Analyze them together and extract a dense "Visual DNA" that captures the SHARED architectural identity across every room.
+
+Focus on elements that MUST remain consistent across all rooms:
+- Flooring material, color, and pattern (the SAME floor runs through most rooms)
+- Wall treatment and color (paint, wallpaper, molding style)
+- Window type and exterior view (what is visible outside — trees, buildings, sky, garden)
+- Ceiling height and style (flat, beamed, molding, recessed spots)
+- Architectural style (modern, classic, Haussmann, industrial loft, etc.)
+- Lighting character (warm/cool, natural light direction, intensity)
+- Fixed elements (radiators, built-in fixtures, door style)
+
+Return ONLY valid JSON:
+{
+  "globalContext": "Dense 50-80 word English description of the property's visual DNA — materials, colors, architectural style, exterior view, lighting character",
+  "dominantMaterials": "comma-separated list of key materials seen across rooms",
+  "exteriorView": "what is visible through windows across the property",
+  "architecturalStyle": "one-line architectural style description",
+  "lightingCharacter": "one-line lighting description"
+}
+
+Be EXTREMELY specific and factual. Describe what you SEE, not what you imagine. No markdown, ONLY valid JSON.`;
 
 export const BATCH_VISION_SYSTEM_PROMPT = `Tu es un expert en analyse immobilière. Pour CHAQUE photo, analyse la pièce.
 
@@ -80,6 +102,14 @@ ANTI-DISTORTION RULES (HIGHEST PRIORITY — violating these ruins the image):
    - Prompt 4: WARM & LIVABLE — Cozy premium with plush textiles, warm lighting, personal touches
    - Prompt 5: SHOWROOM LUXE — Ultra-premium: statement art, sculptural furniture, marble/brass/velvet, dramatic lighting
 
+GLOBAL COHERENCE RULE (CRITICAL):
+You will receive a "GLOBAL PROPERTY DNA" block. This is the visual DNA of the ENTIRE property. You MUST:
+- Use the EXACT same flooring material/color described in the DNA
+- Maintain the EXACT same exterior view through windows
+- Keep the SAME architectural style and wall treatment
+- Match the SAME lighting character
+- NEVER contradict the DNA
+
 Respond in JSON: { "analysis": "Brief 1-line description of what you see", "prompts": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"] }
 No markdown, ONLY valid JSON.`;
 
@@ -145,14 +175,19 @@ export function stagingPromptUser(
   roomLabel: string,
   style: string,
   styleLabel: string,
-  visionData: Record<string, unknown>
+  visionData: Record<string, unknown>,
+  globalContext?: string,
 ): string {
   const styleGuide = STYLE_GUIDES[style] || "";
+
+  const globalBlock = globalContext
+    ? `\nGLOBAL PROPERTY DNA (STRICT — apply to this room):\n${globalContext}\nYou MUST ensure visual continuity with all other rooms: same flooring material, same wall treatment, same exterior view through windows, same lighting character. Do NOT invent different materials or exterior scenery.\n`
+    : "";
 
   return `Room: ${roomType} (${roomLabel}). Style to apply: ${style} (${styleLabel}).
 
 ${styleGuide}
-
+${globalBlock}
 STRUCTURAL INVENTORY (from prior analysis — DO NOT modify these):
 ${JSON.stringify(visionData, null, 2)}
 
@@ -182,13 +217,8 @@ Use the style guide above for the exact aesthetic. Place furniture logically (av
  * Kling interprets these as motion instructions; explicit "no" tokens
  * reduce hallucinated fast pans and whip movements.
  */
-export const VIDEO_CAMERA_PROMPT = [
-  "Ultra slow smooth cinematic dolly-in,",
-  "locked tripod-mounted camera with imperceptible forward glide,",
-  "professional real estate walkthrough cinematography,",
-  "no handheld shake, no fast pan, no whip movement, no rotation,",
-  "camera height fixed at eye level throughout entire sequence.",
-].join(" ");
+export const VIDEO_CAMERA_PROMPT =
+  "Ultra-wide static camera. A slow interior transformation where an empty room gradually becomes a modern living room. Movements are very slow, careful, and clearly readable, with frequent natural pauses between actions. Human motion is near real-time and not accelerated, while the room changes slightly faster. Calm pacing, smooth motion, soft daylight, cinematic interior atmosphere.";
 
 /**
  * Quality suffix appended to every video prompt — enforces temporal coherence.
@@ -518,6 +548,14 @@ ANTI-DISTORTION RULES (same as classic staging — HIGHEST PRIORITY):
 3. ALL furniture must obey gravity. People must cast shadows consistent with lighting.
 4. Spatial coherence: people must fit naturally in the room's proportions.
 
+GLOBAL COHERENCE RULE (CRITICAL):
+You will receive a "GLOBAL PROPERTY DNA" block. This is the visual DNA of the ENTIRE property. You MUST:
+- Use the EXACT same flooring material/color described in the DNA
+- Maintain the EXACT same exterior view through windows
+- Keep the SAME architectural style and wall treatment
+- Match the SAME lighting character
+- NEVER contradict the DNA
+
 Respond in JSON: { "analysis": "Brief 1-line description", "prompts": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"] }
 No markdown, ONLY valid JSON.`;
 
@@ -530,13 +568,18 @@ export function lifestylePromptUser(
   style: string,
   styleLabel: string,
   visionData: Record<string, unknown>,
+  globalContext?: string,
 ): string {
   const sceneGuide = LIFESTYLE_SCENES[roomType] || LIFESTYLE_DEFAULT_SCENE;
+
+  const globalBlock = globalContext
+    ? `\nGLOBAL PROPERTY DNA (STRICT — apply to this room):\n${globalContext}\nYou MUST ensure visual continuity with all other rooms: same flooring material, same wall treatment, same exterior view through windows, same lighting character. Do NOT invent different materials or exterior scenery.\n`
+    : "";
 
   return `Room: ${roomType} (${roomLabel}). Style: ${style} (${styleLabel}).
 
 ${sceneGuide}
-
+${globalBlock}
 STRUCTURAL INVENTORY (from prior analysis — DO NOT modify these):
 ${JSON.stringify(visionData, null, 2)}
 

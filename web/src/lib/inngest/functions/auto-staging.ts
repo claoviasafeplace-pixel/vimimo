@@ -6,7 +6,7 @@ import {
   generateStagingOption,
   generateVideo,
 } from "@/lib/services/replicate";
-import { generateStagingPrompts, analyzePhotos } from "@/lib/services/openai";
+import { generateStagingPrompts, analyzePhotos, analyzeGlobalProperty } from "@/lib/services/openai";
 import { startRender, startStudioRender, startSocialRender } from "@/lib/services/remotion";
 import {
   pipelinePreCheck,
@@ -103,7 +103,31 @@ export const autoStaging = inngest.createFunction(
       await saveProject(proj);
     });
 
-    // Step 1b: Analyze rooms (populate visionData via GPT-4o Vision)
+    // Step 1b: Analyze global property context (Visual DNA)
+    const globalContext = await step.run("analyze-global-context", async () => {
+      const proj = await getProject(projectId);
+      if (!proj || proj.phase !== "auto_staging") return "";
+      if (proj.globalContext) return proj.globalContext; // already computed
+
+      const photoUrls = proj.rooms.map((r, i) => ({
+        index: i + 1,
+        url: r.beforePhotoUrl,
+      }));
+
+      if (photoUrls.length < 2) return ""; // single room → no cross-room coherence needed
+
+      try {
+        const ctx = await analyzeGlobalProperty(photoUrls, proj.style, projectId);
+        proj.globalContext = ctx;
+        await saveProject(proj);
+        return ctx;
+      } catch (error) {
+        console.error("[auto-staging] Global context analysis failed:", error);
+        return ""; // non-fatal
+      }
+    });
+
+    // Step 1c: Analyze rooms (populate visionData via GPT-4o Vision)
     await step.run("analyze-rooms", async () => {
       const proj = await getProject(projectId);
       if (!proj || proj.phase !== "auto_staging") return;
@@ -156,7 +180,7 @@ export const autoStaging = inngest.createFunction(
             try {
               const result = await generateStagingPrompts(
                 room.cleanedPhotoUrl, room.roomType, room.roomLabel,
-                proj.style, proj.styleLabel, room.visionData, projectId, proj.mode);
+                proj.style, proj.styleLabel, room.visionData, projectId, proj.mode, globalContext);
               // Generate all available prompts (up to 5)
               const predictionIds = await Promise.all(
                 result.prompts.map((prompt: string) =>
