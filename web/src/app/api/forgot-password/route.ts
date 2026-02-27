@@ -88,9 +88,7 @@ export async function POST(request: Request) {
   const resendData = await resendRes.json();
   if (!resendRes.ok) {
     console.error("[forgot-password] Resend error:", resendData);
-    // Temporary debug: return Resend error to caller
-    return NextResponse.json({ success: true, _debug: resendData });
   }
 
-  return NextResponse.json({ success: true, _debug: { emailId: resendData.id } });
+  return NextResponse.json({ success: true });
 }
