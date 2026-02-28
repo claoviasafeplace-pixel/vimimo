@@ -69,6 +69,28 @@ interface ActiveProject {
   createdAt: string;
 }
 
+interface AiCostMonth {
+  month: string;
+  costUsd: number;
+}
+
+interface TopCostProject {
+  id: string;
+  cost: number;
+  rooms: number;
+  phase: string;
+  date: string;
+}
+
+interface AiCostStats {
+  totalUsd: number;
+  totalProjects: number;
+  avgPerProject: number;
+  byMonth: AiCostMonth[];
+  topProjects: TopCostProject[];
+  costPerService: Record<string, number>;
+}
+
 interface AdminStats {
   projectsByPhase: Record<string, number>;
   recentProjects: RecentProject[];
@@ -83,6 +105,7 @@ interface AdminStats {
   totalRevenueEur: number;
   stuckProjects: { count: number; projects: StuckProject[] };
   activeProjects: { count: number; projects: ActiveProject[] };
+  aiCostStats: AiCostStats;
 }
 
 interface PaginatedProject {
@@ -859,21 +882,117 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* API cost estimate */}
+            {/* AI Cost Widget */}
             <div className="rounded-2xl border border-border bg-surface p-6">
-              <h2 className="mb-2 text-lg font-semibold">Estimation coûts API</h2>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-gradient-gold">
-                  ~{(stats.creditStats.totalDeducted * 0.25).toFixed(2)} €
-                </span>
-                <span className="text-sm text-muted">
-                  pour {stats.creditStats.totalDeducted} rooms traitées (~0.25 €/room)
-                </span>
+              <h2 className="mb-4 text-lg font-semibold flex items-center gap-2">
+                <Euro className="h-5 w-5 text-amber-400" />
+                Coûts IA
+              </h2>
+
+              {/* Top-level KPIs */}
+              <div className="grid gap-4 sm:grid-cols-3 mb-6">
+                <div className="rounded-xl border border-border bg-surface-hover p-4">
+                  <p className="text-xs text-muted mb-1">Total dépensé</p>
+                  <p className="text-2xl font-bold text-gradient-gold">
+                    ${stats.aiCostStats.totalUsd.toFixed(2)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-surface-hover p-4">
+                  <p className="text-xs text-muted mb-1">Projets facturés</p>
+                  <p className="text-2xl font-bold">{stats.aiCostStats.totalProjects}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-surface-hover p-4">
+                  <p className="text-xs text-muted mb-1">Coût moyen / projet</p>
+                  <p className="text-2xl font-bold">${stats.aiCostStats.avgPerProject.toFixed(2)}</p>
+                </div>
               </div>
-              {stats.activeProjects.count > 0 && (
-                <p className="mt-2 text-xs text-muted">
-                  {stats.activeProjects.projects.reduce((s, p) => s + p.roomCount, 0)} rooms en cours de traitement
+
+              {/* Cost per service */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold mb-2">Coût par appel IA</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.entries(stats.aiCostStats.costPerService).map(([service, cost]) => (
+                    <div key={service} className="rounded-lg border border-border/50 bg-background px-3 py-2">
+                      <p className="text-[10px] text-muted truncate">{service}</p>
+                      <p className="text-sm font-semibold">${cost.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-muted">
+                  1 room standard = 1× vision ($0.03) + {process.env.NEXT_PUBLIC_STAGING_VARIANTS || "1"}× staging ($0.05) + 1× vidéo ($0.50) ≈ <strong>${(0.03 + 0.05 + 0.50).toFixed(2)}</strong>
                 </p>
+              </div>
+
+              {/* Monthly breakdown */}
+              {stats.aiCostStats.byMonth.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold mb-2">Dépenses mensuelles</h3>
+                  <div className="space-y-1.5">
+                    {stats.aiCostStats.byMonth.map((m) => {
+                      const maxCost = Math.max(...stats.aiCostStats.byMonth.map((x) => x.costUsd), 1);
+                      return (
+                        <div key={m.month} className="flex items-center gap-3">
+                          <span className="text-xs text-muted w-16">{m.month}</span>
+                          <div className="flex-1 h-5 rounded bg-surface-hover overflow-hidden">
+                            <div
+                              className="h-full rounded gradient-gold"
+                              style={{ width: `${(m.costUsd / maxCost) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-semibold w-16 text-right">${m.costUsd.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Top spenders */}
+              {stats.aiCostStats.topProjects.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Top projets par coût</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border text-left text-muted">
+                          <th className="pb-2 pr-4">Projet</th>
+                          <th className="pb-2 pr-4">Pièces</th>
+                          <th className="pb-2 pr-4">Phase</th>
+                          <th className="pb-2 pr-4">Date</th>
+                          <th className="pb-2 text-right">Coût IA</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {stats.aiCostStats.topProjects.slice(0, 10).map((p) => (
+                          <tr key={p.id}>
+                            <td className="py-2 pr-4">
+                              <a href={`/project/${p.id}`} target="_blank" rel="noopener noreferrer"
+                                className="font-mono text-xs hover:text-amber-400 transition-colors">
+                                {p.id.slice(0, 8)}
+                              </a>
+                            </td>
+                            <td className="py-2 pr-4">{p.rooms}</td>
+                            <td className="py-2 pr-4"><PhaseBadge phase={p.phase} /></td>
+                            <td className="py-2 pr-4 text-muted">
+                              {new Date(p.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            </td>
+                            <td className="py-2 text-right font-semibold">${p.cost.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Active rooms cost preview */}
+              {stats.activeProjects.count > 0 && (
+                <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                  <p className="text-xs text-amber-400">
+                    {stats.activeProjects.projects.reduce((s, p) => s + p.roomCount, 0)} rooms en cours →
+                    coût estimé restant : ~${(stats.activeProjects.projects.reduce((s, p) => s + p.roomCount, 0) * 0.58).toFixed(2)}
+                  </p>
+                </div>
               )}
             </div>
           </div>

@@ -128,9 +128,78 @@ export async function GET() {
 
   const totalRevenueEur = revenueByMonth.reduce((sum, m) => sum + m.estimatedEur, 0);
 
+  // AI cost stats — aggregate from project JSONB data
+  const { data: costRows } = await db
+    .from("projects")
+    .select("data->apiCostUsd, data->phase, data->rooms, created_at");
+
+  let totalAiCostUsd = 0;
+  let totalAiProjects = 0;
+  const costByMonth: Record<string, number> = {};
+  const costByPhase: Record<string, { count: number; cost: number }> = {};
+  const topCostProjects: { id: string; cost: number; rooms: number; phase: string; date: string }[] = [];
+
+  if (costRows) {
+    for (const row of costRows) {
+      const cost = Number((row as Record<string, unknown>).apiCostUsd) || 0;
+      if (cost > 0) {
+        totalAiCostUsd += cost;
+        totalAiProjects++;
+        const month = new Date(row.created_at).toISOString().slice(0, 7);
+        costByMonth[month] = (costByMonth[month] || 0) + cost;
+      }
+      const phase = String((row as Record<string, unknown>).phase || "unknown");
+      if (!costByPhase[phase]) costByPhase[phase] = { count: 0, cost: 0 };
+      costByPhase[phase].count++;
+      costByPhase[phase].cost += cost;
+    }
+  }
+
+  // Also pull individual project costs for top spenders
+  const { data: topCostRows } = await db
+    .from("projects")
+    .select("id, data, created_at")
+    .not("data->>apiCostUsd", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (topCostRows) {
+    for (const row of topCostRows) {
+      const data = row.data as Record<string, unknown> | null;
+      const cost = Number(data?.apiCostUsd) || 0;
+      if (cost > 0) {
+        const rooms = Array.isArray(data?.rooms) ? (data.rooms as unknown[]).length : 0;
+        topCostProjects.push({
+          id: row.id,
+          cost,
+          rooms,
+          phase: String(data?.phase || "unknown"),
+          date: row.created_at,
+        });
+      }
+    }
+    topCostProjects.sort((a, b) => b.cost - a.cost);
+  }
+
+  const aiCostStats = {
+    totalUsd: Math.round(totalAiCostUsd * 100) / 100,
+    totalProjects: totalAiProjects,
+    avgPerProject: totalAiProjects > 0 ? Math.round((totalAiCostUsd / totalAiProjects) * 100) / 100 : 0,
+    byMonth: Object.entries(costByMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, cost]) => ({ month, costUsd: Math.round(cost * 100) / 100 })),
+    topProjects: topCostProjects.slice(0, 10),
+    costPerService: {
+      "gpt-4o-vision": 0.03,
+      "gpt-4o-text": 0.01,
+      "flux-kontext-pro": 0.05,
+      "kling-v2.1-pro": 0.50,
+    },
+  };
+
   // Stuck projects (active phase + created > 30 min ago)
   const activePhases = [
-    "cleaning", "analyzing", "generating_options", "generating_videos",
+    "cleaning", "cleaned", "analyzing", "generating_options", "generating_videos",
     "rendering", "rendering_montage", "auto_staging", "triaging",
   ];
   const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
@@ -187,5 +256,6 @@ export async function GET() {
     totalRevenueEur,
     stuckProjects,
     activeProjects,
+    aiCostStats,
   });
 }
