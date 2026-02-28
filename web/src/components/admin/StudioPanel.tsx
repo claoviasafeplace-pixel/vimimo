@@ -83,8 +83,15 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
   const handleCleanPhotos = async () => {
     setActionLoading("cleaning");
     try {
-      await api(projectId, "clean_photos");
-      // Start polling
+      // Submit photos one-by-one (Replicate rate limit: burst=1 when <$5 credit)
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const result = await api(projectId, "clean_photos");
+        if (result.allSubmitted || (result.remaining ?? 0) === 0) break;
+        // Wait 12s between submissions to respect rate limits
+        await new Promise(r => setTimeout(r, 12000));
+      }
+      // Start polling for completion
       pollRef.current = setInterval(async () => {
         try {
           const data = await api(projectId, "check_cleaning");

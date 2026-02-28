@@ -121,17 +121,18 @@ export async function POST(
   switch (action) {
     // ─── Clean all photos (remove furniture) ───
     case "clean_photos": {
-      const predictions: string[] = [];
-      for (const photo of project.photos) {
-        if (photo.cleanedUrl) continue; // Already cleaned
-        if (photo.cleanPredictionId) continue; // Already in progress
-        const predId = await cleanPhoto(photo.originalUrl);
-        photo.cleanPredictionId = predId;
-        predictions.push(predId);
+      // Submit ONE photo at a time to avoid Replicate rate limits (burst=1 when <$5)
+      // Frontend calls this repeatedly until all photos are submitted
+      const nextPhoto = project.photos.find(p => !p.cleanedUrl && !p.cleanPredictionId);
+      if (!nextPhoto) {
+        return NextResponse.json({ success: true, allSubmitted: true, predictions: [] });
       }
+      const predId = await cleanPhoto(nextPhoto.originalUrl);
+      nextPhoto.cleanPredictionId = predId;
       project.phase = "cleaning";
       await saveProject(project);
-      return NextResponse.json({ success: true, predictions });
+      const remaining = project.photos.filter(p => !p.cleanedUrl && !p.cleanPredictionId).length;
+      return NextResponse.json({ success: true, predictions: [predId], remaining });
     }
 
     // ─── Poll cleaning status ───
