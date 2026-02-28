@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   CreditCard,
-  Sparkles,
   Plus,
   Coins,
   Menu,
@@ -40,11 +39,8 @@ export default function DashboardShell({
       {/* ─── Sidebar (desktop) ─── */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-r border-border/50 bg-surface/30 backdrop-blur-xl">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 px-6 border-b border-border/50">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
-            <Sparkles className="h-3.5 w-3.5 text-zinc-900" />
-          </div>
-          <Link href="/" className="text-lg font-bold tracking-wide text-gradient-gold">
+        <div className="flex h-16 items-center px-6 border-b border-border/50">
+          <Link href="/" className="text-lg font-bold tracking-widest text-gradient-gold">
             VIMIMO
           </Link>
         </div>
@@ -126,14 +122,9 @@ export default function DashboardShell({
           <aside className="absolute left-0 top-0 bottom-0 w-72 border-r border-border/50 bg-background/95 backdrop-blur-xl flex flex-col">
             {/* Mobile header */}
             <div className="flex h-16 items-center justify-between px-6 border-b border-border/50">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
-                  <Sparkles className="h-3.5 w-3.5 text-zinc-900" />
-                </div>
-                <span className="text-lg font-bold tracking-wide text-gradient-gold">
-                  VIMIMO
-                </span>
-              </div>
+              <span className="text-lg font-bold tracking-widest text-gradient-gold">
+                VIMIMO
+              </span>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-border cursor-pointer"
@@ -204,11 +195,8 @@ export default function DashboardShell({
               <Menu className="h-4 w-4" />
             </button>
             {/* Mobile logo */}
-            <Link href="/" className="flex items-center gap-2 lg:hidden">
-              <div className="flex h-6 w-6 items-center justify-center rounded gradient-gold">
-                <Sparkles className="h-3 w-3 text-zinc-900" />
-              </div>
-              <span className="text-sm font-bold text-gradient-gold">VIMIMO</span>
+            <Link href="/" className="text-sm font-bold tracking-widest text-gradient-gold lg:hidden">
+              VIMIMO
             </Link>
           </div>
 

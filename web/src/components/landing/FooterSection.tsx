@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -68,13 +67,9 @@ export default function FooterSection() {
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
             <div className="lg:col-span-1">
               <div className="mb-4">
-                <Image
-                  src="/logo-vimimo.png"
-                  alt="VIMIMO"
-                  width={120}
-                  height={32}
-                  className="h-8 w-auto"
-                />
+                <span className="text-xl font-bold tracking-widest text-gradient-gold">
+                  VIMIMO
+                </span>
               </div>
               <p className="text-sm leading-relaxed text-muted max-w-xs">
                 Home staging virtuel par IA avec validation expert.

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Menu, X } from "lucide-react";
@@ -40,15 +39,8 @@ export default function Navbar() {
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
-        <Link href="/" className="flex items-center">
-          <Image
-            src="/logo-vimimo.png"
-            alt="VIMIMO"
-            width={140}
-            height={36}
-            className="h-9 w-auto"
-            priority
-          />
+        <Link href="/" className="text-2xl font-bold tracking-widest text-gradient-gold">
+          VIMIMO
         </Link>
 
         <nav className="hidden items-center gap-8 lg:flex">
