@@ -28,16 +28,21 @@ interface StudioProject {
 type Step = "photos" | "staging" | "videos";
 
 // ─── Helpers ───
-function api(projectId: string, action: string, body?: Record<string, unknown>) {
-  return fetch(`/api/admin/studio/${projectId}`, {
+async function api(projectId: string, action: string, body?: Record<string, unknown>) {
+  const res = await fetch(`/api/admin/studio/${projectId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...body }),
-  }).then(async (res) => {
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-    return data;
   });
+  const text = await res.text();
+  let data: Record<string, unknown>;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`Réponse invalide du serveur (${res.status})`);
+  }
+  if (!res.ok) throw new Error((data.error as string) || `Erreur ${res.status}`);
+  return data;
 }
 
 // ─── Main Component ───

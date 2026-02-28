@@ -108,9 +108,16 @@ export async function POST(
     return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
   }
 
-  const body = await request.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corps de requête invalide" }, { status: 400 });
+  }
   const { action } = body;
 
+  try {
   switch (action) {
     // ─── Clean all photos (remove furniture) ───
     case "clean_photos": {
@@ -308,5 +315,10 @@ export async function POST(
 
     default:
       return NextResponse.json({ error: `Action inconnue: ${action}` }, { status: 400 });
+  }
+  } catch (err) {
+    console.error(`[Studio] Action "${action}" failed for project ${id}:`, err);
+    const message = err instanceof Error ? err.message : "Erreur interne";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
