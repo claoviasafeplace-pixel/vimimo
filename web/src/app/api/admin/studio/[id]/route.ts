@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { nanoid } from "nanoid";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getProject, saveProject } from "@/lib/store";
+import { getSupabase } from "@/lib/supabase";
 import { cleanPhoto, generateStagingOption, generateVideo, getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { generateStagingPrompts, analyzePhotos } from "@/lib/services/openai";
 import type { Room } from "@/lib/types";
@@ -20,6 +22,76 @@ export async function GET(
   }
 
   return NextResponse.json({ project });
+}
+
+// PUT — Add photos to existing project (multipart upload)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAdmin();
+  if ("error" in auth && auth.error) return auth.error;
+
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) {
+    return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
+  }
+
+  const formData = await request.formData();
+  const files = formData.getAll("photos") as File[];
+
+  if (!files.length) {
+    return NextResponse.json({ error: "Aucune photo fournie" }, { status: 400 });
+  }
+
+  const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "heic", "heif"];
+  const MAX_FILE_SIZE = 50 * 1024 * 1024;
+  const MIME_MAP: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+    webp: "image/webp", heic: "image/heic", heif: "image/heif",
+  };
+
+  const db = getSupabase();
+
+  const newPhotos = await Promise.all(
+    files.map(async (file) => {
+      const photoId = nanoid(10);
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        throw new Error(`Format non supporté: .${ext}`);
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`Fichier trop volumineux: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+      }
+
+      const path = `uploads/${photoId}.${ext}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const { error } = await db.storage
+        .from("photos")
+        .upload(path, buffer, {
+          contentType: MIME_MAP[ext] || "image/jpeg",
+          upsert: true,
+        });
+
+      if (error) throw new Error(`Storage: ${error.message}`);
+
+      const { data: urlData } = db.storage.from("photos").getPublicUrl(path);
+      return { id: photoId, originalUrl: urlData.publicUrl };
+    }),
+  );
+
+  project.photos.push(...newPhotos);
+  await saveProject(project);
+
+  return NextResponse.json({
+    success: true,
+    added: newPhotos.length,
+    totalPhotos: project.photos.length,
+    photos: project.photos,
+  });
 }
 
 // POST — Studio actions

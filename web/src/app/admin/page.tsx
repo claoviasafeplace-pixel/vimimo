@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3,
@@ -33,6 +33,8 @@ import ProjectsTable, { type ProjectRow } from "@/components/admin/ProjectsTable
 import KanbanBoard from "@/components/admin/KanbanBoard";
 import OrderDetailPanel from "@/components/admin/OrderDetailPanel";
 import StudioPanel from "@/components/admin/StudioPanel";
+import { STYLES } from "@/lib/types";
+import type { Style } from "@/lib/types";
 import type { ProjectSummary } from "@/lib/store";
 import type { AdminKanbanStatus } from "@/lib/types";
 
@@ -181,6 +183,34 @@ export default function AdminDashboard() {
   // Studio tab state
   const [studioProjectId, setStudioProjectId] = useState<string | null>(null);
   const [studioInput, setStudioInput] = useState("");
+  const [studioCreating, setStudioCreating] = useState(false);
+  const [studioStyle, setStudioStyle] = useState<Style>("modern_minimalist");
+  const studioFileRef = useRef<HTMLInputElement>(null);
+
+  // Studio: create new project from uploaded files
+  const handleStudioCreate = async (files: FileList) => {
+    setStudioCreating(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append("photos", files[i]);
+      }
+      formData.append("style", studioStyle);
+      const res = await fetch("/api/admin/studio", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+      setStudioProjectId(data.projectId);
+      setStudioInput(data.projectId);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Erreur création projet");
+    } finally {
+      setStudioCreating(false);
+      if (studioFileRef.current) studioFileRef.current.value = "";
+    }
+  };
 
   // Auth redirect
   useEffect(() => {
@@ -1042,13 +1072,76 @@ export default function AdminDashboard() {
                 onClose={() => setStudioProjectId(null)}
               />
             ) : (
-              <div className="max-w-lg mx-auto space-y-6 py-8">
-                <div className="text-center">
-                  <Wand2 className="mx-auto h-12 w-12 text-amber-400 mb-3" />
-                  <h2 className="text-xl font-bold mb-2">Studio de Création</h2>
-                  <p className="text-sm text-muted">
-                    Entrez l&apos;ID d&apos;un projet pour traiter ses médias : retirer les meubles, générer le staging IA, créer les vidéos.
-                  </p>
+              <div className="max-w-2xl mx-auto space-y-8 py-8">
+                {/* Hidden file input for new project */}
+                <input
+                  ref={studioFileRef}
+                  type="file"
+                  multiple
+                  accept=".jpg,.jpeg,.png,.webp,.heic,.heif"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) handleStudioCreate(e.target.files);
+                  }}
+                />
+
+                {/* New project creation */}
+                <div className="rounded-2xl border border-amber-500/30 bg-surface p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="rounded-xl gradient-gold p-2.5">
+                      <Wand2 className="h-5 w-5 text-zinc-900" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold">Nouveau projet</h2>
+                      <p className="text-xs text-muted">Importez des photos et créez un projet — sans limites, sans crédits</p>
+                    </div>
+                  </div>
+
+                  {/* Style selector */}
+                  <div className="mb-4">
+                    <label className="text-xs font-medium text-muted mb-2 block">Style de staging</label>
+                    <div className="flex flex-wrap gap-2">
+                      {STYLES.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => setStudioStyle(s.id)}
+                          className={`rounded-lg border px-3 py-2 text-xs font-medium transition-all cursor-pointer ${
+                            studioStyle === s.id
+                              ? "border-amber-400 bg-amber-500/10 text-amber-400"
+                              : "border-border bg-surface-hover text-muted hover:text-foreground"
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Upload zone */}
+                  <button
+                    onClick={() => studioFileRef.current?.click()}
+                    disabled={studioCreating}
+                    className="w-full rounded-xl border-2 border-dashed border-border hover:border-amber-500/40 bg-background px-6 py-10 text-center transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {studioCreating ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+                        <span className="text-sm text-amber-400">Upload et création en cours...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <ImageIcon className="h-8 w-8 text-muted" />
+                        <span className="text-sm font-medium">Cliquez pour importer des photos</span>
+                        <span className="text-xs text-muted">JPG, PNG, WebP, HEIC — max 20 photos, 50MB chacune</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
+
+                {/* Or open existing project */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+                  <div className="relative flex justify-center"><span className="bg-background px-3 text-xs text-muted">ou ouvrir un projet existant</span></div>
                 </div>
 
                 <div className="flex gap-2">
@@ -1069,7 +1162,6 @@ export default function AdminDashboard() {
                     disabled={!studioInput.trim()}
                     onClick={() => setStudioProjectId(studioInput.trim())}
                   >
-                    <Wand2 className="mr-1.5 h-4 w-4" />
                     Ouvrir
                   </Button>
                 </div>
@@ -1101,7 +1193,6 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* Also show recent projects */}
                 {stats.recentProjects.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold mb-3">Projets récents</h3>
@@ -1118,7 +1209,7 @@ export default function AdminDashboard() {
                             <span className="text-xs text-muted">{p.roomCount} pièce{p.roomCount > 1 ? "s" : ""}</span>
                           </div>
                           <span className="text-xs text-muted">
-                            {p.userEmail || "invité"}
+                            {p.userEmail || "admin"}
                           </span>
                         </button>
                       ))}

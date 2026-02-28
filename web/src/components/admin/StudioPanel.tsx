@@ -3,12 +3,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Loader2, Trash2, Wand2, Film, CheckCircle, ImageIcon, RefreshCw,
-  ChevronDown, Eye, Download, Sparkles, AlertTriangle,
+  ChevronDown, Eye, Download, Sparkles, AlertTriangle, Upload, Plus,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import PhaseBadge from "@/components/ui/PhaseBadge";
 import type { Photo, Room, Style, Project } from "@/lib/types";
 import { STYLES } from "@/lib/types";
+
+const ACCEPTED_TYPES = ".jpg,.jpeg,.png,.webp,.heic,.heif";
 
 // ─── Types ───
 interface StudioProject {
@@ -172,6 +174,31 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
     }
   };
 
+  // ─── Action: Add Photos ───
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleAddPhotos = async (files: FileList) => {
+    setActionLoading("uploading");
+    setError(null);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append("photos", files[i]);
+      }
+      const res = await fetch(`/api/admin/studio/${projectId}`, {
+        method: "PUT",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+      await loadProject();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur upload");
+    } finally {
+      setActionLoading(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   // ─── Render ───
   if (loading) {
     return (
@@ -239,12 +266,37 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
       {/* ═══ STEP 1: PHOTOS ═══ */}
       {step === "photos" && (
         <div className="space-y-4">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ACCEPTED_TYPES}
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) handleAddPhotos(e.target.files);
+            }}
+          />
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted">
               {project.photos.length} photo{project.photos.length > 1 ? "s" : ""} —
               {allCleaned ? " toutes nettoyées" : ` ${project.photos.filter((p) => p.cleanedUrl).length} nettoyée(s)`}
             </p>
             <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={actionLoading === "uploading"}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {actionLoading === "uploading" ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-1.5 h-4 w-4" />
+                )}
+                Ajouter des photos
+              </Button>
               {!allCleaned && (
                 <Button
                   variant="primary"
