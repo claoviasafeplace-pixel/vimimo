@@ -47,7 +47,8 @@ Réponds en JSON valide :
       "lighting": { "naturalLight": "good", "windowCount": 2, "lightDirection": "south" },
       "cameraAngle": { "perspective": "corner wide", "height": "eye level", "orientation": "landscape" },
       "stagingPriority": "high"|"medium"|"low",
-      "notes": "specific observations — mention ANY remaining furniture clues (bed frame, sofa, appliances) even if partially removed"
+      "notes": "specific observations — mention ANY remaining furniture clues (bed frame, sofa, appliances) even if partially removed",
+      "glazing": ["list ALL large glass surfaces: sliding glass doors, bay windows, French doors, floor-to-ceiling windows, glass walls — with their POSITION in the frame (left wall, back wall, right side). This is CRITICAL for staging to preserve them."]
     }
   ],
   "overallNotes": "general observations"
@@ -93,6 +94,13 @@ ANTI-DISTORTION:
 2. Reference positions from the photo ("along the back wall", "to the right of the window", "in the far-left corner")
 3. Furniture must obey gravity — feet flat on floor, no floating, no clipping through pillars/islands
 4. If fixed structures exist (pillars, islands, built-in units), place furniture AROUND them
+
+GLASS SURFACES PROTECTION (CRITICAL — violating this destroys the photo):
+- Sliding glass doors, bay windows, French doors, floor-to-ceiling windows MUST remain 100% VISIBLE and UNOBSTRUCTED
+- NEVER place furniture directly IN FRONT of a sliding glass door or large window — leave at least 50cm clearance
+- NEVER write "curtains covering" or "drapes across" a sliding glass door — use "curtains framing the sides of" or "sheer curtains pulled to the sides of"
+- Curtains must be OPEN and pulled to the SIDES, never drawn closed over glass surfaces
+- If the room has a sliding glass door, explicitly write: "the sliding glass door remains fully visible and unblocked"
 
 VARIETY across 5 prompts:
 - Prompt 1: SIGNATURE hero shot — balanced, premium
@@ -179,12 +187,18 @@ export function stagingPromptUser(
   const isBedroomType = ["bedroom", "studio"].includes(roomType);
   const fewShotExample = isBedroomType
     ? `EXAMPLE of a CORRECT prompt (match this density):
-"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a king-size bed with an upholstered oatmeal Belgian linen headboard centered on the back wall, layered with a white stonewashed linen duvet, a folded camel cashmere throw at the foot, and four textured cushions — two in ivory boucle and two in burnt sienna velvet. Place matching solid oak nightstands on each side, each with a ceramic table lamp with a warm linen drum shade, a small potted succulent in a ribbed terracotta pot, a hardcover book, and a ceramic trinket dish. Hang a large 100x80cm abstract warm-toned oil painting in a thin black metal frame above the headboard. Lay a plush 200x300cm cream wool rug under the bed extending past the nightstands. Place a woven rattan bench at the foot of the bed with a folded herringbone wool blanket. Add a tall fiddle leaf fig in a woven seagrass basket in the corner by the window, and sheer ivory linen curtains framing the window, softly pooling on the floor. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a king-size bed with an upholstered oatmeal Belgian linen headboard centered on the back wall, layered with a white stonewashed linen duvet, a folded camel cashmere throw at the foot, and four textured cushions — two in ivory boucle and two in burnt sienna velvet. Place matching solid oak nightstands on each side, each with a ceramic table lamp with a warm linen drum shade, a small potted succulent in a ribbed terracotta pot, a hardcover book, and a ceramic trinket dish. Hang a large 100x80cm abstract warm-toned oil painting in a thin black metal frame above the headboard. Lay a plush 200x300cm cream wool rug under the bed extending past the nightstands. Place a woven rattan bench at the foot of the bed with a folded herringbone wool blanket. Add a tall fiddle leaf fig in a woven seagrass basket in the corner near the window, and sheer ivory linen curtains pulled open to the sides of the window, leaving the glass fully visible. All windows and glass doors remain completely visible and unobstructed. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`
     : `EXAMPLE of a CORRECT prompt (match this density):
-"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a deep-seated emerald velvet three-seater sofa with brushed brass legs along the back wall, with four cushions — two in ivory linen and two in mustard velvet. Place a round white Carrara marble coffee table with a matte brass base in front of the sofa, styled with three stacked Assouline coffee-table books, a brass candle holder with a cream pillar candle, and a small ceramic vase with dried pampas grass. Add a cream boucle accent armchair with walnut legs to the right of the sofa, angled inward. Lay a large 250x350cm hand-knotted vintage Persian rug in faded rose and indigo anchoring the entire seating area. Place a sculptural brass arc floor lamp with a white linen drum shade behind the left side of the sofa, and a ceramic table lamp with a fluted base on a slim walnut side table next to the armchair. Hang a gallery wall of three framed black-and-white photography prints in thin oak frames above the sofa. Add a large fiddle leaf fig in a woven seagrass basket in the corner by the window, and a trailing pothos on a floating shelf if wall space allows. Drape a chunky cream knit throw over one arm of the sofa, and hang sage green linen curtains softly pooling on the floor by the windows. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`;
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a deep-seated emerald velvet three-seater sofa with brushed brass legs along the back wall, with four cushions — two in ivory linen and two in mustard velvet. Place a round white Carrara marble coffee table with a matte brass base in front of the sofa, styled with three stacked Assouline coffee-table books, a brass candle holder with a cream pillar candle, and a small ceramic vase with dried pampas grass. Add a cream boucle accent armchair with walnut legs to the right of the sofa, angled inward. Lay a large 250x350cm hand-knotted vintage Persian rug in faded rose and indigo anchoring the entire seating area. Place a sculptural brass arc floor lamp with a white linen drum shade behind the left side of the sofa, and a ceramic table lamp with a fluted base on a slim walnut side table next to the armchair. Hang a gallery wall of three framed black-and-white photography prints in thin oak frames above the sofa. Add a large fiddle leaf fig in a woven seagrass basket in the corner near the window, and a trailing pothos on a floating shelf if wall space allows. Drape a chunky cream knit throw over one arm of the sofa, and add sheer sage green linen curtains pulled open to the sides of the windows, leaving all glass surfaces fully visible. All windows, sliding glass doors, and glass surfaces remain completely visible and unobstructed. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`;
 
   const dimensions = visionData.dimensions as Record<string, string> | undefined;
   const estimatedArea = dimensions?.estimatedArea || "unknown";
+
+  // Extract glazing info if available
+  const glazing = (visionData.glazing as string[]) || [];
+  const glazingRule = glazing.length > 0
+    ? `\n6. GLASS PROTECTION: This room has: ${glazing.join(", ")}. Each one MUST remain 100% visible and unobstructed. Place NO furniture in front of them. Curtains must be pulled OPEN to the sides only. End each prompt with: "All windows, sliding glass doors, and glass surfaces remain completely visible and unobstructed."`
+    : `\n6. If the room has any glass doors or large windows, they MUST remain fully visible. Curtains pulled open to sides only.`;
 
   return `Room: ${roomType} (${roomLabel}). Style: ${style} (${styleLabel}). Estimated size: ${estimatedArea}.
 
@@ -202,7 +216,7 @@ HARD RULES:
 2. EVERY surface (coffee table, nightstand, shelf, console) MUST have 3-4 objects ON it
 3. Room is ~${estimatedArea} — ${parseInt(estimatedArea) > 25 ? "CREATE 2 DISTINCT ZONES (e.g. seating + reading, or seating + dining)" : "fill at least 60% of visible floor with rug + furniture"}
 4. Follow the ${styleLabel} style guide strictly
-5. Use spatial references from the photo ("along the back wall", "in the far-left corner", "between the two windows")`;
+5. Use spatial references from the photo ("along the back wall", "in the far-left corner", "between the two windows")${glazingRule}`;
 }
 
 // ─── Video generation constants (Kling v2.1 Pro) ───
@@ -569,7 +583,8 @@ export const STAGING_QUALITY_SUFFIX = [
   "natural window light mixed with warm interior lighting,",
   "8K resolution, architectural magazine quality, Architectural Digest editorial,",
   "exact room geometry preserved, walls plumb, floor plane undistorted,",
-  "all doors, windows, radiators, outlets, light switches, and fixed elements pixel-perfect unchanged,",
+  "all doors, windows, sliding glass doors, bay windows, radiators, outlets, light switches, and fixed elements pixel-perfect unchanged,",
+  "all glass surfaces fully visible and unobstructed,",
   "correct perspective, no lens warping, no floating objects, physically plausible furniture placement,",
   "consistent shadows matching existing light direction, subtle ambient occlusion under furniture.",
 ].join(" ");
