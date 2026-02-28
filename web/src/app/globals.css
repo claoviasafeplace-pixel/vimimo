@@ -122,3 +122,57 @@ html:not(.dark) .glass {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Gold range slider */
+.slider-gold {
+  height: 6px;
+}
+
+.slider-gold::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+}
+
+.slider-gold::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  border: 3px solid #0a0a0b;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+  margin-top: -9px;
+  cursor: pointer;
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.slider-gold::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+  transform: scale(1.15);
+}
+
+.slider-gold::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  border: none;
+}
+
+.slider-gold::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  border: 3px solid #0a0a0b;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+  cursor: pointer;
+}
+
+/* Animated gradient border custom property */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
