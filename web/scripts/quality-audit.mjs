@@ -183,7 +183,9 @@ async function analyzeRoom(photoUrl, style) {
     messages: [
       {
         role: "system",
-        content: `Tu es un expert en analyse immobilière. Analyse cette photo de pièce.
+        content: `Tu es un expert en analyse immobilière. Analyse cette photo de pièce ou d'espace.
+
+RÈGLE ABSOLUE : Tu DOIS TOUJOURS répondre en JSON valide, même si la photo est floue, extérieure, ou inhabituelle. JAMAIS de texte libre, JAMAIS d'excuses, JAMAIS de refus.
 
 RÈGLE CRITIQUE D'IDENTIFICATION :
 - Si tu vois un LIT, SOMMIER, MATELAS, DRAPS → c'est une CHAMBRE (bedroom), JAMAIS un salon
@@ -191,11 +193,13 @@ RÈGLE CRITIQUE D'IDENTIFICATION :
 - Si tu vois un ÉVIER, FOUR, PLAQUES, FRIGO → c'est une CUISINE (kitchen)
 - Si tu vois DOUCHE, BAIGNOIRE, LAVABO → c'est une SALLE DE BAIN (bathroom)
 - Si tu vois un BUREAU, ORDINATEUR → c'est un BUREAU (office)
+- Si tu vois une FAÇADE, un JARDIN, une PISCINE, une TERRASSE → c'est un EXTÉRIEUR (exterior)
+- Si tu vois une PORTE DE GARAGE, des OUTILS → c'est un GARAGE (garage)
 - En cas de doute : une petite pièce ~10-15m² avec 1 fenêtre = probablement chambre. Un grand espace ouvert 25m²+ = salon.
 
 Réponds en JSON valide :
 {
-  "roomType": "living_room"|"bedroom"|"kitchen"|"bathroom"|"dining_room"|"office"|"studio"|"hallway"|"balcony",
+  "roomType": "living_room"|"bedroom"|"kitchen"|"bathroom"|"dining_room"|"office"|"studio"|"hallway"|"balcony"|"exterior"|"garage"|"terrace",
   "roomLabel": "Salon principal",
   "dimensions": { "estimatedArea": "25m²", "ceilingHeight": "2.5m", "shape": "rectangular" },
   "existingMaterials": { "flooring": "parquet", "walls": "white painted", "ceiling": "flat white" },
@@ -216,7 +220,22 @@ Reply ONLY valid JSON.`,
     ],
   });
   const raw = response.choices[0].message.content?.trim() || "";
-  return parseJson(raw);
+  try {
+    return parseJson(raw);
+  } catch {
+    // GPT refused or returned non-JSON — create a fallback analysis
+    console.log(`  ⚠️  GPT returned non-JSON: "${raw.substring(0, 60)}..." — using fallback`);
+    return {
+      roomType: "living_room",
+      roomLabel: "Pièce non identifiée",
+      dimensions: { estimatedArea: "20m²", ceilingHeight: "2.5m", shape: "rectangular" },
+      existingMaterials: { flooring: "unknown", walls: "white painted", ceiling: "flat white" },
+      lighting: { naturalLight: "good", windowCount: 1, lightDirection: "unknown" },
+      cameraAngle: { perspective: "wide", height: "eye level", orientation: "landscape" },
+      notes: `GPT analysis failed. Raw response: ${raw.substring(0, 100)}`,
+      glazing: [],
+    };
+  }
 }
 
 async function generatePrompts(photoUrl, roomData, style) {
@@ -276,6 +295,14 @@ WHAT DESTROYS IMAGES — NEVER do this:
 - Describing walls, floor, ceiling, windows → CAUSES DISTORTION
 - Vague items ("a lamp", "a rug") → AI generates blobs
 - Too few items → room stays empty
+
+ARCHITECTURAL HALLUCINATION BAN:
+- NEVER invent windows, doors, walls, or architectural features not in the photo
+- NEVER add curtains if there are NO windows visible
+- NEVER change the flooring material
+- KITCHEN: ONLY counter styling, bar stools, pendant lights, herbs, small appliances. NO sofas, armchairs, or large rugs.
+- GARAGE: ONLY storage/organization. Do NOT add living room furniture.
+- EXTERIOR: ONLY outdoor furniture. Keep facade, pool, landscaping unchanged.
 
 GLASS SURFACES PROTECTION (CRITICAL):
 - Sliding glass doors, bay windows MUST remain 100% VISIBLE

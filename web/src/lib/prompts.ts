@@ -23,7 +23,9 @@ Return ONLY valid JSON:
 
 Be EXTREMELY specific and factual. Describe what you SEE, not what you imagine. No markdown, ONLY valid JSON.`;
 
-export const BATCH_VISION_SYSTEM_PROMPT = `Tu es un expert en analyse immobilière. Pour CHAQUE photo, analyse la pièce.
+export const BATCH_VISION_SYSTEM_PROMPT = `Tu es un expert en analyse immobilière. Pour CHAQUE photo, analyse la pièce ou l'espace.
+
+RÈGLE ABSOLUE : Tu DOIS TOUJOURS répondre en JSON valide, même si la photo est floue, extérieure, ou inhabituelle. JAMAIS de texte libre, JAMAIS d'excuses, JAMAIS de refus. Un JSON valide à chaque fois.
 
 RÈGLE CRITIQUE D'IDENTIFICATION — tu DOIS utiliser ces indices visuels :
 - Si tu vois un LIT, un SOMMIER, un MATELAS, ou des DRAPS → c'est une CHAMBRE (bedroom), JAMAIS un salon
@@ -32,6 +34,8 @@ RÈGLE CRITIQUE D'IDENTIFICATION — tu DOIS utiliser ces indices visuels :
 - Si tu vois une DOUCHE, une BAIGNOIRE, un LAVABO, des WC → c'est une SALLE DE BAIN (bathroom)
 - Si tu vois un BUREAU, un ORDINATEUR → c'est un BUREAU (office)
 - Si tu vois une TABLE avec des CHAISES autour (pas un bureau) → c'est un COIN REPAS (dining_room)
+- Si tu vois une FAÇADE, un JARDIN, une PISCINE, une TERRASSE → c'est un EXTÉRIEUR (exterior)
+- Si tu vois une PORTE DE GARAGE, des OUTILS, des VÉLOS → c'est un GARAGE (garage)
 - En cas de doute sur un meuble retiré, observe la TAILLE de la pièce et la position des prises : une petite pièce ~10-15m² avec une seule fenêtre est probablement une chambre
 
 Réponds en JSON valide :
@@ -40,7 +44,7 @@ Réponds en JSON valide :
   "rooms": [
     {
       "photoIndex": 1,
-      "roomType": "living_room"|"bedroom"|"kitchen"|"bathroom"|"dining_room"|"office"|"studio"|"hallway"|"balcony",
+      "roomType": "living_room"|"bedroom"|"kitchen"|"bathroom"|"dining_room"|"office"|"studio"|"hallway"|"balcony"|"exterior"|"garage"|"terrace",
       "roomLabel": "Salon principal",
       "dimensions": { "estimatedArea": "25m²", "ceilingHeight": "2.5m", "shape": "rectangular" },
       "existingMaterials": { "flooring": "parquet", "walls": "white painted", "ceiling": "flat white" },
@@ -93,15 +97,23 @@ The #1 failure mode is putting ALL furniture in the foreground and leaving the b
 ROOM TYPE RULES:
 - BEDROOM: primary = bed (always include headboard + bedding layers + pillows), secondary = nightstands + bench/chair
 - LIVING ROOM: primary = sofa + coffee table, secondary = armchair + side table. ALWAYS include a media/bookshelf area if wall space allows.
-- KITCHEN: only counter styling + bar stools + pendant lights + small appliances + herbs
+- KITCHEN: ONLY add items that belong in a kitchen: counter styling (cutting board, ceramic bowl, herb pots, cookbook stand), bar stools if there's an island, pendant lights, small appliances (espresso machine, toaster), fresh herbs in pots. NEVER add sofas, armchairs, coffee tables, rugs larger than a runner, or curtains in a kitchen. NEVER INVENT windows or architectural elements that don't exist in the photo.
 - BATHROOM: only towels + bath accessories + candles + small plants
 - HALLWAY: only console + mirror + runner rug + hooks
+- GARAGE: only storage organization (shelving, tool wall, workbench) + epoxy floor mat. Do NOT turn a garage into a living room.
+- EXTERIOR/TERRACE: only outdoor furniture (lounge chairs, dining set, planters, string lights, outdoor rugs). Keep the building facade, pool, and landscaping UNCHANGED.
 
 ANTI-DISTORTION:
 1. NEVER mention walls, floor, windows, ceiling, or doors in the furniture section
 2. Reference positions from the photo ("along the back wall", "to the right of the window", "in the far-left corner")
 3. Furniture must obey gravity — feet flat on floor, no floating, no clipping through pillars/islands
 4. If fixed structures exist (pillars, islands, built-in units), place furniture AROUND them
+
+ARCHITECTURAL HALLUCINATION BAN (CRITICAL):
+- NEVER invent windows, doors, walls, columns, or architectural features that don't exist in the photo
+- NEVER add curtains if there are NO windows visible in the photo
+- NEVER change the flooring material (e.g. tile → wood)
+- If the room has 0 windows, do NOT add curtains or mention windows at all
 
 GLASS SURFACES PROTECTION (CRITICAL — violating this destroys the photo):
 - Sliding glass doors, bay windows, French doors, floor-to-ceiling windows MUST remain 100% VISIBLE and UNOBSTRUCTED
