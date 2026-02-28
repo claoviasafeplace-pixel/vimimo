@@ -56,7 +56,7 @@ Réponds en JSON valide :
 
 photoIndex must match image order (1-based). One room per photo. Reply ONLY valid JSON, no markdown fences.`;
 
-export const STAGING_PROMPT_SYSTEM = `You write image-editing prompts for Flux Kontext Pro to stage empty rooms. Each prompt must be a SINGLE DENSE PARAGRAPH of 120-180 words listing ONLY objects to add.
+export const STAGING_PROMPT_SYSTEM = `You write image-editing prompts for Flux Kontext Pro to stage empty rooms. Each prompt must be a SINGLE DENSE PARAGRAPH listing ONLY objects to add. Word count: 120-180 words for small/medium rooms, 180-250 words for large rooms (25m²+).
 
 FORMAT (follow EXACTLY):
 "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. [FURNITURE + DECOR — 120-180 words of items to add]. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
@@ -80,7 +80,15 @@ SPATIAL FILLING RULE (CRITICAL):
 Estimate the room size from the photo. The staging must FILL the room proportionally:
 - Small room (10-15m²): 1 primary + 1 secondary furniture piece, cover 60% of visible floor with rug + objects
 - Medium room (15-25m²): 2 primary + 1-2 secondary pieces, create a cohesive seating/sleeping area
-- Large room (25m²+): create 2 DISTINCT ZONES (e.g. seating area + reading nook, or seating + dining). A single sofa in a 40m² room is ALWAYS wrong.
+- Large room (25m²+): create 2 DISTINCT ZONES at DIFFERENT DEPTHS. A single sofa in a 40m² room is ALWAYS wrong.
+
+LARGE ROOM DEPTH RULE (25m²+ ONLY — HIGHEST PRIORITY):
+The #1 failure mode is putting ALL furniture in the foreground and leaving the back empty. You MUST:
+1. ZONE A (FOREGROUND): seating group — sofa + coffee table + armchair + rug (occupies the front 50% of the room)
+2. ZONE B (BACKGROUND): a SECOND furniture group placed IN THE BACK of the room, BEHIND any pillars or in the far area — e.g. dining table + chairs, console/sideboard + mirror, desk + chair, or bookshelf + reading chair
+3. LIST ZONE B ITEMS FIRST in the prompt, THEN Zone A. Flux Kontext Pro gives more visual weight to items mentioned earlier in the prompt — listing background items first forces them to render.
+4. EACH zone needs its OWN rug, its OWN light source, and at least 1 plant
+5. Use DEPTH ANCHORS: "in the far back of the room", "against the distant back wall", "behind the structural pillars", "in the rear half of the space"
 
 ROOM TYPE RULES:
 - BEDROOM: primary = bed (always include headboard + bedding layers + pillows), secondary = nightstands + bench/chair
@@ -193,12 +201,25 @@ export function stagingPromptUser(
 
   const dimensions = visionData.dimensions as Record<string, string> | undefined;
   const estimatedArea = dimensions?.estimatedArea || "unknown";
+  const isLargeRoom = parseInt(estimatedArea) > 25;
 
   // Extract glazing info if available
   const glazing = (visionData.glazing as string[]) || [];
   const glazingRule = glazing.length > 0
     ? `\n6. GLASS PROTECTION: This room has: ${glazing.join(", ")}. Each one MUST remain 100% visible and unobstructed. Place NO furniture in front of them. Curtains must be pulled OPEN to the sides only. End each prompt with: "All windows, sliding glass doors, and glass surfaces remain completely visible and unobstructed."`
     : `\n6. If the room has any glass doors or large windows, they MUST remain fully visible. Curtains pulled open to sides only.`;
+
+  // Large room: override few-shot with a depth-focused example
+  const largeRoomExample = `EXAMPLE of a CORRECT prompt for a LARGE ROOM (match this structure — background items FIRST):
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. In the far back of the room against the distant wall, place a round reclaimed oak dining table with four mismatched vintage wooden chairs, styled with a linen runner, a ceramic vase holding dried wildflowers, a brass candlestick with a cream taper candle, and a small terracotta bowl of lemons. Hang a woven seagrass pendant light above the dining table. Add a tall walnut bookshelf filled with books and decorative objects beside the dining area, with a trailing pothos on the top shelf. Place a large fiddle leaf fig in a woven basket next to the bookshelf. In the foreground, add a deep-seated olive velvet L-shaped sectional along the left wall with five cushions in mixed patterns of rust, cream, and indigo. Place a round black marble coffee table with brass legs in front of the sofa, styled with three stacked art books, a brass tray with candles, and a small ceramic planter. Add a rattan armchair with a cream cushion to the right, angled inward. Lay a large 300x400cm vintage Persian rug in faded rose and navy anchoring the front seating area. Place a sculptural brass arc floor lamp behind the sofa. Drape a chunky terracotta knit throw over one arm of the sectional, and add sheer white linen curtains pulled open to the sides of the windows. All windows, sliding glass doors, and glass surfaces remain completely visible and unobstructed. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`;
+
+  const activeExample = isLargeRoom ? largeRoomExample : fewShotExample;
+  const wordRange = isLargeRoom ? "180-250" : "120-180";
+  const itemCount = isLargeRoom ? "15+" : "10+";
+
+  const depthRule = isLargeRoom
+    ? `\n3. Room is ~${estimatedArea} — THIS IS A LARGE ROOM. You MUST create 2 ZONES at DIFFERENT DEPTHS:\n   - ZONE B (BACK): dining table + chairs OR bookshelf + reading chair OR console + mirror — placed "in the far back", "against the distant wall", "behind the pillars". LIST THESE ITEMS FIRST IN THE PROMPT.\n   - ZONE A (FRONT): sofa + coffee table + armchair — placed in the foreground. LIST THESE AFTER Zone B.\n   - Each zone needs its OWN rug, light source, and plant.`
+    : `\n3. Room is ~${estimatedArea} — fill at least 60% of visible floor with rug + furniture`;
 
   return `Room: ${roomType} (${roomLabel}). Style: ${style} (${styleLabel}). Estimated size: ${estimatedArea}.
 
@@ -207,14 +228,13 @@ ${globalBlock}
 STRUCTURAL INVENTORY (DO NOT modify these):
 ${JSON.stringify(visionData, null, 2)}
 
-${fewShotExample}
+${activeExample}
 
-YOUR TASK: Generate 5 prompts for this ${roomLabel}, each 120-180 words between the start/end markers.
+YOUR TASK: Generate 5 prompts for this ${roomLabel}, each ${wordRange} words between the start/end markers.
 
 HARD RULES:
-1. Each prompt MUST list 10+ distinct items with material + color + texture
-2. EVERY surface (coffee table, nightstand, shelf, console) MUST have 3-4 objects ON it
-3. Room is ~${estimatedArea} — ${parseInt(estimatedArea) > 25 ? "CREATE 2 DISTINCT ZONES (e.g. seating + reading, or seating + dining)" : "fill at least 60% of visible floor with rug + furniture"}
+1. Each prompt MUST list ${itemCount} distinct items with material + color + texture
+2. EVERY surface (coffee table, nightstand, shelf, console) MUST have 3-4 objects ON it${depthRule}
 4. Follow the ${styleLabel} style guide strictly
 5. Use spatial references from the photo ("along the back wall", "in the far-left corner", "between the two windows")${glazingRule}`;
 }

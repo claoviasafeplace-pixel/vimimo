@@ -233,11 +233,25 @@ async function generatePrompts(photoUrl, roomData, style) {
   const isBedroomType = ["bedroom", "studio"].includes(roomData.roomType);
   const estimatedArea = roomData.dimensions?.estimatedArea || "unknown";
 
-  const fewShot = isBedroomType
+  const isLargeRoom = parseInt(estimatedArea) > 25;
+
+  const largeRoomExample = `EXAMPLE for LARGE ROOM (background items FIRST — 180-250 words):
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. In the far back of the room against the distant wall, place a round reclaimed oak dining table with four mismatched vintage wooden chairs, styled with a linen runner, a ceramic vase holding dried wildflowers, a brass candlestick with a cream taper candle, and a small terracotta bowl of lemons. Hang a woven seagrass pendant light above the dining table. Add a tall walnut bookshelf filled with books and decorative objects beside the dining area, with a trailing pothos on the top shelf. Place a large fiddle leaf fig in a woven basket next to the bookshelf. In the foreground, add a deep-seated olive velvet L-shaped sectional along the left wall with five cushions in mixed patterns of rust, cream, and indigo. Place a round black marble coffee table with brass legs in front of the sofa, styled with three stacked art books, a brass tray with candles, and a small ceramic planter. Add a rattan armchair with a cream cushion to the right, angled inward. Lay a large 300x400cm vintage Persian rug in faded rose and navy anchoring the front seating area. Place a sculptural brass arc floor lamp behind the sofa. Drape a chunky terracotta knit throw over one arm of the sectional, and add sheer white linen curtains pulled open to the sides of the windows. All windows, sliding glass doors, and glass surfaces remain completely visible and unobstructed. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`;
+
+  const fewShot = isLargeRoom
+    ? largeRoomExample
+    : isBedroomType
     ? `EXAMPLE (match this density — 120-180 words between start/end):
 "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a king-size bed with an upholstered oatmeal Belgian linen headboard centered on the back wall, layered with a white stonewashed linen duvet, a folded camel cashmere throw at the foot, and four textured cushions — two in ivory boucle and two in burnt sienna velvet. Place matching solid oak nightstands on each side, each with a ceramic table lamp with a warm linen drum shade, a small potted succulent in a ribbed terracotta pot, a hardcover book, and a ceramic trinket dish. Hang a large 100x80cm abstract warm-toned oil painting in a thin black metal frame above the headboard. Lay a plush 200x300cm cream wool rug under the bed extending past the nightstands. Place a woven rattan bench at the foot of the bed with a folded herringbone wool blanket. Add a tall fiddle leaf fig in a woven seagrass basket in the corner by the window, and sheer ivory linen curtains framing the window, softly pooling on the floor. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`
     : `EXAMPLE (match this density — 120-180 words between start/end):
 "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a deep-seated emerald velvet three-seater sofa with brushed brass legs along the back wall, with four cushions — two in ivory linen and two in mustard velvet. Place a round white Carrara marble coffee table with a matte brass base in front of the sofa, styled with three stacked Assouline coffee-table books, a brass candle holder with a cream pillar candle, and a small ceramic vase with dried pampas grass. Add a cream boucle accent armchair with walnut legs to the right of the sofa, angled inward. Lay a large 250x350cm hand-knotted vintage Persian rug in faded rose and indigo anchoring the entire seating area. Place a sculptural brass arc floor lamp with a white linen drum shade behind the left side of the sofa, and a ceramic table lamp with a fluted base on a slim walnut side table next to the armchair. Hang a gallery wall of three framed black-and-white photography prints in thin oak frames above the sofa. Add a large fiddle leaf fig in a woven seagrass basket in the corner by the window, and a trailing pothos on a floating shelf if wall space allows. Drape a chunky cream knit throw over one arm of the sofa, and hang sage green linen curtains softly pooling on the floor by the windows. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`;
+
+  const wordRange = isLargeRoom ? "180-250" : "120-180";
+  const itemCount = isLargeRoom ? "15+" : "10+";
+
+  const depthRule = isLargeRoom
+    ? `2. Room is ~${estimatedArea} — LARGE ROOM. Create 2 ZONES at DIFFERENT DEPTHS:\n   - ZONE B (BACK): dining/reading/console area placed "in the far back", "against the distant wall", "behind the pillars". LIST THESE FIRST.\n   - ZONE A (FRONT): sofa group in foreground. LIST AFTER Zone B.\n   - Each zone needs its OWN rug, light source, and plant.`
+    : `2. Room is ~${estimatedArea} — fill 60% of visible floor`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -246,11 +260,17 @@ async function generatePrompts(photoUrl, roomData, style) {
     messages: [
       {
         role: "system",
-        content: `You write image-editing prompts for Flux Kontext Pro to stage empty rooms. Each prompt must be a SINGLE DENSE PARAGRAPH of 120-180 words listing ONLY objects to add.
+        content: `You write image-editing prompts for Flux Kontext Pro to stage empty rooms. Each prompt must be a SINGLE DENSE PARAGRAPH listing ONLY objects to add. Word count: 120-180 words for small/medium rooms, 180-250 words for large rooms (25m²+).
 
-FORMAT: "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. [120-180 words of items]. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
+FORMAT: "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. [items]. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
 
-MANDATORY: every prompt must list 10+ items. Every item = material + color + texture + position. Every surface must have 3-4 objects ON it.
+MANDATORY: every prompt must list ${itemCount} items. Every item = material + color + texture + position. Every surface must have 3-4 objects ON it.
+
+LARGE ROOM DEPTH RULE (25m²+ ONLY):
+The #1 failure is putting ALL furniture in the foreground. For large rooms:
+1. LIST BACKGROUND ITEMS FIRST — Flux gives more weight to items early in the prompt
+2. Use depth anchors: "in the far back of the room", "against the distant wall", "behind the structural pillars"
+3. Each zone needs its OWN rug, light, and plant
 
 WHAT DESTROYS IMAGES — NEVER do this:
 - Describing walls, floor, ceiling, windows → CAUSES DISTORTION
@@ -258,10 +278,9 @@ WHAT DESTROYS IMAGES — NEVER do this:
 - Too few items → room stays empty
 
 GLASS SURFACES PROTECTION (CRITICAL):
-- Sliding glass doors, bay windows, French doors, floor-to-ceiling windows MUST remain 100% VISIBLE
-- NEVER place furniture IN FRONT of a glass door or large window
-- Curtains must be OPEN and pulled to the SIDES, never drawn closed over glass
-- End each prompt with: "All windows, sliding glass doors, and glass surfaces remain completely visible and unobstructed."
+- Sliding glass doors, bay windows MUST remain 100% VISIBLE
+- NEVER place furniture IN FRONT of glass doors/large windows
+- Curtains pulled OPEN to SIDES only
 
 Respond in JSON: { "prompts": ["prompt1", "prompt2", ...] }
 ONLY valid JSON.`,
@@ -279,8 +298,8 @@ ${JSON.stringify(roomData, null, 2)}
 ${fewShot}
 
 Generate ${VARIANTS} prompts. HARD RULES:
-1. Each prompt: 120-180 words, 10+ items with material+color+texture
-2. Room is ~${estimatedArea} — ${parseInt(estimatedArea) > 25 ? "CREATE 2 ZONES (seating + dining, or seating + reading nook)" : "fill 60% of visible floor"}
+1. Each prompt: ${wordRange} words, ${itemCount} items with material+color+texture
+${depthRule}
 3. Every table/nightstand has 3-4 objects ON it (books, candle, vase, tray)
 4. Include: 2 light sources + 2 plants + rug + art + curtains (pulled OPEN to sides) + throw + cushions
 5. GLASS PROTECTION: ${roomData.glazing?.length ? `This room has: ${roomData.glazing.join(", ")}. They MUST remain 100% visible and unblocked.` : "If the room has glass doors or large windows, they MUST stay fully visible. Curtains open to sides only."}`,
