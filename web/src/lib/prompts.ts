@@ -399,6 +399,44 @@ export function klingSocialVideoPrompt(style: string, roomType: string): string 
   ].join(" ");
 }
 
+// ─── Veo 3.1 Video Prompts (Google AI — replaces Kling) ─────────────
+// Veo 3.1 has NO negative_prompt parameter, so all constraints go in the prompt.
+// Exports kept for interface compatibility.
+
+export function veoVideoPrompt(style: string, roomType: string): string {
+  return [
+    VIDEO_CAMERA_PROMPT,
+    `A beautifully furnished ${style} ${roomType} bathed in soft natural light.`,
+    "The camera slowly glides forward, revealing the complete interior design.",
+    "All furniture is already in place, perfectly still, casting natural shadows.",
+    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL in every frame.",
+    "AVOID: blurry, warped walls, furniture morphing, objects appearing, fast camera, shaky, text, watermark.",
+    VIDEO_QUALITY_SUFFIX,
+  ].join(" ");
+}
+
+export const VEO_NEGATIVE_PROMPT = ""; // Veo 3.1 has no negative_prompt param
+
+export function veoSocialVideoPrompt(style: string, roomType: string): string {
+  const movement = SOCIAL_CAMERA_MOVEMENTS[
+    Math.floor(Math.random() * SOCIAL_CAMERA_MOVEMENTS.length)
+  ];
+  console.log(`[PROMPT] Veo social camera: ${movement.id} | room: ${roomType}`);
+
+  return [
+    movement.camera,
+    `A beautifully furnished ${style} ${roomType} bathed in warm natural light.`,
+    "The camera slowly glides forward, exploring the interior design with cinematic depth.",
+    "All furniture is already in place, perfectly still, casting natural shadows on the floor.",
+    "Soft daylight shifts subtly as the camera advances, creating gentle light transitions on surfaces.",
+    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL and rigid in every frame.",
+    "AVOID: blurry, warped walls, furniture morphing, objects appearing or disappearing, fast camera, shaky camera, text, watermark.",
+    SOCIAL_QUALITY_SUFFIX,
+  ].join(" ");
+}
+
+export const SOCIAL_VEO_NEGATIVE_PROMPT = ""; // Veo 3.1 has no negative_prompt param
+
 // ─── Lifestyle Prompts (social_reel — human presence + cinematic scenes) ───
 
 /**

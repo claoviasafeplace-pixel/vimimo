@@ -83,29 +83,35 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
   const handleCleanPhotos = async () => {
     setActionLoading("cleaning");
     try {
-      // Submit photos one-by-one (Replicate rate limit: burst=1 when <$5 credit)
+      // Submit photos one-by-one (Gemini is sync — each call returns the cleaned URL)
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const result = await api(projectId, "clean_photos");
+        await loadProject();
         if (result.allSubmitted || (result.remaining ?? 0) === 0) break;
-        // Wait 12s between submissions to respect rate limits
-        await new Promise(r => setTimeout(r, 12000));
       }
-      // Start polling for completion
-      pollRef.current = setInterval(async () => {
-        try {
-          const data = await api(projectId, "check_cleaning");
-          await loadProject();
-          if (data.done) {
+      // Check completion (images are already done since Gemini is sync)
+      const data = await api(projectId, "check_cleaning");
+      await loadProject();
+      if (!data.done) {
+        // Fallback polling for any async predictions still in flight
+        pollRef.current = setInterval(async () => {
+          try {
+            const d = await api(projectId, "check_cleaning");
+            await loadProject();
+            if (d.done) {
+              if (pollRef.current) clearInterval(pollRef.current);
+              pollRef.current = null;
+              setActionLoading(null);
+            }
+          } catch {
             if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
             setActionLoading(null);
           }
-        } catch {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setActionLoading(null);
-        }
-      }, 4000);
+        }, 4000);
+      } else {
+        setActionLoading(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
       setActionLoading(null);

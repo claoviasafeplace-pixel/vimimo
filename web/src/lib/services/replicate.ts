@@ -1,58 +1,59 @@
-import Replicate from "replicate";
+/**
+ * AI Service — Google Gemini (Nano Banana) for images + Veo 3.1 for videos
+ *
+ * SAME INTERFACE as the old Replicate service (replicate-lucie.ts).
+ * Images are synchronous (Gemini returns result immediately) so we use
+ * the "done:<url>" convention: getPredictionStatus("done:...") returns
+ * succeeded instantly. Videos use Veo 3.1 async operations.
+ *
+ * To revert to Replicate/Kling: copy replicate-lucie.ts back to replicate.ts
+ */
+
+import { nanoid } from "nanoid";
 import {
   CLEAN_PHOTO_PROMPT,
   CLEANING_QUALITY_SUFFIX,
   STAGING_QUALITY_SUFFIX,
-  klingVideoPrompt,
-  KLING_NEGATIVE_PROMPT,
-  klingSocialVideoPrompt,
-  SOCIAL_NEGATIVE_PROMPT,
+  veoVideoPrompt,
+  VEO_NEGATIVE_PROMPT,
+  veoSocialVideoPrompt,
+  SOCIAL_VEO_NEGATIVE_PROMPT,
 } from "../prompts";
 import type { ProjectMode } from "../types";
 import { withRetry, REPLICATE_RETRY } from "../retry";
-import { savePredictionMap } from "../store";
+import { getSupabase } from "../supabase";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
+// ─── Config ────────────────────────────────────────────────────────
+const GEMINI_API_KEY = () => process.env.GEMINI_API_KEY || "";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+const IMAGE_MODEL = "gemini-2.5-flash-image";
+const VIDEO_MODEL = "veo-3.1-generate-preview";
+
+// ─── Mock ──────────────────────────────────────────────────────────
 function isMock(): boolean {
   return process.env.USE_MOCK_AI?.trim() === "true";
 }
-
-// ─── Mock Constants (B1 test assets in web/public/B1/) ──────────────
-// Files served by Next.js from public/B1/. Full URL built from APP_URL
-// so Inngest (server-side) and Remotion (VPS) can fetch them.
 
 function mockBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL || "http://localhost:3000";
 }
 
 const MOCK_ORIGINALS = ["original-1.jpg", "original-2.jpg", "original-3.jpg"];
-const MOCK_CLEANED  = ["cleaned-1.jpg", "cleaned-2.jpg", "cleaned-3.jpg"];
-const MOCK_STAGED   = ["staged-1.jpg", "staged-2.jpg", "staged-3.jpg", "staged-4.jpg"];
-const MOCK_VIDEO    = "video.mov";
+const MOCK_CLEANED = ["cleaned-1.jpg", "cleaned-2.jpg", "cleaned-3.jpg"];
+const MOCK_STAGED = ["staged-1.jpg", "staged-2.jpg", "staged-3.jpg", "staged-4.jpg"];
+const MOCK_VIDEO = "video.mov";
 
 let mockIdCounter = 0;
 function mockPredictionId(prefix: string): string {
   return `mock-${prefix}-${Date.now()}-${++mockIdCounter}`;
 }
-
-/** Pick a random file from a list and return the full public URL */
 function mockAssetUrl(files: string[]): string {
   const file = files[mockIdCounter % files.length];
   return `${mockBaseUrl()}/B1/${file}`;
 }
-// ─────────────────────────────────────────────────────────────────────
 
-function getClient() {
-  return new Replicate();
-}
-
-function getWebhookUrl(): string | undefined {
-  if (process.env.USE_INNGEST !== "true") return undefined;
-  const base = (process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL)?.trim();
-  if (!base) return undefined;
-  return `${base}/api/webhook/replicate`;
-}
-
+// ─── Types (unchanged interface) ───────────────────────────────────
 export interface PredictionStatus {
   id: string;
   status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
@@ -66,50 +67,215 @@ export interface PredictionContext {
   roomIndex?: number;
 }
 
+// ─── Helpers ───────────────────────────────────────────────────────
+
+/** Download image from URL → base64 string */
+async function imageUrlToBase64(url: string): Promise<{ data: string; mimeType: string }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to download image: ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const contentType = res.headers.get("content-type") || "image/jpeg";
+  return { data: buffer.toString("base64"), mimeType: contentType };
+}
+
+/** Upload base64 image to Supabase Storage, return public URL */
+async function uploadBase64ToStorage(base64: string, prefix: string): Promise<string> {
+  const db = getSupabase();
+  const id = nanoid(10);
+  const path = `ai-output/${prefix}-${id}.png`;
+  const buffer = Buffer.from(base64, "base64");
+
+  const { error } = await db.storage
+    .from("photos")
+    .upload(path, buffer, { contentType: "image/png", upsert: true });
+  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+
+  const { data } = db.storage.from("photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/** Call Gemini image editing (Nano Banana) */
+async function geminiImageEdit(imageUrl: string, prompt: string): Promise<string> {
+  const { data: imgData, mimeType } = await imageUrlToBase64(imageUrl);
+
+  const body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inlineData: { mimeType, data: imgData } },
+      ],
+    }],
+    generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"],
+    },
+  };
+
+  const res = await fetch(
+    `${GEMINI_BASE}/models/${IMAGE_MODEL}:generateContent?key=${GEMINI_API_KEY()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error ${res.status}: ${err}`);
+  }
+
+  const json = await res.json();
+  const parts = json?.candidates?.[0]?.content?.parts;
+  if (!parts) throw new Error("Gemini returned no content");
+
+  // Find the image part (Gemini REST returns camelCase: inlineData)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const imagePart = parts.find((p: any) => p.inlineData);
+  if (!imagePart?.inlineData?.data) {
+    // Check for text-only response (refusal or no-image)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const textPart = parts.find((p: any) => p.text);
+    const reason = textPart?.text?.substring(0, 100) || "unknown";
+    throw new Error(`Gemini returned no image: ${reason}`);
+  }
+
+  return imagePart.inlineData.data; // base64
+}
+
+/** Submit Veo 3.1 video generation, return operation name */
+async function veoSubmit(
+  prompt: string,
+  firstFrameUrl: string,
+  lastFrameUrl?: string,
+  aspectRatio: string = "16:9",
+): Promise<string> {
+  const firstFrame = await imageUrlToBase64(firstFrameUrl);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const requestBody: any = {
+    instances: [{
+      prompt,
+      image: {
+        inlineData: { mimeType: firstFrame.mimeType, data: firstFrame.data },
+      },
+    }],
+    parameters: {
+      aspectRatio,
+      sampleCount: 1,
+      durationSeconds: 5,
+      personGeneration: "allow_all",
+      enhancePrompt: false,
+    },
+  };
+
+  // Add last frame if provided
+  if (lastFrameUrl) {
+    const lastFrame = await imageUrlToBase64(lastFrameUrl);
+    requestBody.parameters.lastFrame = {
+      inlineData: { mimeType: lastFrame.mimeType, data: lastFrame.data },
+    };
+  }
+
+  const res = await fetch(
+    `${GEMINI_BASE}/models/${VIDEO_MODEL}:predictLongRunning?key=${GEMINI_API_KEY()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Veo API error ${res.status}: ${err}`);
+  }
+
+  const json = await res.json();
+  // Returns { "name": "operations/xxx" }
+  const operationName = json.name;
+  if (!operationName) throw new Error("Veo returned no operation name");
+  return operationName;
+}
+
+/** Poll a Veo operation */
+async function veoPoll(operationName: string): Promise<PredictionStatus> {
+  const res = await fetch(
+    `${GEMINI_BASE}/${operationName}?key=${GEMINI_API_KEY()}`,
+    { headers: { "Content-Type": "application/json" } },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Veo poll error ${res.status}: ${err}`);
+  }
+
+  const json = await res.json();
+
+  if (json.done) {
+    // Extract video URI
+    const video = json.response?.generateVideoResponse?.generatedSamples?.[0]?.video;
+    if (video?.uri) {
+      return {
+        id: operationName,
+        status: "succeeded",
+        output: video.uri,
+      };
+    }
+    // Check for error
+    const error = json.error?.message || json.response?.error;
+    return {
+      id: operationName,
+      status: "failed",
+      output: null,
+      error: error || "Veo returned no video",
+    };
+  }
+
+  // Still processing
+  return {
+    id: operationName,
+    status: json.metadata?.state === "ACTIVE" ? "processing" : "starting",
+    output: null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PUBLIC API — same interface as replicate-lucie.ts
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Clean a photo (remove furniture) using Gemini Nano Banana.
+ * Returns "done:<url>" — synchronous, no polling needed.
+ */
 export async function cleanPhoto(
   photoUrl: string,
   ctx?: PredictionContext,
 ): Promise<string> {
   if (isMock()) {
     const id = mockPredictionId("clean");
-    console.log(`[MOCK_AI] cleanPhoto → ${id} (skipped Flux Kontext Pro)`);
+    console.log(`[MOCK_AI] cleanPhoto → ${id} (skipped Gemini)`);
     return id;
   }
-  if (ctx?.projectId) await costGuard(ctx.projectId, "flux-kontext-pro");
+  if (ctx?.projectId) await costGuard(ctx.projectId, "gemini-image");
 
-  const result = await withCircuitBreaker("replicate", () =>
+  const result = await withCircuitBreaker("gemini", () =>
     withRetry(async () => {
-      const webhookUrl = getWebhookUrl();
-      const prediction = await getClient().predictions.create({
-        model: "black-forest-labs/flux-kontext-pro",
-        input: {
-          prompt: `${CLEAN_PHOTO_PROMPT} ${CLEANING_QUALITY_SUFFIX}`,
-          input_image: photoUrl,
-          aspect_ratio: "match_input_image",
-          output_format: "jpg",
-          safety_tolerance: 2,
-          seed: Math.floor(Math.random() * 999999),
-        },
-        ...(webhookUrl ? { webhook: webhookUrl, webhook_events_filter: ["completed"] } : {}),
-      });
-
-      if (ctx) {
-        await savePredictionMap({
-          predictionId: prediction.id,
-          projectId: ctx.projectId,
-          predictionType: ctx.predictionType,
-          roomIndex: ctx.roomIndex,
-        });
-      }
-
-      return prediction.id;
+      const prompt = `${CLEAN_PHOTO_PROMPT} ${CLEANING_QUALITY_SUFFIX}`;
+      const base64 = await geminiImageEdit(photoUrl, prompt);
+      const publicUrl = await uploadBase64ToStorage(base64, "cleaned");
+      console.log(`[Gemini] cleanPhoto done → ${publicUrl.substring(0, 60)}...`);
+      return `done:${publicUrl}`;
     }, REPLICATE_RETRY),
   );
 
-  if (ctx?.projectId) await trackCost(ctx.projectId, "flux-kontext-pro");
+  if (ctx?.projectId) await trackCost(ctx.projectId, "gemini-image");
   return result;
 }
 
+/**
+ * Generate a staging option using Gemini Nano Banana.
+ * Returns "done:<url>" — synchronous, no polling needed.
+ */
 export async function generateStagingOption(
   photoUrl: string,
   prompt: string,
@@ -117,44 +283,29 @@ export async function generateStagingOption(
 ): Promise<string> {
   if (isMock()) {
     const id = mockPredictionId("staging");
-    console.log(`[MOCK_AI] generateStagingOption → ${id} (skipped Flux Kontext Pro)`);
+    console.log(`[MOCK_AI] generateStagingOption → ${id} (skipped Gemini)`);
     return id;
   }
-  if (ctx?.projectId) await costGuard(ctx.projectId, "flux-kontext-pro");
+  if (ctx?.projectId) await costGuard(ctx.projectId, "gemini-image");
 
-  const result = await withCircuitBreaker("replicate", () =>
+  const result = await withCircuitBreaker("gemini", () =>
     withRetry(async () => {
-      const webhookUrl = getWebhookUrl();
-      const prediction = await getClient().predictions.create({
-        model: "black-forest-labs/flux-kontext-pro",
-        input: {
-          prompt: `${prompt} ${STAGING_QUALITY_SUFFIX}`,
-          input_image: photoUrl,
-          aspect_ratio: "match_input_image",
-          output_format: "jpg",
-          safety_tolerance: 2,
-          seed: Math.floor(Math.random() * 999999),
-        },
-        ...(webhookUrl ? { webhook: webhookUrl, webhook_events_filter: ["completed"] } : {}),
-      });
-
-      if (ctx) {
-        await savePredictionMap({
-          predictionId: prediction.id,
-          projectId: ctx.projectId,
-          predictionType: ctx.predictionType,
-          roomIndex: ctx.roomIndex,
-        });
-      }
-
-      return prediction.id;
+      const fullPrompt = `${prompt} ${STAGING_QUALITY_SUFFIX}`;
+      const base64 = await geminiImageEdit(photoUrl, fullPrompt);
+      const publicUrl = await uploadBase64ToStorage(base64, "staged");
+      console.log(`[Gemini] staging done → ${publicUrl.substring(0, 60)}...`);
+      return `done:${publicUrl}`;
     }, REPLICATE_RETRY),
   );
 
-  if (ctx?.projectId) await trackCost(ctx.projectId, "flux-kontext-pro");
+  if (ctx?.projectId) await trackCost(ctx.projectId, "gemini-image");
   return result;
 }
 
+/**
+ * Generate a video using Veo 3.1 (first frame → last frame interpolation).
+ * Returns a Veo operation name — async, needs polling via getPredictionStatus.
+ */
 export async function generateVideo(
   originalUrl: string,
   stagedUrl: string,
@@ -165,55 +316,47 @@ export async function generateVideo(
 ): Promise<string> {
   if (isMock()) {
     const id = mockPredictionId("video");
-    console.log(`[MOCK_AI] generateVideo → ${id} (skipped Kling v2.1 Pro)`);
+    console.log(`[MOCK_AI] generateVideo → ${id} (skipped Veo 3.1)`);
     return id;
   }
-  if (ctx?.projectId) await costGuard(ctx.projectId, "kling-v2.1-pro");
+  if (ctx?.projectId) await costGuard(ctx.projectId, "veo-3.1");
 
   const isSocial = projectMode === "social_reel";
   const prompt = isSocial
-    ? klingSocialVideoPrompt(style, roomType)
-    : klingVideoPrompt(style, roomType);
-  const negativePrompt = isSocial
-    ? SOCIAL_NEGATIVE_PROMPT
-    : KLING_NEGATIVE_PROMPT;
+    ? veoSocialVideoPrompt(style, roomType)
+    : veoVideoPrompt(style, roomType);
 
-  const result = await withCircuitBreaker("replicate_video", () =>
+  const result = await withCircuitBreaker("google_video", () =>
     withRetry(async () => {
-      const webhookUrl = getWebhookUrl();
-      const prediction = await getClient().predictions.create({
-        model: "kwaivgi/kling-v2.1",
-        input: {
-          prompt,
-          start_image: originalUrl,
-          end_image: stagedUrl,
-          mode: "pro",
-          duration: 5,
-          aspect_ratio: isSocial ? "9:16" : "16:9",
-          cfg_scale: isSocial ? 0.7 : 0.8,
-          negative_prompt: negativePrompt,
-        },
-        ...(webhookUrl ? { webhook: webhookUrl, webhook_events_filter: ["completed"] } : {}),
-      });
-
-      if (ctx) {
-        await savePredictionMap({
-          predictionId: prediction.id,
-          projectId: ctx.projectId,
-          predictionType: ctx.predictionType,
-          roomIndex: ctx.roomIndex,
-        });
-      }
-
-      return prediction.id;
+      const operationName = await veoSubmit(
+        prompt,
+        originalUrl,
+        stagedUrl,
+        isSocial ? "9:16" : "16:9",
+      );
+      console.log(`[Veo] Video submitted → ${operationName}`);
+      return operationName;
     }, REPLICATE_RETRY),
   );
 
-  if (ctx?.projectId) await trackCost(ctx.projectId, "kling-v2.1-pro");
+  if (ctx?.projectId) await trackCost(ctx.projectId, "veo-3.1");
   return result;
 }
 
+/**
+ * Get prediction status.
+ * - "done:..." IDs → return succeeded immediately (Gemini sync results)
+ * - "operations/..." IDs → poll Veo operation
+ * - "mock-..." IDs → return mock succeeded
+ */
 export async function getPredictionStatus(id: string): Promise<PredictionStatus> {
+  // Gemini sync results (images)
+  if (id.startsWith("done:")) {
+    const url = id.slice(5);
+    return { id, status: "succeeded", output: url };
+  }
+
+  // Mock results
   if (isMock()) {
     let mockUrl: string;
     if (id.includes("-video-")) {
@@ -228,17 +371,10 @@ export async function getPredictionStatus(id: string): Promise<PredictionStatus>
     console.log(`[MOCK_AI] getPredictionStatus(${id}) → succeeded (${mockUrl})`);
     return { id, status: "succeeded", output: mockUrl };
   }
-  return withCircuitBreaker("replicate", () =>
-    withRetry(async () => {
-      const prediction = await getClient().predictions.get(id);
-      const output = prediction.output as string | string[] | null;
-      return {
-        id: prediction.id,
-        status: prediction.status as PredictionStatus["status"],
-        output,
-        error: prediction.error ? String(prediction.error) : undefined,
-      };
-    }, REPLICATE_RETRY),
+
+  // Veo operation polling
+  return withCircuitBreaker("google_video", () =>
+    withRetry(async () => veoPoll(id), REPLICATE_RETRY),
   );
 }
 

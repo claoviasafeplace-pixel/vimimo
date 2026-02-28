@@ -18,7 +18,7 @@ const ADMIN_EMAIL = "claoviasafeplace@gmail.com";
 // Types
 // =============================================
 
-export type ServiceName = "openai" | "replicate" | "replicate_video" | "remotion";
+export type ServiceName = "openai" | "replicate" | "replicate_video" | "remotion" | "gemini" | "google_video";
 
 export type CircuitState = "closed" | "open" | "half_open";
 
@@ -60,6 +60,8 @@ const COST_MAP: Record<string, number> = {
   "gpt-4o-text": 0.01,
   "flux-kontext-pro": 0.05,
   "kling-v2.1-pro": 0.50,
+  "gemini-image": 0.07,    // Nano Banana 1K
+  "veo-3.1": 0.75,         // Veo 3.1 Fast 5s
 };
 
 // =============================================
