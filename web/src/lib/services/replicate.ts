@@ -261,10 +261,20 @@ export async function cleanPhoto(
   const result = await withCircuitBreaker("gemini", () =>
     withRetry(async () => {
       const prompt = `${CLEAN_PHOTO_PROMPT} ${CLEANING_QUALITY_SUFFIX}`;
-      const base64 = await geminiImageEdit(photoUrl, prompt);
-      const publicUrl = await uploadBase64ToStorage(base64, "cleaned");
-      console.log(`[Gemini] cleanPhoto done → ${publicUrl.substring(0, 60)}...`);
-      return `done:${publicUrl}`;
+      try {
+        const base64 = await geminiImageEdit(photoUrl, prompt);
+        const publicUrl = await uploadBase64ToStorage(base64, "cleaned");
+        console.log(`[Gemini] cleanPhoto done → ${publicUrl.substring(0, 60)}...`);
+        return `done:${publicUrl}`;
+      } catch (e) {
+        // Gemini may refuse exterior/pool/garden photos — fallback to original
+        const msg = e instanceof Error ? e.message : "";
+        if (msg.includes("Gemini returned no image")) {
+          console.log(`[Gemini] cleanPhoto skipped (no edit needed) → using original`);
+          return `done:${photoUrl}`;
+        }
+        throw e;
+      }
     }, REPLICATE_RETRY),
   );
 
