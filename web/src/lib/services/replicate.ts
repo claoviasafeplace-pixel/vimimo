@@ -189,6 +189,7 @@ export async function generateVideo(
           end_image: stagedUrl,
           mode: "pro",
           duration: 5,
+          aspect_ratio: isSocial ? "9:16" : "16:9",
           cfg_scale: isSocial ? 0.7 : 0.8,
           negative_prompt: negativePrompt,
         },

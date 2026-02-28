@@ -10,6 +10,12 @@ import {
   CostThresholdError,
 } from "@/lib/circuit-breaker";
 
+/** Number of staging variants per room. Default 1 to minimize AI costs. */
+const NB_VARIANTS = Math.min(
+  Math.max(1, Number(process.env.STAGING_VARIANTS) || 1),
+  5,
+);
+
 async function autoRefund(project: {
   userId?: string;
   creditsUsed?: number;
@@ -115,12 +121,38 @@ export const cleaningPoll = inngest.createFunction(
       if (changed) await saveProject(proj);
     });
 
+    // Set "cleaned" checkpoint — admin validates before staging continues
+    await step.run("set-cleaned", async () => {
+      const proj = await getProject(projectId);
+      if (!proj) return;
+      proj.phase = "cleaned";
+      await saveProject(proj);
+    });
+
+    // Wait for admin validation: poll until phase changes from "cleaned"
+    for (let wait = 0; wait < 720; wait++) { // 720 × 5s = 1h max
+      const ready = await step.run(`wait-validation-${wait}`, async () => {
+        const proj = await getProject(projectId);
+        return !proj || proj.phase !== "cleaned";
+      });
+      if (ready) break;
+      await step.sleep(`sleep-validation-${wait}`, "5s");
+    }
+
     // Branch: triage (video_visite) or analyze (staging_piece)
     const project = await step.run("read-project", async () => {
       return await getProject(projectId);
     });
 
     if (!project) return { error: "Project not found" };
+    // If still "cleaned" after timeout, stop
+    if (project.phase === "cleaned") {
+      return { projectId, status: "validation-timeout" };
+    }
+    // If admin moved to "error", stop
+    if (project.phase === "error") {
+      return { projectId, status: "admin-rejected" };
+    }
 
     if (project.mode === "video_visite") {
       await step.run("triage-photos", async () => {
@@ -200,7 +232,7 @@ export const cleaningPoll = inngest.createFunction(
                 proj.mode,
               );
               const predictionIds = await Promise.all(
-                result.prompts.map((prompt) =>
+                result.prompts.slice(0, NB_VARIANTS).map((prompt) =>
                   generateStagingOption(room.cleanedPhotoUrl, prompt),
                 ),
               );

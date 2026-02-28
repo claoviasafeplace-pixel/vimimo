@@ -20,6 +20,9 @@ import {
   Undo2,
   Loader2,
   ShoppingBag,
+  ImageIcon,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -104,7 +107,7 @@ const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
 ];
 
 const PHASE_OPTIONS = [
-  "", "done", "error", "uploading", "cleaning", "analyzing",
+  "", "done", "error", "uploading", "cleaning", "cleaned", "analyzing",
   "generating_options", "selecting", "generating_videos",
   "rendering", "rendering_montage", "auto_staging", "triaging", "reviewing",
 ];
@@ -250,6 +253,30 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("[Admin] Project action failed:", error);
+      alert("Erreur réseau");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Cleaned validation actions
+  const handleCleanedAction = async (projectId: string, action: "validate_cleaned" | "reject_cleaned") => {
+    setActionLoading(projectId);
+    try {
+      const res = await fetch(`/api/admin/projects/${projectId}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Erreur");
+      } else {
+        const statsRes = await fetch("/api/admin");
+        if (statsRes.ok) setStats(await statsRes.json());
+      }
+    } catch (error) {
+      console.error("[Admin] Cleaned action failed:", error);
       alert("Erreur réseau");
     } finally {
       setActionLoading(null);
@@ -647,6 +674,77 @@ export default function AdminDashboard() {
         {/* ========== TAB 3: Pipeline ========== */}
         {tab === "pipeline" && (
           <div>
+            {/* Cleaned projects awaiting validation */}
+            {(() => {
+              const cleanedProjects = stats.activeProjects.projects.filter(
+                (p) => p.phase === "cleaned"
+              );
+              if (cleanedProjects.length === 0) return null;
+              return (
+                <div className="mb-8 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ImageIcon className="h-5 w-5 text-amber-400" />
+                    <h2 className="text-lg font-semibold text-amber-400">
+                      {cleanedProjects.length} projet{cleanedProjects.length > 1 ? "s" : ""} en attente de validation
+                    </h2>
+                  </div>
+                  <p className="text-xs text-muted mb-4">
+                    Les meubles ont été retirés. Validez pour lancer le staging IA, ou rejetez pour annuler et rembourser.
+                  </p>
+                  <div className="space-y-3">
+                    {cleanedProjects.map((p) => (
+                      <div
+                        key={p.id}
+                        className="rounded-xl border border-amber-500/20 bg-surface p-4"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs">{p.id.slice(0, 8)}</span>
+                            <PhaseBadge phase="cleaned" />
+                            <span className="text-xs text-muted">
+                              {p.roomCount} pièce{p.roomCount > 1 ? "s" : ""}
+                            </span>
+                            <span className="text-xs text-muted">
+                              {new Date(p.createdAt).toLocaleDateString("fr-FR", {
+                                day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <a href={`/project/${p.id}`} target="_blank" rel="noopener noreferrer">
+                              <Button variant="ghost" size="sm">Voir</Button>
+                            </a>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              disabled={actionLoading === p.id}
+                              onClick={() => handleCleanedAction(p.id, "validate_cleaned")}
+                            >
+                              {actionLoading === p.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <ThumbsUp className="mr-1 h-3.5 w-3.5" />
+                              )}
+                              Valider
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={actionLoading === p.id}
+                              onClick={() => handleCleanedAction(p.id, "reject_cleaned")}
+                            >
+                              <ThumbsDown className="mr-1 h-3.5 w-3.5" />
+                              Rejeter
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Stuck projects alert */}
             {stats.stuckProjects.count > 0 && (
               <div className="mb-8 rounded-2xl border border-red-500/30 bg-red-500/5 p-6">

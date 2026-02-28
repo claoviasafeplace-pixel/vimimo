@@ -74,7 +74,7 @@ export const montageSchema = z.object({
 
 // --- Admin action ---
 export const adminActionSchema = z.object({
-  action: z.enum(["retry", "force_done", "refund"]),
+  action: z.enum(["retry", "force_done", "refund", "validate_cleaned", "reject_cleaned"]),
 });
 
 // --- Signed URL upload ---

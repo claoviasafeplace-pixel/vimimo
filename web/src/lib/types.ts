@@ -78,6 +78,7 @@ export type Ambiance = "jour" | "nuit" | "neige";
 export type ProjectPhase =
   | "uploading"
   | "cleaning"
+  | "cleaned"
   | "analyzing"
   | "generating_options"
   | "selecting"

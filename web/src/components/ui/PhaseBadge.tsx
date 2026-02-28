@@ -4,6 +4,7 @@ const PHASE_COLORS: Record<string, string> = {
   selecting: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   reviewing: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   cleaning: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  cleaned: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   analyzing: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   generating_options: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   generating_videos: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -20,6 +21,7 @@ const PHASE_LABELS: Record<string, string> = {
   selecting: "Sélection",
   reviewing: "Révision",
   cleaning: "Nettoyage",
+  cleaned: "En attente validation",
   analyzing: "Analyse",
   generating_options: "Génération options",
   generating_videos: "Génération vidéos",
@@ -32,6 +34,7 @@ const PHASE_LABELS: Record<string, string> = {
 
 export const ACTIVE_PHASES = [
   "cleaning",
+  "cleaned",
   "analyzing",
   "generating_options",
   "selecting",

@@ -16,6 +16,12 @@ import {
 } from "@/lib/circuit-breaker";
 import { persistFromUrl } from "@/lib/services/storage";
 
+/** Number of staging variants per room. Default 1 to minimize AI costs. Set STAGING_VARIANTS=5 for full variety. */
+const NB_VARIANTS = Math.min(
+  Math.max(1, Number(process.env.STAGING_VARIANTS) || 1),
+  5,
+);
+
 async function autoRefund(project: {
   userId?: string;
   creditsUsed?: number;
@@ -181,9 +187,9 @@ export const autoStaging = inngest.createFunction(
               const result = await generateStagingPrompts(
                 room.cleanedPhotoUrl, room.roomType, room.roomLabel,
                 proj.style, proj.styleLabel, room.visionData, projectId, proj.mode, globalContext);
-              // Generate all available prompts (up to 5)
+              // Generate NB_VARIANTS options (slice prompts to limit cost)
               const predictionIds = await Promise.all(
-                result.prompts.map((prompt: string) =>
+                result.prompts.slice(0, NB_VARIANTS).map((prompt: string) =>
                   generateStagingOption(room.cleanedPhotoUrl, prompt)
                 )
               );
