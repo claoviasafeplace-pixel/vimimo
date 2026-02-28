@@ -1,21 +1,21 @@
 "use client";
 
-import { ArrowLeft, Sparkles, Camera, Wand2, Film, MessageSquare } from "lucide-react";
+import { ArrowLeft, Sparkles, Camera, Wand2, Film, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import AuthButton from "@/components/auth/AuthButton";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import PricingGrid from "@/components/pricing/PricingGrid";
+import PricingTiers from "@/components/pricing/PricingTiers";
 
 const INCLUDED = [
   {
     icon: Camera,
-    label: "Nettoyage IA de la photo",
-    detail: "L'IA supprime les meubles existants automatiquement",
+    label: "Staging IA",
+    detail: "Nettoyage + ameublement intelligent par IA",
   },
   {
     icon: Wand2,
-    label: "5 options de staging",
+    label: "5 options / pièce",
     detail: "Scandinave, moderne, classique, industriel, bohème",
   },
   {
@@ -24,9 +24,9 @@ const INCLUDED = [
     detail: "Montage avant/après prêt à publier",
   },
   {
-    icon: MessageSquare,
-    label: "Descriptions réseaux",
-    detail: "Textes optimisés Instagram & TikTok",
+    icon: ShieldCheck,
+    label: "Expert qualité",
+    detail: "Un expert valide chaque résultat avant livraison",
   },
 ];
 
@@ -78,10 +78,10 @@ export default function PricingPage() {
             Tarifs transparents
           </span>
           <h1 className="mt-4 text-3xl font-bold sm:text-4xl">
-            1 Bien = <span className="text-gradient-gold">tout inclus</span>
+            Tarifs simples, <span className="text-gradient-gold">résultats premium</span>
           </h1>
-          <p className="mt-3 text-muted max-w-lg mx-auto">
-            Chaque crédit vous donne accès au pipeline complet pour un bien immobilier.
+          <p className="mt-3 text-muted max-w-xl mx-auto">
+            1 Bien = staging IA complet + vidéo cinématique. Un expert valide chaque résultat.
           </p>
         </motion.div>
 
@@ -105,13 +105,13 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* Pricing Grid */}
+        {/* Pricing Tiers */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <PricingGrid />
+          <PricingTiers />
         </motion.div>
 
         <motion.p
@@ -120,7 +120,7 @@ export default function PricingPage() {
           transition={{ delay: 0.8 }}
           className="mt-10 text-center text-xs text-muted"
         >
-          Prix affichés HT. TVA 20% appliquée au paiement. Paiement sécurisé par Stripe. Annulez à tout moment.
+          Prix affichés HT. TVA 20% appliquée au paiement. Paiement sécurisé par Stripe.
         </motion.p>
       </main>
     </div>

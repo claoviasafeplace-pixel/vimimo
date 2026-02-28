@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
 import { useProject } from "@/hooks/useProject";
 import ProjectView from "@/components/project/ProjectView";
+import OrderStatusView from "@/components/project/OrderStatusView";
 import AuthButton from "@/components/auth/AuthButton";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import type { ConfirmedPhoto } from "@/lib/types";
@@ -135,13 +136,17 @@ export default function ProjectPage({
             </button>
           </div>
         )}
-        <ProjectView
-          project={project}
-          onSelect={handleSelect}
-          onConfirm={handleConfirm}
-          onTriageConfirm={handleTriageConfirm}
-          isTriageSubmitting={isTriageSubmitting}
-        />
+        {project.orderStatus ? (
+          <OrderStatusView project={project} />
+        ) : (
+          <ProjectView
+            project={project}
+            onSelect={handleSelect}
+            onConfirm={handleConfirm}
+            onTriageConfirm={handleTriageConfirm}
+            isTriageSubmitting={isTriageSubmitting}
+          />
+        )}
       </main>
     </div>
   );

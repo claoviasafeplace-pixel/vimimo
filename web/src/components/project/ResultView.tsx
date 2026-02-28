@@ -200,7 +200,7 @@ export default function ResultView({
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/new">
+            <a href="/commander">
               <Button size="sm">
                 <Plus className="mr-1.5 h-4 w-4" />
                 Nouveau projet

@@ -1,6 +1,12 @@
 import { nanoid } from "nanoid";
 import { getSupabase } from "./supabase";
-import type { Project, CreditTransaction, CreditTransactionType } from "./types";
+import type {
+  Project,
+  CreditTransaction,
+  CreditTransactionType,
+  OrderStatus,
+  AdminKanbanStatus,
+} from "./types";
 
 // =============================================
 // Projects — Supabase (JSON column, persistent)
@@ -54,6 +60,100 @@ export async function updateProject(
   return merged;
 }
 
+// Atomic update for order/kanban status (updates both JSONB data + indexed columns)
+export async function updateProjectStatus(
+  id: string,
+  orderStatus: OrderStatus,
+  kanbanStatus: AdminKanbanStatus,
+  extraUpdates?: Partial<Project>,
+): Promise<Project> {
+  const db = getSupabase();
+
+  // Update indexed columns
+  await db
+    .from("projects")
+    .update({
+      order_status: orderStatus,
+      kanban_status: kanbanStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  // Merge into JSONB data
+  const jsonbUpdates: Partial<Project> = {
+    orderStatus,
+    kanbanStatus,
+    ...extraUpdates,
+  };
+
+  return updateProject(id, jsonbUpdates);
+}
+
+// Get orders grouped by kanban status (for admin Kanban board)
+export async function getOrdersByKanbanStatus(): Promise<
+  Record<AdminKanbanStatus, ProjectSummary[]>
+> {
+  const db = getSupabase();
+  const { data: rows } = await db
+    .from("projects")
+    .select("id, data, created_at")
+    .not("order_status", "is", null)
+    .order("created_at", { ascending: false });
+
+  const result: Record<AdminKanbanStatus, ProjectSummary[]> = {
+    a_traiter: [],
+    en_generation: [],
+    a_valider: [],
+    livre: [],
+  };
+
+  if (!rows) return result;
+
+  for (const row of rows) {
+    const data = row.data as Record<string, unknown> | null;
+    const rooms = data?.rooms as Array<Record<string, unknown>> | undefined;
+    const photos = data?.photos as Array<Record<string, unknown>> | undefined;
+    const kanbanStatus = (data?.kanbanStatus as AdminKanbanStatus) || "a_traiter";
+
+    let thumbnailUrl: string | null = null;
+    if (rooms?.length) {
+      const room = rooms[0];
+      const options = room.options as Array<Record<string, unknown>> | undefined;
+      const selectedIdx = (room.selectedOptionIndex as number) ?? 0;
+      if (options?.[selectedIdx]?.url) {
+        thumbnailUrl = options[selectedIdx].url as string;
+      }
+    }
+    if (!thumbnailUrl && photos?.length) {
+      thumbnailUrl = (photos[0].originalUrl as string) || null;
+    }
+
+    const summary: ProjectSummary = {
+      id: row.id,
+      phase: (data?.phase as string) || "unknown",
+      mode: (data?.mode as string) || "staging_piece",
+      styleLabel: (data?.styleLabel as string) || "",
+      roomCount: Array.isArray(rooms) ? rooms.length : 0,
+      thumbnailUrl,
+      finalVideoUrl: (data?.finalVideoUrl as string) || null,
+      studioMontageUrl: (data?.studioMontageUrl as string) || null,
+      createdAt: (data?.createdAt as number) || new Date(row.created_at).getTime(),
+      error: (data?.error as string) || null,
+      orderStatus: (data?.orderStatus as string) || null,
+      kanbanStatus: (data?.kanbanStatus as string) || null,
+      clientEmail: (data?.clientEmail as string) || null,
+      ambiance: (data?.ambiance as string) || null,
+      deliveredAt: (data?.deliveredAt as number) || null,
+    };
+
+    if (result[kanbanStatus]) {
+      result[kanbanStatus].push(summary);
+    }
+  }
+
+  return result;
+}
+
 export interface ProjectSummary {
   id: string;
   phase: string;
@@ -65,6 +165,11 @@ export interface ProjectSummary {
   studioMontageUrl: string | null;
   createdAt: number;
   error: string | null;
+  orderStatus?: string | null;
+  kanbanStatus?: string | null;
+  clientEmail?: string | null;
+  ambiance?: string | null;
+  deliveredAt?: number | null;
 }
 
 export async function getUserProjects(userId: string, limit = 50): Promise<ProjectSummary[]> {
@@ -108,6 +213,9 @@ export async function getUserProjects(userId: string, limit = 50): Promise<Proje
       studioMontageUrl: (data?.studioMontageUrl as string) || null,
       createdAt: data?.createdAt as number || new Date(row.created_at).getTime(),
       error: (data?.error as string) || null,
+      orderStatus: (data?.orderStatus as string) || null,
+      kanbanStatus: (data?.kanbanStatus as string) || null,
+      deliveredAt: (data?.deliveredAt as number) || null,
     };
   });
 }

@@ -61,7 +61,7 @@ export default function Hero() {
         className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row"
       >
         <Link
-          href="/new"
+          href="/commander"
           className="inline-flex items-center gap-2 rounded-xl gradient-gold px-8 py-4 text-base font-semibold text-zinc-900 shadow-lg shadow-amber-900/20 transition-opacity hover:opacity-90"
         >
           <Sparkles className="h-5 w-5" />

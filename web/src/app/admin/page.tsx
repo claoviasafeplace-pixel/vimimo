@@ -19,12 +19,17 @@ import {
   CheckCircle,
   Undo2,
   Loader2,
+  ShoppingBag,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import PhaseBadge, { getPhaseLabel, ACTIVE_PHASES } from "@/components/ui/PhaseBadge";
 import StatCard from "@/components/admin/StatCard";
 import ProjectsTable, { type ProjectRow } from "@/components/admin/ProjectsTable";
+import KanbanBoard from "@/components/admin/KanbanBoard";
+import OrderDetailPanel from "@/components/admin/OrderDetailPanel";
+import type { ProjectSummary } from "@/lib/store";
+import type { AdminKanbanStatus } from "@/lib/types";
 
 // ============================================
 // Types
@@ -85,7 +90,7 @@ interface PaginatedProject {
   created_at: string;
 }
 
-type Tab = "overview" | "projects" | "pipeline";
+type Tab = "overview" | "projects" | "pipeline" | "orders";
 
 // ============================================
 // Tabs config
@@ -95,6 +100,7 @@ const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Vue d'ensemble", icon: BarChart3 },
   { id: "projects", label: "Projets", icon: FolderKanban },
   { id: "pipeline", label: "Pipeline", icon: Activity },
+  { id: "orders", label: "Commandes", icon: ShoppingBag },
 ];
 
 const PHASE_OPTIONS = [
@@ -137,6 +143,11 @@ export default function AdminDashboard() {
   } | null>(null);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Orders (Kanban) tab state
+  const [ordersData, setOrdersData] = useState<Record<AdminKanbanStatus, ProjectSummary[]> | null>(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Auth redirect
   useEffect(() => {
@@ -268,6 +279,75 @@ export default function AdminDashboard() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Fetch orders (tab 4)
+  const fetchOrders = useCallback(() => {
+    setOrdersLoading(true);
+    fetch("/api/admin/orders")
+      .then((res) => res.json())
+      .then((data) => setOrdersData(data.orders || null))
+      .catch(console.error)
+      .finally(() => setOrdersLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (tab === "orders") fetchOrders();
+  }, [tab, fetchOrders]);
+
+  // Orders handlers
+  const handleOrderCardClick = (order: ProjectSummary) => {
+    setSelectedOrderId(order.id);
+  };
+
+  const handleOrderDeliver = async (
+    projectId: string,
+    selectedOptions: Record<number, number>,
+    adminNotes?: string,
+  ) => {
+    const res = await fetch(`/api/admin/orders/${projectId}/deliver`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selectedOptions, adminNotes }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Erreur lors de la livraison");
+      throw new Error(data.error);
+    }
+    alert("Commande livree avec succes !");
+    setSelectedOrderId(null);
+    fetchOrders();
+  };
+
+  const handleOrderRegenerate = async (
+    projectId: string,
+    roomIndex: number,
+    customPrompt: string,
+  ) => {
+    const res = await fetch(`/api/admin/orders/${projectId}/regenerate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomIndex, customPrompt }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Erreur lors de la regeneration");
+    }
+  };
+
+  const handleOrderStatusChange = async (projectId: string, kanbanStatus: string) => {
+    const res = await fetch(`/api/admin/orders/${projectId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kanbanStatus }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Erreur lors du changement de statut");
+      return;
+    }
+    fetchOrders();
   };
 
   // ============================================
@@ -698,6 +778,34 @@ export default function AdminDashboard() {
                 </p>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ========== TAB 4: Orders (Kanban) ========== */}
+        {tab === "orders" && (
+          <div>
+            {ordersLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+              </div>
+            ) : ordersData ? (
+              <KanbanBoard orders={ordersData} onCardClick={handleOrderCardClick} />
+            ) : (
+              <div className="rounded-2xl border border-border bg-surface p-8 text-center text-muted">
+                Aucune commande
+              </div>
+            )}
+
+            {/* Order detail panel (modal) */}
+            {selectedOrderId && (
+              <OrderDetailPanel
+                projectId={selectedOrderId}
+                onClose={() => setSelectedOrderId(null)}
+                onDeliver={handleOrderDeliver}
+                onRegenerate={handleOrderRegenerate}
+                onStatusChange={handleOrderStatusChange}
+              />
+            )}
           </div>
         )}
       </main>

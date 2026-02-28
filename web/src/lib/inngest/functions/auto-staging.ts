@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject, refundCredits } from "@/lib/store";
+import { getProject, saveProject, refundCredits, updateProjectStatus } from "@/lib/store";
 import {
   getPredictionStatus,
   extractOutputUrl,
@@ -263,6 +263,20 @@ export const autoStaging = inngest.createFunction(
 
       if (done) break;
       await step.sleep(`wait-staging-${attempt}`, "5s");
+    }
+
+    // Order flow: after options generated, go to admin quality check instead of auto-selecting
+    const isOrderFlow = await step.run("check-order-flow", async () => {
+      const proj = await getProject(projectId);
+      if (proj?.orderStatus) {
+        await updateProjectStatus(proj.id, "quality_check", "a_valider");
+        return true;
+      }
+      return false;
+    });
+
+    if (isOrderFlow) {
+      return { projectId, status: "order-awaiting-admin" };
     }
 
     // Step 4: Launch all videos (skip if replicate_video is down)

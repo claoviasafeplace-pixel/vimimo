@@ -122,3 +122,41 @@ export const triageConfirmSchema = z.object({
     )
     .min(1),
 });
+
+// --- Order tunnel (conciergerie) ---
+export const createOrderSchema = z.object({
+  photos: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        originalUrl: z.string().url(),
+      })
+    )
+    .min(1, "Au moins une photo requise")
+    .max(6, "Maximum 6 photos par bien"),
+  style: z.enum([
+    "scandinavian",
+    "industrial",
+    "modern_minimalist",
+    "classic_french",
+    "bohemian",
+  ]),
+  ambiance: z.enum(["jour", "nuit", "neige"]).optional(),
+  clientEmail: z.string().email("Email invalide").optional(),
+  packId: z.string().min(1, "Pack requis"),
+});
+
+// --- Admin deliver order ---
+export const adminDeliverSchema = z.object({
+  selectedOptions: z.record(
+    z.string(),
+    z.number().int().min(0),
+  ),
+  adminNotes: z.string().max(1000).optional(),
+});
+
+// --- Admin regenerate staging ---
+export const adminRegenerateSchema = z.object({
+  roomIndex: z.number().int().min(0),
+  customPrompt: z.string().min(10, "Prompt trop court").max(2000),
+});

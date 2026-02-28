@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject, refundCredits } from "@/lib/store";
+import { getProject, saveProject, refundCredits, updateProjectStatus } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { analyzePhotos, triagePhotos, generateStagingPrompts } from "@/lib/services/openai";
 import { generateStagingOption } from "@/lib/services/replicate";
@@ -276,10 +276,18 @@ export const cleaningPoll = inngest.createFunction(
 
           if (allDone) {
             const allRoomsHaveOptions = proj.rooms.every((r) => r.options.length > 0);
-            proj.phase = allRoomsHaveOptions ? "selecting" : "error";
             if (!allRoomsHaveOptions) {
+              proj.phase = "error";
               proj.error = "Certaines pièces n'ont aucune option de staging";
               await autoRefund(proj);
+            } else if (proj.orderStatus) {
+              // Order flow: skip client selection, go to admin quality check
+              proj.phase = "selecting"; // keep phase for compat
+              await saveProject(proj);
+              await updateProjectStatus(proj.id, "quality_check", "a_valider");
+              return true;
+            } else {
+              proj.phase = "selecting";
             }
           }
           await saveProject(proj);

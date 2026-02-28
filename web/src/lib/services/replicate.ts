@@ -48,7 +48,7 @@ function getClient() {
 
 function getWebhookUrl(): string | undefined {
   if (process.env.USE_INNGEST !== "true") return undefined;
-  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL;
+  const base = (process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL)?.trim();
   if (!base) return undefined;
   return `${base}/api/webhook/replicate`;
 }

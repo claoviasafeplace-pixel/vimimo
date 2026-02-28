@@ -68,6 +68,13 @@ export interface Room {
 
 export type ProjectMode = "staging_piece" | "video_visite" | "social_reel";
 
+// --- Order flow (conciergerie) ---
+
+export type OrderStatus = "pending" | "processing" | "quality_check" | "delivered" | "error";
+export type AdminKanbanStatus = "a_traiter" | "en_generation" | "a_valider" | "livre";
+
+export type Ambiance = "jour" | "nuit" | "neige";
+
 export type ProjectPhase =
   | "uploading"
   | "cleaning"
@@ -154,6 +161,14 @@ export interface Project {
   propertyInfo?: PropertyInfo;
   apiCostUsd?: number;
   globalContext?: string;
+  // Order flow (conciergerie)
+  orderStatus?: OrderStatus;
+  kanbanStatus?: AdminKanbanStatus;
+  adminSelectedOptions?: Record<number, number>; // roomIndex → optionIndex
+  deliveredAt?: number;
+  clientEmail?: string;
+  ambiance?: Ambiance;
+  adminNotes?: string;
 }
 
 // --- Auth & Credits ---
@@ -183,30 +198,53 @@ export interface CreditPack {
   tagline: string;
 }
 
-export const CREDIT_PACKS: CreditPack[] = [
+// B2C packs (Particuliers)
+export const B2C_PACKS: CreditPack[] = [
   {
-    id: "single",
+    id: "b2c_1",
     name: "1 Bien",
     credits: 1,
-    priceEur: 19,
-    tagline: "Pour un besoin ponctuel",
+    priceEur: 39,
+    tagline: "Idéal pour un premier test",
   },
   {
-    id: "trio",
+    id: "b2c_3",
     name: "3 Biens",
     credits: 3,
-    priceEur: 49,
+    priceEur: 99,
     popular: true,
     tagline: "Le plus demandé",
   },
+];
+
+// B2B packs (Professionnels)
+export const B2B_PACKS: CreditPack[] = [
   {
-    id: "five",
+    id: "b2b_5",
     name: "5 Biens",
     credits: 5,
-    priceEur: 79,
+    priceEur: 149,
     tagline: "Pour un portefeuille actif",
   },
+  {
+    id: "b2b_10",
+    name: "10 Biens",
+    credits: 10,
+    priceEur: 249,
+    popular: true,
+    tagline: "Le choix pro",
+  },
+  {
+    id: "b2b_25",
+    name: "25 Biens",
+    credits: 25,
+    priceEur: 499,
+    tagline: "Volume agence",
+  },
 ];
+
+// All packs combined (backwards compat)
+export const CREDIT_PACKS: CreditPack[] = [...B2C_PACKS, ...B2B_PACKS];
 
 // --- Subscription Plans (monthly) ---
 

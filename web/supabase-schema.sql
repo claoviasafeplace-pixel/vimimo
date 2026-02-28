@@ -176,3 +176,14 @@ DO $$ BEGIN
     ALTER TABLE users ADD CONSTRAINT credits_non_negative CHECK (credits >= 0);
   END IF;
 END $$;
+
+-- ============================================
+-- Order flow columns (conciergerie model)
+-- ============================================
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS order_status TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS kanban_status TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_email TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_projects_order_status ON projects (order_status) WHERE order_status IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_projects_kanban_status ON projects (kanban_status) WHERE kanban_status IS NOT NULL;

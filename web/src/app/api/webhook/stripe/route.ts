@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { addCredits, upsertSubscription, getUserByEmail, updateUser } from "@/lib/store";
+import { addCredits, upsertSubscription, getUserByEmail, updateUser, getProject, saveProject, updateProjectStatus } from "@/lib/store";
 import { getSupabase } from "@/lib/supabase";
 import { SUBSCRIPTION_PLANS } from "@/lib/types";
 import { nanoid } from "nanoid";
@@ -90,6 +90,73 @@ export async function POST(request: Request) {
                 },
               });
               console.log(`Guest subscription ${subId} linked to user ${guestUserId}`);
+            }
+          }
+          break;
+        }
+
+        // Order type: resolve user, add credits, start pipeline
+        if (session.metadata?.type === "order") {
+          const orderCredits = parseInt(session.metadata.credits || "0", 10);
+          const orderProjectId = session.metadata.projectId;
+          let orderUserId = session.metadata.userId;
+
+          // Guest order: resolve or create user
+          if (!orderUserId && session.metadata.guest === "true") {
+            const email = session.customer_details?.email;
+            if (email) {
+              const existingUser = await getUserByEmail(email);
+              if (existingUser) {
+                orderUserId = existingUser.id;
+                if (!existingUser.stripe_customer_id && typeof session.customer === "string") {
+                  await updateUser(orderUserId, { stripe_customer_id: session.customer });
+                }
+              } else {
+                const newId = nanoid(12);
+                const now = new Date().toISOString();
+                const db = getSupabase();
+                const { error } = await db.from("users").insert({
+                  id: newId,
+                  email,
+                  name: session.customer_details?.name ?? null,
+                  image: null,
+                  credits: 0,
+                  stripe_customer_id: typeof session.customer === "string" ? session.customer : null,
+                  created_at: now,
+                  updated_at: now,
+                });
+                if (!error) {
+                  orderUserId = newId;
+                  console.log(`Guest user created for order: ${orderUserId} (${email})`);
+                }
+              }
+            }
+          }
+
+          if (orderUserId && orderCredits) {
+            await addCredits(orderUserId, orderCredits, `Commande ${orderProjectId} — ${orderCredits} crédits`, session.id);
+          }
+
+          // Link project to user and start pipeline
+          if (orderProjectId) {
+            const proj = await getProject(orderProjectId);
+            if (proj) {
+              if (orderUserId) proj.userId = orderUserId;
+              proj.clientEmail = session.customer_details?.email || proj.clientEmail;
+              proj.orderStatus = "processing";
+              proj.kanbanStatus = "en_generation";
+              await saveProject(proj);
+              await updateProjectStatus(orderProjectId, "processing", "en_generation");
+
+              // Start Inngest pipeline
+              if (process.env.USE_INNGEST === "true") {
+                const { inngest } = await import("@/lib/inngest/client");
+                await inngest.send({
+                  name: "project/created",
+                  data: { projectId: orderProjectId },
+                });
+              }
+              console.log(`Order pipeline started: ${orderProjectId} for user ${orderUserId}`);
             }
           }
           break;

@@ -30,30 +30,30 @@ export default function SuccessPage() {
         </h1>
 
         <p className="mt-4 text-muted">
-          Vos crédits ont été ajoutés à votre compte.
-          Vous pouvez maintenant créer un projet de staging IA.
+          Commande reçue ! Notre IA est au travail. Un expert vérifiera chaque résultat
+          avant de vous livrer sous 24h.
         </p>
 
         {session ? (
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
-              href="/new"
+              href="/dashboard"
               className="inline-flex items-center justify-center gap-2 rounded-xl gradient-gold px-6 py-3 text-sm font-semibold text-zinc-900 transition-opacity hover:opacity-90"
             >
-              Nouveau projet
+              Voir mes commandes
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/dashboard"
+              href="/commander"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface/50 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
             >
-              Mon dashboard
+              Nouvelle commande
             </Link>
           </div>
         ) : (
           <div className="mt-8 space-y-4">
             <p className="text-sm text-muted">
-              Connectez-vous avec l&apos;email utilisé lors du paiement pour retrouver vos crédits.
+              Connectez-vous avec l&apos;email utilisé lors du paiement pour suivre votre commande.
             </p>
             <Link
               href="/login"

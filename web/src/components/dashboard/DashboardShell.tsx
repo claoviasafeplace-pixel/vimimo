@@ -92,7 +92,7 @@ export default function DashboardShell({
         {/* New project CTA */}
         <div className="px-4 pb-4">
           <Link
-            href="/new"
+            href="/commander"
             className="flex items-center justify-center gap-2 rounded-xl gradient-gold px-4 py-3 text-sm font-semibold text-zinc-900 shadow-lg shadow-amber-900/20 transition-all hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
@@ -179,7 +179,7 @@ export default function DashboardShell({
 
             <div className="px-4 pb-4">
               <Link
-                href="/new"
+                href="/commander"
                 onClick={() => setSidebarOpen(false)}
                 className="flex items-center justify-center gap-2 rounded-xl gradient-gold px-4 py-3 text-sm font-semibold text-zinc-900"
               >

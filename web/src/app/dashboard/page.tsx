@@ -21,6 +21,7 @@ import {
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ProjectHistoryCard from "@/components/dashboard/ProjectHistoryCard";
+import OrderCard from "@/components/dashboard/OrderCard";
 import type { CreditTransaction } from "@/lib/types";
 import { SUBSCRIPTION_PLANS } from "@/lib/types";
 
@@ -35,6 +36,9 @@ interface ProjectSummary {
   studioMontageUrl: string | null;
   createdAt: number;
   error: string | null;
+  orderStatus?: string | null;
+  kanbanStatus?: string | null;
+  deliveredAt?: number | null;
 }
 
 interface DashboardSubscription {
@@ -227,7 +231,7 @@ export default function DashboardPage() {
             Mes projets
           </h2>
           <Link
-            href="/new"
+            href="/commander"
             className="inline-flex items-center gap-1.5 rounded-lg gradient-gold px-3.5 py-2 text-xs font-semibold text-zinc-900 transition-opacity hover:opacity-90"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -254,7 +258,7 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* New project card */}
             <Link
-              href="/new"
+              href="/commander"
               className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 bg-surface/20 p-8 text-center transition-all hover:border-badge-gold-border/50 hover:bg-badge-gold-bg/10 min-h-[240px]"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-badge-gold-bg/40 border border-badge-gold-border/30 transition-transform group-hover:scale-110">
@@ -268,9 +272,13 @@ export default function DashboardPage() {
               </p>
             </Link>
 
-            {projects.map((project) => (
-              <ProjectHistoryCard key={project.id} project={project} />
-            ))}
+            {projects.map((project) =>
+              project.orderStatus ? (
+                <OrderCard key={project.id} project={project} />
+              ) : (
+                <ProjectHistoryCard key={project.id} project={project} />
+              )
+            )}
           </div>
         )}
       </div>

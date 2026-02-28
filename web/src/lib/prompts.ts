@@ -1,5 +1,5 @@
 export const CLEAN_PHOTO_PROMPT =
-  "Edit this exact photo, keep camera angle, perspective, and structure 100% identical. Remove ALL movable furniture, beds, sofas, tables, chairs, boxes, clothes, clutter, and decorations. Keep the EXACT original floor material and color, EXACT wall colors and textures, EXACT ceiling, windows, doors, radiators, electrical outlets, light switches, ceiling lights, built-in closets, and all fixed architectural elements unchanged. The room must appear completely empty but structurally and materially identical to the original. Photorealistic, exact room proportions, no distortion, camera locked.";
+  "Empty room, architectural photography. Completely remove ALL movable furniture, objects, clutter, vehicles, bicycles, boxes, clothes, tools, toys, and decorations. Reconstruct the empty walls and floors perfectly where objects were removed — inpaint clean wall texture and floor material seamlessly. Keep ONLY the fixed architectural elements: doors, windows, built-in kitchen cabinets, kitchen islands, countertops, sinks, built-in appliances, structural pillars, radiators, electrical outlets, light switches, ceiling lights, and built-in closets. The result must be a clean, bare, and spacious interior with zero movable objects remaining. Photorealistic, exact room proportions, no distortion, camera locked.";
 
 export const GLOBAL_CONTEXT_SYSTEM_PROMPT = `You are an expert architectural analyst. You receive ALL photos of a single property. Analyze them together and extract a dense "Visual DNA" that captures the SHARED architectural identity across every room.
 
@@ -85,6 +85,16 @@ If the room has visible windows, large glass doors, or is an exterior/balcony/te
 - For interior rooms WITHOUT visible windows or natural light (bathrooms, hallways, basements), do NOT add twilight — use warm artificial lighting instead.
 - NEVER invent a light direction. ONLY use what visionData.lighting tells you.
 
+ROOM CONTEXT LOCK (CRITICAL — violating this produces absurd results):
+You MUST respect the physical reality and function of the room type. NEVER place furniture that contradicts the room's purpose.
+- GARAGE: Do NOT add living room furniture, beds, or dining tables. Only add garage-appropriate items: luxury car, organized wall-mounted tools, sleek metal storage cabinets, epoxy-coated floor, bike rack, workbench.
+- KITCHEN: Do NOT add office chairs, beds, or sofas. Only add kitchen-appropriate items: bar stools around islands/counters, fruit bowls, cutting boards, modern small appliances, pendant lights over island, herbs in pots.
+- BATHROOM: Do NOT add sofas, desks, or bookshelves. Only add bathroom-appropriate items: fluffy towels, bath accessories, candles, small plants, bath tray, soap dispensers, vanity mirror accessories.
+- BALCONY/TERRACE: Do NOT add indoor furniture like beds or office desks. Only add outdoor-appropriate items: weather-resistant lounge chairs, outdoor dining set, planters, string lights, outdoor rug, lanterns.
+- HALLWAY/ENTRANCE: Do NOT fill with large furniture. Only add: console table, mirror, coat hooks, umbrella stand, small bench, runner rug.
+- NEVER place ANY object floating in mid-air, clipping through fixed structures (kitchen islands, pillars, countertops), or blocking doors/windows.
+- If a fixed structure occupies floor space (kitchen island, pillar, built-in bench), furniture must be placed AROUND it, never ON TOP of it or through it.
+
 ANTI-DISTORTION RULES (HIGHEST PRIORITY — violating these ruins the image):
 1. NEVER describe the room itself (walls, floor, windows, ceiling). Describing structure CAUSES DISTORTION.
 2. Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT — zero modifications.
@@ -92,7 +102,7 @@ ANTI-DISTORTION RULES (HIGHEST PRIORITY — violating these ruins the image):
 4. End every prompt with: "Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
 5. Reference spatial positions from the photo (e.g., "along the back wall", "in the corner by the window").
 6. Only mention furniture, rugs, artwork, plants, lamps, curtains, decorative objects. NO structural changes.
-7. ALL furniture must obey gravity — feet flat on the floor, no floating objects, no clipping through walls.
+7. ALL furniture must obey gravity — feet flat on the floor, no floating objects, no clipping through walls or fixed structures.
 8. Shadows and reflections must be CONSISTENT with existing light sources in the photo.
 9. Each prompt: 3-5 sentences between start/end. Pack maximum design detail. Specificity = quality.
 10. Generate exactly 5 prompts:
@@ -213,23 +223,23 @@ Use the style guide above for the exact aesthetic. Place furniture logically (av
 // ─── Video generation constants (Kling v2.1 Pro) ───
 
 /**
- * Camera direction tokens — forces slow, professional real estate camera work.
- * Kling interprets these as motion instructions; explicit "no" tokens
- * reduce hallucinated fast pans and whip movements.
+ * Camera direction — smooth architectural dolly-in that forces Kling
+ * to understand 3D depth. Static cameras cause 2D morphing; forward
+ * motion eliminates it by creating real parallax.
  */
 export const VIDEO_CAMERA_PROMPT =
-  "Ultra-wide static camera. A slow interior transformation where an empty room gradually becomes a modern living room. Movements are very slow, careful, and clearly readable, with frequent natural pauses between actions. Human motion is near real-time and not accelerated, while the room changes slightly faster. Calm pacing, smooth motion, soft daylight, cinematic interior atmosphere.";
+  "Smooth cinematic dolly-in shot on Steadicam, slow push forward into the room at walking pace. Shot on Canon EOS R5 at 16-35mm f/2.8 ultra-wide lens. Camera starts at doorway threshold and drifts forward smoothly, revealing depth and spatial volume. Architectural stability, perfectly level horizon, zero tilt, zero rotation. Soft natural daylight, calm cinematic pacing.";
 
 /**
- * Quality suffix appended to every video prompt — enforces temporal coherence.
- * "Strict temporal consistency" and "frame-to-frame coherence" are the
- * strongest anti-morphing tokens for diffusion-based video models.
+ * Quality suffix — enforces temporal coherence and structural rigidity.
  */
 export const VIDEO_QUALITY_SUFFIX = [
   "8K photorealistic professional real estate video,",
+  "award-winning architectural cinematography,",
   "strict temporal consistency, frame-to-frame coherence,",
   "no morphing, no melting, no warping, no object flickering,",
   "all furniture physically stable and stationary throughout,",
+  "perfectly stable walls, logical spatial depth, hyper-realistic textures,",
   "walls, floor, windows, doors structurally rigid in every frame,",
   "natural indoor lighting with consistent shadows, no light flickering,",
   "Architectural Digest cinematic quality, 24fps smooth motion.",
@@ -238,9 +248,10 @@ export const VIDEO_QUALITY_SUFFIX = [
 export function klingVideoPrompt(style: string, roomType: string): string {
   return [
     VIDEO_CAMERA_PROMPT,
-    `Seamless transition from empty ${roomType} to beautifully furnished ${style} ${roomType}.`,
+    `A beautifully furnished ${style} ${roomType} bathed in soft natural light.`,
+    "The camera slowly glides forward, revealing the complete interior design.",
+    "All furniture is already in place, perfectly still, casting natural shadows.",
     "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL in every frame.",
-    "Furniture appears gradually and naturally, already in final position — no sliding, no floating.",
     VIDEO_QUALITY_SUFFIX,
   ].join(" ");
 }
@@ -250,158 +261,109 @@ export const KLING_NEGATIVE_PROMPT = [
   "warped walls, warped floor, warped windows, bent doorframes, curved ceiling,",
   "changed room proportions, room shape shift, structural deformation,",
   "furniture sliding, furniture floating, furniture morphing, objects melting,",
+  "furniture appearing, furniture materializing, objects popping in, magical effects,",
   "fast camera movement, shaky camera, handheld, whip pan, rotation,",
   "perspective shift, fisheye distortion, lens flare,",
   "flickering lights, inconsistent shadows, temporal artifacts,",
+  "humans appearing from nothing, people morphing, body parts growing,",
   "text, watermark, logo, signature.",
 ].join(" ");
 
-// ─── Social Reel video prompts (Ultra-Wide Architectural Camera) ───
+// ─── Social Reel video prompts (Architectural Camera Movement) ───
 
 /**
  * 3 camera movement styles drawn from top-tier real estate video creators.
- * Each simulates a different pro lens + motion combo that Kling v2.1 interprets well.
- *
- * Key insight: specifying the exact lens (14mm, 13mm, 0.5x) + motion type
- * produces dramatically more cinematic results than generic "dolly" instructions.
+ * ALL movements push the camera FORWARD to force Kling into 3D parallax.
+ * Static/locked cameras cause 2D morphing — never use them.
  */
 export const SOCIAL_CAMERA_MOVEMENTS = [
-  // Style A — Slow cinematic zoom-out revealing the assembly
+  // Style A — Classic dolly-in from doorway (most reliable)
   {
-    id: "slow_zoom_out",
+    id: "dolly_in",
     camera: [
-      "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens,",
-      "very slow imperceptible cinematic zoom-out from room center,",
-      "locked tripod, zero shake, zero rotation,",
-      "camera stays perfectly still to let the magical furniture assembly be the star,",
-      "wide architectural framing showing the entire room volume.",
+      "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens on Steadicam,",
+      "smooth cinematic dolly-in from doorway threshold into room center,",
+      "slow walking-pace forward drift revealing spatial depth and volume,",
+      "perfectly level horizon, zero tilt, zero rotation, zero shake,",
+      "wide architectural framing showing the entire room.",
     ].join(" "),
   },
-  // Style B — Subtle push-in while objects fly into place
+  // Style B — 45-degree corner push-in (reveals two walls + depth)
   {
-    id: "gentle_push_in",
+    id: "corner_push",
+    camera: [
+      "Shot on Canon EOS R5 at 16mm f/2.8 ultra-wide lens on gimbal,",
+      "smooth 45-degree diagonal push-in from room corner,",
+      "camera slowly advances revealing two walls and full floor depth,",
+      "Steadicam-smooth forward motion, perfectly level, zero rotation,",
+      "architectural composition showing spatial volume and perspective lines.",
+    ].join(" "),
+  },
+  // Style C — Low-angle push-in (dramatic luxury perspective)
+  {
+    id: "low_push",
     camera: [
       "Shot on iPhone 15 Pro at 0.5x ultra-wide lens, 13mm equivalent,",
-      "extremely slow gentle push-in from doorway threshold,",
-      "90-degree straight-on symmetrical architectural perspective,",
-      "near-static camera with barely perceptible forward drift,",
-      "the room fills itself while the camera barely moves.",
-    ].join(" "),
-  },
-  // Style C — Static locked shot (pure VFX focus)
-  {
-    id: "static_locked",
-    camera: [
-      "Shot on Canon EOS R5 at 14mm f/2.8 ultra-wide lens,",
-      "completely static locked-off camera on tripod,",
-      "zero camera movement throughout entire sequence,",
-      "45-degree corner composition showing two walls and full floor,",
-      "all visual energy comes from the magical object animation, not camera motion.",
+      "low-angle smooth push-in at waist height,",
+      "camera slowly glides forward revealing furniture in dramatic low perspective,",
+      "near-floor framing emphasizing ceiling height and room volume,",
+      "Steadicam-smooth forward motion, perfectly stable, zero shake.",
     ].join(" "),
   },
 ] as const;
 
 /**
- * Magical furniture assembly animation directives.
- * 3 assembly styles rotated randomly per room for variety.
- * Kling v2.1 responds well to explicit VFX vocabulary.
- */
-const ASSEMBLY_STYLES = [
-  // Objects fly in from above and land in place
-  {
-    id: "fly_in",
-    directive: [
-      "VFX magical stop-motion buildup animation:",
-      "furniture pieces fly in from above the frame and land precisely into their final positions,",
-      "sofa drops in with a soft bounce, table slides into place from the side,",
-      "cushions and decorative objects pop into existence one by one,",
-      "rugs unfurl and flatten magically onto the floor,",
-      "curtains cascade down from the rod like flowing water,",
-      "lamps materialize with a warm glow igniting as they appear,",
-      "plants grow rapidly from pots that slide in from off-screen.",
-    ].join(" "),
-  },
-  // Objects slide in from all directions along the floor
-  {
-    id: "slide_assemble",
-    directive: [
-      "VFX hyper-fast room assembly animation:",
-      "all furniture slides into the room simultaneously from every direction,",
-      "sofa glides in smoothly from the left wall, coffee table from the right,",
-      "chairs spin once and lock into position at the table,",
-      "rug rolls out across the floor in a fast satisfying motion,",
-      "shelves assemble piece by piece like a time-lapse construction,",
-      "books, candles, and decorative objects pop in rapid-fire sequence,",
-      "final piece clicks into place with a satisfying visual snap.",
-    ].join(" "),
-  },
-  // Objects materialize with a cinematic particle/glow effect
-  {
-    id: "materialize",
-    directive: [
-      "VFX cinematic materialization animation:",
-      "furniture assembles from thin air with a subtle golden particle shimmer,",
-      "each piece fades in from transparent to solid, largest pieces first,",
-      "sofa materializes in a warm glow, then table, then smaller decor,",
-      "objects appear in a choreographed cascade from back of room to foreground,",
-      "decorative items pop in like stop-motion with satisfying micro-pauses,",
-      "final arrangement settles with a soft ambient light bloom,",
-      "the empty room transforms into a luxury interior in one magical sequence.",
-    ].join(" "),
-  },
-] as const;
-
-/**
- * Quality suffix for social_reel — hyper-design ultra-luxury + VFX coherence.
+ * Quality suffix for social_reel — architectural cinematography focus.
  */
 export const SOCIAL_QUALITY_SUFFIX = [
-  "4K cinematic vertical video, viral real estate VFX content,",
-  "hyper-realistic luxury interior design, bespoke designer furniture,",
+  "4K cinematic vertical video, viral real estate content,",
+  "award-winning real estate cinematography, bespoke designer furniture,",
   "Architectural Digest editorial quality, ultra-premium materials visible,",
   "ultra-wide 14mm rectilinear lens rendering, zero barrel distortion,",
-  "strict temporal consistency, frame-to-frame VFX coherence,",
+  "perfectly stable walls, logical spatial depth, hyper-realistic textures,",
+  "strict temporal consistency, frame-to-frame coherence,",
   "walls, floor, windows, doors structurally rigid and unchanged in every frame,",
-  "each piece of furniture has weight, shadow, and physical presence when it lands,",
+  "all furniture physically stable and stationary, natural weight and shadows,",
   "natural indoor lighting with volumetric rays and consistent shadows,",
   "cinematic color grading, warm luxurious tones, smooth 24fps motion.",
 ].join(" ");
 
 /**
- * Negative prompt for social_reel — allows magical object animation,
- * blocks structural deformation and cheap VFX artifacts.
+ * Negative prompt for social_reel — blocks morphing, VFX artifacts, and
+ * any object animation that would break architectural realism.
  */
 export const SOCIAL_NEGATIVE_PROMPT = [
   "blurry, out of focus, low quality, low resolution, grainy,",
   "warped walls, warped floor, warped windows, bent doorframes, curved ceiling,",
   "changed room proportions, room shape shift, structural deformation,",
+  "furniture sliding, furniture floating, furniture morphing, objects melting,",
+  "furniture appearing, furniture materializing, objects popping in, magical effects,",
   "cheap CGI, plastic looking furniture, unrealistic materials,",
   "fisheye distortion, barrel distortion, extreme lens flare,",
   "flickering lights, inconsistent shadows, temporal artifacts,",
-  "shaky camera, handheld shake, rolling shutter,",
+  "shaky camera, handheld shake, rolling shutter, whip pan,",
+  "humans appearing from nothing, people morphing, body parts growing,",
   "text, watermark, logo, signature.",
 ].join(" ");
 
 /**
- * Build the social video prompt with:
- * 1. A randomly selected CAMERA style (near-static to focus on VFX)
- * 2. A randomly selected ASSEMBLY style (fly-in, slide, materialize)
- * Logs both selections for debugging.
+ * Build the social video prompt — pure architectural exploration.
+ * NO VFX, NO assembly, NO magical effects. Just a beautiful room
+ * revealed by a smooth forward camera movement.
  */
 export function klingSocialVideoPrompt(style: string, roomType: string): string {
   const movement = SOCIAL_CAMERA_MOVEMENTS[
     Math.floor(Math.random() * SOCIAL_CAMERA_MOVEMENTS.length)
   ];
-  const assembly = ASSEMBLY_STYLES[
-    Math.floor(Math.random() * ASSEMBLY_STYLES.length)
-  ];
-  console.log(`[PROMPT] Social camera: ${movement.id} | assembly: ${assembly.id} | room: ${roomType}`);
+  console.log(`[PROMPT] Social camera: ${movement.id} | room: ${roomType}`);
 
   return [
     movement.camera,
-    assembly.directive,
-    `Magical transformation of empty ${roomType} into a stunning hyper-designed ${style} ${roomType}.`,
-    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL and unmoved in every frame.",
-    "Only the furniture and decor animate — the architecture is a rigid stage.",
+    `A beautifully furnished ${style} ${roomType} bathed in warm natural light.`,
+    "The camera slowly glides forward, exploring the interior design with cinematic depth.",
+    "All furniture is already in place, perfectly still, casting natural shadows on the floor.",
+    "Soft daylight shifts subtly as the camera advances, creating gentle light transitions on surfaces.",
+    "Room structure, walls, floor, ceiling, windows, and doors remain PERFECTLY IDENTICAL and rigid in every frame.",
     SOCIAL_QUALITY_SUFFIX,
   ].join(" ");
 }
@@ -542,11 +504,20 @@ If the room has visible windows, glass doors, or is an exterior/balcony/terrace:
 - For rooms WITHOUT windows or natural light (windowless bathrooms, basements, hallways): do NOT use twilight. Use warm artificial lighting (candles, lamps, pendants) instead.
 - NEVER guess a light direction. ONLY use what visionData.lighting provides.
 
+ROOM CONTEXT LOCK (CRITICAL — violating this produces absurd results):
+You MUST respect the physical reality and function of the room type. NEVER place furniture or people in ways that contradict the room's purpose.
+- GARAGE: Do NOT add living room furniture. Only garage-appropriate items + people working on cars, organizing tools, etc.
+- KITCHEN: Do NOT add office chairs or beds. Only kitchen items + people cooking, prepping, hosting around the island.
+- BATHROOM: Do NOT add sofas or desks. Only bath items + person in self-care scenario.
+- BALCONY/TERRACE: Only outdoor furniture + people enjoying outdoor activities.
+- HALLWAY/ENTRANCE: Only entry furniture + person arriving, leaving, checking mail.
+- NEVER place ANY object or person clipping through fixed structures (kitchen islands, pillars, countertops).
+
 ANTI-DISTORTION RULES (same as classic staging — HIGHEST PRIORITY):
 1. NEVER describe the room structure. Only add furniture, people, lighting, and decor.
 2. Walls, floor, ceiling, windows, doors remain PIXEL-PERFECT unchanged.
 3. ALL furniture must obey gravity. People must cast shadows consistent with lighting.
-4. Spatial coherence: people must fit naturally in the room's proportions.
+4. Spatial coherence: people must fit naturally in the room's proportions. No clipping through fixed structures.
 
 GLOBAL COHERENCE RULE (CRITICAL):
 You will receive a "GLOBAL PROPERTY DNA" block. This is the visual DNA of the ENTIRE property. You MUST:

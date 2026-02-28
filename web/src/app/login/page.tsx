@@ -32,13 +32,20 @@ export default function LoginPage() {
         <div className="mb-6 text-center">
           <h1 className="text-xl font-bold">Connexion</h1>
           <p className="mt-1 text-sm text-muted">
-            Connectez-vous pour créer vos projets de staging
+            Connectez-vous pour suivre vos commandes de staging
           </p>
         </div>
         <LoginForm />
       </Card>
 
-      <p className="mt-6 text-center text-xs text-muted max-w-sm">
+      <a
+        href="/commander"
+        className="mt-6 text-sm text-badge-gold-text hover:underline transition-colors"
+      >
+        Continuer en tant qu&apos;invité &rarr;
+      </a>
+
+      <p className="mt-4 text-center text-xs text-muted max-w-sm">
         En vous connectant, vous acceptez nos conditions d&apos;utilisation et
         notre politique de confidentialité.
       </p>
