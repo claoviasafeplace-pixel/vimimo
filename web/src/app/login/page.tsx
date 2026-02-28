@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import Card from "@/components/ui/Card";
@@ -9,6 +9,8 @@ import Card from "@/components/ui/Card";
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
 
   useEffect(() => {
     if (session) router.replace("/");
@@ -29,6 +31,13 @@ export default function LoginPage() {
       </a>
 
       <Card className="w-full max-w-md">
+        {errorParam && (
+          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            {errorParam === "OAuthAccountNotLinked"
+              ? "Cet email est déjà associé à un autre mode de connexion. Essayez avec votre mot de passe ou un magic link."
+              : "Erreur de connexion. Veuillez réessayer."}
+          </div>
+        )}
         <div className="mb-6 text-center">
           <h1 className="text-xl font-bold">Connexion</h1>
           <p className="mt-1 text-sm text-muted">
