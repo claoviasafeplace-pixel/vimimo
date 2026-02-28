@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,62 +15,78 @@ const fadeUp = {
 
 const FAQS = [
   {
-    q: "Que comprend exactement 1 Bien ?",
-    a: "1 Bien = jusqu'à 6 photos de pièces vides d'un même bien immobilier. Notre IA génère 5 options de décoration par pièce. Un expert sélectionne la meilleure et vous recevez les photos stagées + une vidéo cinématique avant/après.",
+    q: "Que comprend exactement le traitement d'un bien ?",
+    a: "1 bien = jusqu'à 6 pièces d'un même bien immobilier. Notre IA génère 5 options de décoration par pièce. Un expert sélectionne la meilleure option et vous recevez les photos stagées + une vidéo avant/après.",
   },
   {
-    q: "Combien de temps pour recevoir mon staging ?",
-    a: "Livraison sous 24h. Notre IA travaille en quelques minutes, puis un expert vérifie et valide chaque résultat avant de vous le livrer.",
+    q: "Combien de temps pour recevoir mes visuels ?",
+    a: "Livraison sous 24h. Notre IA travaille en quelques minutes, puis un expert vérifie et valide chaque résultat avant de vous le livrer par email.",
   },
   {
     q: "Puis-je choisir le style de décoration ?",
     a: "Oui. Vous choisissez parmi 5 styles (Scandinave, Moderne, Classique, Industriel, Bohème) lors de votre commande. Notre expert sélectionne ensuite la meilleure option pour chaque pièce.",
   },
   {
-    q: "Qui est l'expert qui valide ?",
+    q: "Qui est l'expert qui valide les résultats ?",
     a: "Notre équipe interne de spécialistes en home staging vérifie la qualité de chaque résultat : cohérence du mobilier, perspective, éclairage. Vous ne recevez que des résultats impeccables.",
   },
   {
-    q: "Puis-je essayer sans engagement ?",
-    a: "Oui. Le pack Particulier à 39€ (1 bien) vous permet de tester le service complet sans engagement. Si le résultat vous convainc, passez à un pack plus avantageux.",
+    q: "Puis-je utiliser les images dans mes annonces ?",
+    a: "Absolument. Tous les visuels livrés vous appartiennent et peuvent être utilisés librement dans vos annonces immobilières, sur les portails et sur les réseaux sociaux.",
   },
   {
-    q: "Que se passe-t-il si le résultat ne me convient pas ?",
-    a: "Notre expert peut relancer la génération avec un prompt ajusté. Nous ne livrons que des résultats qui répondent à nos standards de qualité.",
+    q: "Quels formats de fichiers sont livrés ?",
+    a: "Photos en haute résolution (JPEG), vidéos en MP4 (format paysage pour annonces, format vertical pour Reels/Stories). Tous les fichiers sont optimisés pour le web.",
+  },
+  {
+    q: "Et si le résultat ne me convient pas ?",
+    a: "Notre expert peut relancer la génération avec un prompt ajusté. Nous ne livrons que des résultats conformes à nos standards de qualité.",
+  },
+  {
+    q: "Y a-t-il un engagement minimum ?",
+    a: "Non. Les packs par bien sont sans engagement. Vous payez uniquement ce que vous consommez. Les abonnements sont mensuels et résiliables à tout moment.",
   },
 ];
 
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-border/60">
+    <div className="border-b border-border/60 last:border-b-0">
       <button
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between py-5 text-left cursor-pointer group"
+        aria-expanded={open}
       >
         <span className="text-base font-medium pr-4 group-hover:text-badge-gold-text transition-colors">
           {q}
         </span>
-        <ChevronRight
+        <ChevronDown
           className={`h-5 w-5 shrink-0 text-muted transition-transform duration-300 ${
-            open ? "rotate-90" : ""
+            open ? "rotate-180" : ""
           }`}
+          aria-hidden="true"
         />
       </button>
-      <div
-        className={`overflow-hidden transition-all duration-300 ${
-          open ? "max-h-48 pb-5" : "max-h-0"
-        }`}
-      >
-        <p className="text-sm leading-relaxed text-muted">{a}</p>
-      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as const }}
+            className="overflow-hidden"
+          >
+            <p className="pb-5 text-sm leading-relaxed text-muted">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 export default function FAQSection() {
   return (
-    <section id="faq" className="py-24 px-6 lg:py-32 border-t border-border/50 bg-surface/20">
+    <section id="faq" className="py-24 px-6 lg:py-32 border-t border-border">
       <div className="mx-auto max-w-3xl">
         <motion.div
           initial="hidden"
@@ -90,7 +106,7 @@ export default function FAQSection() {
           </p>
         </motion.div>
 
-        <div className="rounded-2xl border border-border/60 bg-surface/40 px-6 backdrop-blur-sm">
+        <div className="rounded-2xl border border-border bg-surface/40 px-6">
           {FAQS.map((faq) => (
             <FAQItem key={faq.q} q={faq.q} a={faq.a} />
           ))}

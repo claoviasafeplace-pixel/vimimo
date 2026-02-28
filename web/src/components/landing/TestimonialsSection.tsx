@@ -17,28 +17,28 @@ const TESTIMONIALS = [
     name: "Sophie M.",
     role: "Agent immobilier, Lyon",
     quote:
-      "J'uploade mes photos le matin, je reçois tout le lendemain. La qualité est irréprochable grâce à la validation par un expert.",
+      "Je reçois mes visuels le lendemain. La qualité est irréprochable grâce à la validation par un expert. Mes mandants sont bluffés.",
     stars: 5,
   },
   {
     name: "Thomas D.",
-    role: "Agent indépendant, Paris",
+    role: "Mandataire indépendant, Paris",
     quote:
-      "Avant je passais des heures sur le staging. Maintenant je commande et je reçois un résultat premium sans effort.",
+      "Avant je perdais des heures à essayer de valoriser mes annonces. Maintenant j'envoie mes photos et tout est prêt — c'est un game changer.",
     stars: 5,
   },
   {
     name: "Claire B.",
     role: "Directrice d'agence, Bordeaux",
     quote:
-      "Le fait qu'un expert valide chaque résultat change tout. Aucun risque de staging bancal envoyé aux clients.",
+      "Depuis qu'on utilise VIMIMO, nos biens vides reçoivent 3x plus de demandes de visite. Le ROI est immédiat.",
     stars: 5,
   },
 ];
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-24 px-6 lg:py-32 border-t border-border/50 bg-surface/20">
+    <section className="py-24 px-6 lg:py-32 border-t border-border bg-surface/30">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial="hidden"
@@ -54,7 +54,7 @@ export default function TestimonialsSection() {
             Ils nous font <span className="text-gradient-gold">confiance</span>
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-muted">
-            Ce que disent les professionnels de l&apos;immobilier qui utilisent VIMIMO.
+            Ce que disent les professionnels de l&apos;immobilier qui utilisent VIMIMO au quotidien.
           </p>
         </motion.div>
 
@@ -67,18 +67,18 @@ export default function TestimonialsSection() {
               viewport={{ once: true, margin: "-60px" }}
               custom={i}
               variants={fadeUp}
-              className="rounded-2xl border border-border/60 bg-surface/40 p-7 backdrop-blur-sm"
+              className="rounded-2xl border border-border bg-background p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[rgba(28,25,23,0.04)]"
             >
-              <div className="flex gap-0.5 mb-4">
+              <div className="flex gap-0.5 mb-4" aria-label={`${t.stars} étoiles sur 5`}>
                 {Array.from({ length: t.stars }).map((_, j) => (
-                  <Star key={j} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <Star key={j} className="h-4 w-4 fill-amber-500 text-amber-500" aria-hidden="true" />
                 ))}
               </div>
               <p className="text-sm leading-relaxed text-feature-text italic">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <div className="mt-5 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-gold text-sm font-bold text-zinc-900">
+              <div className="mt-6 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-gold text-sm font-bold text-white">
                   {t.name[0]}
                 </div>
                 <div>

@@ -358,7 +358,7 @@ export const autoStaging = inngest.createFunction(
             }
           }));
 
-        const allDone = proj.rooms.every((r) => !!r.videoUrl || r.videoUrl === "");
+        const allDone = proj.rooms.every((r) => r.videoUrl !== undefined);
         await saveProject(proj);
         return allDone;
       });
