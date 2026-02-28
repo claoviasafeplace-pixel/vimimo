@@ -461,7 +461,9 @@ export const autoStaging = inngest.createFunction(
               return true;
             } else if (status.status === "error") {
               console.error(`[auto-staging] Render ${renderId} failed: ${status.error}`);
-              proj.phase = "done";
+              proj.phase = "error";
+              proj.error = `Échec du rendu vidéo: ${status.error || "erreur inconnue"}`;
+              await autoRefund(proj);
               await saveProject(proj);
               return true;
             }

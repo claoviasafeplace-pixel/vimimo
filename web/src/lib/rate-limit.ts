@@ -45,6 +45,8 @@ export const RATE_LIMITS = {
   AI_PIPELINE: { max: 3, windowMs: 60_000 },
   /** Replicate polling: 30 per minute */
   REPLICATE_POLL: { max: 30, windowMs: 60_000 },
+  /** Auth routes (register, forgot/reset password): 5 per 15 minutes */
+  AUTH: { max: 5, windowMs: 900_000 },
   /** General API: 30 per minute */
   GENERAL: { max: 30, windowMs: 60_000 },
 } as const;

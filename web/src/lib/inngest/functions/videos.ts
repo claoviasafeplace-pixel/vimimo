@@ -121,16 +121,21 @@ export const videosPoll = inngest.createFunction(
             await saveProject(proj);
             return true;
           } else if (renderStatus.status === "error") {
-            console.error(`Remotion render ${proj.remotionRenderId} failed`);
-            proj.phase = "done";
+            console.error(`Remotion render ${proj.remotionRenderId} failed:`, renderStatus.error);
+            proj.phase = "error";
+            proj.error = `Échec du rendu vidéo: ${renderStatus.error || "erreur inconnue"}`;
+            if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
+              try {
+                await refundCredits(proj.userId, proj.creditsUsed, proj.id, `Remboursement auto — rendu échoué`);
+                proj.creditsRefunded = true;
+              } catch (e) { console.error("[videos] Auto-refund failed:", e); }
+            }
             await saveProject(proj);
             return true;
           }
         } catch (error) {
           console.error("Remotion render status check failed:", error);
-          proj.phase = "done";
-          await saveProject(proj);
-          return true;
+          // Transient error — retry instead of marking as done
         }
         return false;
       });

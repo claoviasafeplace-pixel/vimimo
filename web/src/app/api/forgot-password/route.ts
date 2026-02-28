@@ -2,8 +2,18 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { getSupabase } from "@/lib/supabase";
 import { forgotPasswordSchema } from "@/lib/validations";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`auth:forgot:${ip}`, RATE_LIMITS.AUTH);
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: "Trop de tentatives. Réessayez dans quelques minutes." },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

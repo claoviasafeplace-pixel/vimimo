@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject } from "@/lib/store";
+import { getProject, saveProject, refundCredits } from "@/lib/store";
 import { getRenderStatus, downloadRender } from "@/lib/services/remotion";
 import { uploadBuffer } from "@/lib/services/storage";
 
@@ -29,16 +29,21 @@ export const renderPoll = inngest.createFunction(
             await saveProject(proj);
             return true;
           } else if (renderStatus.status === "error") {
-            console.error(`[render-poll] Remotion render ${proj.remotionRenderId} failed`);
-            proj.phase = "done";
+            console.error(`[render-poll] Remotion render ${proj.remotionRenderId} failed:`, renderStatus.error);
+            proj.phase = "error";
+            proj.error = `Échec du rendu vidéo: ${renderStatus.error || "erreur inconnue"}`;
+            if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
+              try {
+                await refundCredits(proj.userId, proj.creditsUsed, proj.id, `Remboursement auto — rendu échoué`);
+                proj.creditsRefunded = true;
+              } catch (e) { console.error("[render-poll] Auto-refund failed:", e); }
+            }
             await saveProject(proj);
             return true;
           }
         } catch (error) {
           console.error(`[render-poll] Render status check failed for ${proj.remotionRenderId}:`, error);
-          proj.phase = "done";
-          await saveProject(proj);
-          return true;
+          // Transient error — retry instead of marking as done
         }
         return false;
       });

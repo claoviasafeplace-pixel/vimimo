@@ -3,8 +3,18 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { getSupabase } from "@/lib/supabase";
 import { registerSchema } from "@/lib/validations";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`auth:register:${ip}`, RATE_LIMITS.AUTH);
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: "Trop de tentatives. Réessayez dans quelques minutes." },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
