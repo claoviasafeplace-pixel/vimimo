@@ -38,7 +38,18 @@ export async function requireProjectOwner(
     };
   }
 
-  if (project.userId && project.userId !== result.session.user.id) {
+  // SEC-1.2: Block access to projects without userId (guest orders) unless admin
+  if (!project.userId) {
+    const isAdmin = (result.session.user as { isAdmin?: boolean }).isAdmin === true;
+    if (!isAdmin) {
+      return {
+        error: NextResponse.json(
+          { error: "Accès interdit" },
+          { status: 403 }
+        ),
+      };
+    }
+  } else if (project.userId !== result.session.user.id) {
     return {
       error: NextResponse.json(
         { error: "Accès interdit" },

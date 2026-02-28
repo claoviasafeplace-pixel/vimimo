@@ -21,8 +21,17 @@ async function resolveWatermark(userId?: string): Promise<{ type: WatermarkType;
 }
 
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
-const RENDER_SECRET = process.env.RENDER_SECRET || "vimimo-dev-secret";
 const REMOTION_TIMEOUT = 30_000; // 30 seconds
+
+/** Lazy-evaluated render secret — throws at call time (not import time) in prod if missing */
+function getRenderSecret(): string {
+  const secret = process.env.RENDER_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("RENDER_SECRET must be set in production");
+  }
+  return "vimimo-dev-secret";
+}
 
 interface RenderResponse {
   id: string;
@@ -68,7 +77,7 @@ export async function startRender(project: Project): Promise<string> {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${RENDER_SECRET}`,
+          Authorization: `Bearer ${getRenderSecret()}`,
         },
         body: JSON.stringify({
           compositionId: "PropertyShowcase",
@@ -91,7 +100,7 @@ export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
   return withCircuitBreaker("remotion", () =>
     withRetry(async () => {
       const response = await fetch(`${REMOTION_URL}/renders/${renderId}`, {
-        headers: { Authorization: `Bearer ${RENDER_SECRET}` },
+        headers: { Authorization: `Bearer ${getRenderSecret()}` },
         signal: AbortSignal.timeout(REMOTION_TIMEOUT),
       });
       if (!response.ok) {
@@ -104,7 +113,7 @@ export async function getRenderStatus(renderId: string): Promise<RenderStatus> {
 
 export async function downloadRender(renderId: string): Promise<Buffer> {
   const response = await fetch(`${REMOTION_URL}/renders/${renderId}/download`, {
-    headers: { Authorization: `Bearer ${RENDER_SECRET}` },
+    headers: { Authorization: `Bearer ${getRenderSecret()}` },
     signal: AbortSignal.timeout(120_000), // 2 min for download
   });
   if (!response.ok) {
@@ -164,7 +173,7 @@ export async function startStudioRender(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${RENDER_SECRET}`,
+          Authorization: `Bearer ${getRenderSecret()}`,
         },
         body: JSON.stringify({
           compositionId: "StudioMontage",
@@ -216,7 +225,7 @@ export async function startSocialRender(project: Project): Promise<string> {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${RENDER_SECRET}`,
+          Authorization: `Bearer ${getRenderSecret()}`,
         },
         body: JSON.stringify({
           compositionId: "SocialMontage",

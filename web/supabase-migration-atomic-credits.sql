@@ -1,6 +1,7 @@
 -- Atomic credit decrement: returns new balance, or -1 if insufficient
 -- Prevents race conditions / double-spend
-CREATE OR REPLACE FUNCTION decrement_credits(p_user_id UUID, p_amount INT)
+-- PIPE-1.2 FIX: Changed UUID → TEXT to match users.id type (nanoid)
+CREATE OR REPLACE FUNCTION decrement_credits(p_user_id TEXT, p_amount INT)
 RETURNS INT
 LANGUAGE plpgsql
 AS $$
@@ -33,8 +34,8 @@ BEGIN
 END;
 $$;
 
--- Atomic credit increment (if not already created)
-CREATE OR REPLACE FUNCTION increment_credits(user_id UUID, delta INT)
+-- PIPE-1.2 FIX: Changed UUID → TEXT to match users.id type (nanoid)
+CREATE OR REPLACE FUNCTION increment_credits(user_id TEXT, delta INT)
 RETURNS INT
 LANGUAGE plpgsql
 AS $$

@@ -23,6 +23,23 @@ function getClient() {
   return new OpenAI({ timeout: OPENAI_TIMEOUT });
 }
 
+/** Clean markdown code fences from GPT responses and parse as JSON.
+ *  Throws a retryable error (with status 500) so withRetry will retry. */
+function parseGptJson<T = unknown>(raw: string): T {
+  let cleaned = raw.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Make it retryable by giving it a status code that withRetry recognizes
+    const err = new Error(`GPT returned invalid JSON: ${cleaned.substring(0, 200)}`);
+    (err as unknown as { status: number }).status = 500;
+    throw err;
+  }
+}
+
 export async function analyzeGlobalProperty(
   photoUrls: { index: number; url: string }[],
   style: string,
@@ -59,12 +76,9 @@ export async function analyzeGlobalProperty(
         ],
       });
 
-      let raw = response.choices[0].message.content?.trim() || "";
-      if (raw.startsWith("```")) {
-        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
-      const parsed = JSON.parse(raw);
-      return parsed.globalContext as string;
+      const raw = response.choices[0].message.content?.trim() || "";
+      const parsed = parseGptJson<{ globalContext: string }>(raw);
+      return parsed.globalContext;
     }, OPENAI_RETRY),
   );
 
@@ -141,11 +155,8 @@ export async function analyzePhotos(
         ],
       });
 
-      let raw = response.choices[0].message.content?.trim() || "";
-      if (raw.startsWith("```")) {
-        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
-      return JSON.parse(raw);
+      const raw = response.choices[0].message.content?.trim() || "";
+      return parseGptJson<VisionAnalysis>(raw);
     }, OPENAI_RETRY),
   );
 
@@ -203,11 +214,8 @@ export async function triagePhotos(
         ],
       });
 
-      let raw = response.choices[0].message.content?.trim() || "";
-      if (raw.startsWith("```")) {
-        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
-      return JSON.parse(raw);
+      const raw = response.choices[0].message.content?.trim() || "";
+      return parseGptJson<TriageResult>(raw);
     }, OPENAI_RETRY),
   );
 
@@ -275,11 +283,8 @@ export async function generateStagingPrompts(
         ],
       });
 
-      let raw = response.choices[0].message.content?.trim() || "";
-      if (raw.startsWith("```")) {
-        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
-      return JSON.parse(raw);
+      const raw = response.choices[0].message.content?.trim() || "";
+      return parseGptJson<StagingPrompts>(raw);
     }, OPENAI_RETRY),
   );
 
@@ -342,11 +347,8 @@ Génère les descriptions Instagram et TikTok.`;
         ],
       });
 
-      let raw = response.choices[0].message.content?.trim() || "";
-      if (raw.startsWith("```")) {
-        raw = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
-      return JSON.parse(raw);
+      const raw = response.choices[0].message.content?.trim() || "";
+      return parseGptJson<DescriptionResult>(raw);
     }, OPENAI_RETRY),
   );
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Film, Image } from "lucide-react";
+import { Film, Image as ImageIcon } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,15 +15,15 @@ const fadeUp = {
 
 const COMPARISONS = [
   {
-    before: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/Before-Empty-Livingroom-1.jpeg",
-    after: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/After-Virtually-Staged-Livingroom-in-Standard-Style-1.png",
+    before: "/images/staging/before-salon.jpg",
+    after: "/images/staging/after-salon.png",
     label: "Salon — Staging Contemporain",
     beforeText: "Pièce vide, difficile de se projeter",
     afterText: "Salon chaleureux, prêt à déclencher le coup de cœur",
   },
   {
-    before: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/Before-Empty-Master-BedRoom-1.jpeg",
-    after: "https://instahomevirtualstaging.com/wp-content/uploads/2024/10/After-Virtually-Staged-Bedroom-in-Standard-Style-1.webp",
+    before: "/images/staging/before-chambre.jpg",
+    after: "/images/staging/after-chambre.webp",
     label: "Chambre — Staging Scandinave",
     beforeText: "Chambre vide, sans âme",
     afterText: "Ambiance cosy et lumineuse, envie d'y vivre",
@@ -88,10 +88,10 @@ function BeforeAfterSlider({ before, after, label, beforeText, afterText }: {
         }}
       >
         {/* After (background) */}
-        <img src={after} alt={`Après staging IA — ${afterText}`} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+        <img src={after} alt={`Après staging IA — ${afterText}`} width={800} height={600} loading="lazy" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         {/* Before (clipped) */}
         <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
-          <img src={before} alt={`Avant — ${beforeText}`} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+          <img src={before} alt={`Avant — ${beforeText}`} width={800} height={600} loading="lazy" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         </div>
         {/* Divider */}
         <div
@@ -196,7 +196,7 @@ export default function BeforeAfterSection() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface/50 px-5 py-3 backdrop-blur-sm">
-              <Image className="h-5 w-5 text-icon-accent shrink-0" aria-hidden="true" />
+              <ImageIcon className="h-5 w-5 text-icon-accent shrink-0" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">Reels & stories prêts</p>
                 <p className="text-xs text-muted">Format vertical pour Instagram & TikTok</p>

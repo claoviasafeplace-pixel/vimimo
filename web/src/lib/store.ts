@@ -14,22 +14,25 @@ import type {
 
 export async function getProject(id: string): Promise<Project | null> {
   const db = getSupabase();
-  const { data } = await db
+  const { data, error } = await db
     .from("projects")
     .select("data")
     .eq("id", id)
     .single();
+  // PGRST116 = row not found — that's a valid null, any other error should throw
+  if (error && error.code !== "PGRST116") throw error;
   return data?.data ?? null;
 }
 
 export async function saveProject(project: Project): Promise<void> {
   const db = getSupabase();
-  await db.from("projects").upsert({
+  const { error } = await db.from("projects").upsert({
     id: project.id,
     user_id: project.userId ?? null,
     data: project,
     updated_at: new Date().toISOString(),
   });
+  if (error) throw error;
 }
 
 export async function updateProject(
@@ -288,7 +291,7 @@ async function recordTransaction(
     createdAt: Date.now(),
   };
 
-  await db.from("credit_transactions").insert({
+  const { error } = await db.from("credit_transactions").insert({
     id: tx.id,
     user_id: tx.userId,
     type: tx.type,
@@ -298,6 +301,7 @@ async function recordTransaction(
     stripe_session_id: tx.stripeSessionId ?? null,
     description: tx.description,
   });
+  if (error) throw error;
 
   return tx;
 }

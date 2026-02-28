@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { getPredictionStatus } from "@/lib/services/replicate";
+import { getPredictionMap, getProject } from "@/lib/store";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
@@ -21,6 +22,16 @@ export async function GET(
     if (authResult.error) return authResult.error;
 
     const { id } = await params;
+
+    // SEC-1.1: Verify prediction belongs to a project owned by the user
+    const mapping = await getPredictionMap(id);
+    if (mapping) {
+      const project = await getProject(mapping.projectId);
+      if (project && project.userId && project.userId !== authResult.session.user.id) {
+        return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
+      }
+    }
+
     const status = await getPredictionStatus(id);
     return NextResponse.json(status);
   } catch (error) {

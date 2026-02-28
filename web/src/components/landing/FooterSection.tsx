@@ -111,9 +111,9 @@ export default function FooterSection() {
                 Légal
               </h4>
               <ul className="space-y-2.5">
-                <li><span className="text-sm text-muted">Mentions légales</span></li>
-                <li><span className="text-sm text-muted">Politique de confidentialité</span></li>
-                <li><span className="text-sm text-muted">CGV</span></li>
+                <li><Link href="/mentions-legales" className="text-sm text-muted transition-colors hover:text-foreground">Mentions légales</Link></li>
+                <li><Link href="/confidentialite" className="text-sm text-muted transition-colors hover:text-foreground">Politique de confidentialité</Link></li>
+                <li><Link href="/cgv" className="text-sm text-muted transition-colors hover:text-foreground">CGV</Link></li>
               </ul>
             </div>
           </div>
