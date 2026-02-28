@@ -23,6 +23,7 @@ import {
   ImageIcon,
   ThumbsUp,
   ThumbsDown,
+  Wand2,
 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -31,6 +32,7 @@ import StatCard from "@/components/admin/StatCard";
 import ProjectsTable, { type ProjectRow } from "@/components/admin/ProjectsTable";
 import KanbanBoard from "@/components/admin/KanbanBoard";
 import OrderDetailPanel from "@/components/admin/OrderDetailPanel";
+import StudioPanel from "@/components/admin/StudioPanel";
 import type { ProjectSummary } from "@/lib/store";
 import type { AdminKanbanStatus } from "@/lib/types";
 
@@ -116,7 +118,7 @@ interface PaginatedProject {
   created_at: string;
 }
 
-type Tab = "overview" | "projects" | "pipeline" | "orders";
+type Tab = "overview" | "projects" | "pipeline" | "orders" | "studio";
 
 // ============================================
 // Tabs config
@@ -127,6 +129,7 @@ const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: "projects", label: "Projets", icon: FolderKanban },
   { id: "pipeline", label: "Pipeline", icon: Activity },
   { id: "orders", label: "Commandes", icon: ShoppingBag },
+  { id: "studio", label: "Studio", icon: Wand2 },
 ];
 
 const PHASE_OPTIONS = [
@@ -174,6 +177,10 @@ export default function AdminDashboard() {
   const [ordersData, setOrdersData] = useState<Record<AdminKanbanStatus, ProjectSummary[]> | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Studio tab state
+  const [studioProjectId, setStudioProjectId] = useState<string | null>(null);
+  const [studioInput, setStudioInput] = useState("");
 
   // Auth redirect
   useEffect(() => {
@@ -1022,6 +1029,103 @@ export default function AdminDashboard() {
                 onRegenerate={handleOrderRegenerate}
                 onStatusChange={handleOrderStatusChange}
               />
+            )}
+          </div>
+        )}
+
+        {/* ========== TAB 5: Studio ========== */}
+        {tab === "studio" && (
+          <div>
+            {studioProjectId ? (
+              <StudioPanel
+                projectId={studioProjectId}
+                onClose={() => setStudioProjectId(null)}
+              />
+            ) : (
+              <div className="max-w-lg mx-auto space-y-6 py-8">
+                <div className="text-center">
+                  <Wand2 className="mx-auto h-12 w-12 text-amber-400 mb-3" />
+                  <h2 className="text-xl font-bold mb-2">Studio de Création</h2>
+                  <p className="text-sm text-muted">
+                    Entrez l&apos;ID d&apos;un projet pour traiter ses médias : retirer les meubles, générer le staging IA, créer les vidéos.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={studioInput}
+                    onChange={(e) => setStudioInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && studioInput.trim()) {
+                        setStudioProjectId(studioInput.trim());
+                      }
+                    }}
+                    placeholder="ID du projet (ex: abc12345-...)"
+                    className="flex-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-amber-500/50"
+                  />
+                  <Button
+                    variant="primary"
+                    disabled={!studioInput.trim()}
+                    onClick={() => setStudioProjectId(studioInput.trim())}
+                  >
+                    <Wand2 className="mr-1.5 h-4 w-4" />
+                    Ouvrir
+                  </Button>
+                </div>
+
+                {/* Quick access from recent/active projects */}
+                {stats.activeProjects.projects.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">Projets actifs</h3>
+                    <div className="space-y-2">
+                      {stats.activeProjects.projects.slice(0, 8).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { setStudioInput(p.id); setStudioProjectId(p.id); }}
+                          className="w-full flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm hover:border-amber-500/30 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs">{p.id.slice(0, 8)}</span>
+                            <PhaseBadge phase={p.phase} />
+                            <span className="text-xs text-muted">{p.roomCount} pièce{p.roomCount > 1 ? "s" : ""}</span>
+                          </div>
+                          <span className="text-xs text-muted">
+                            {new Date(p.createdAt).toLocaleDateString("fr-FR", {
+                              day: "numeric", month: "short",
+                            })}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Also show recent projects */}
+                {stats.recentProjects.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">Projets récents</h3>
+                    <div className="space-y-2">
+                      {stats.recentProjects.slice(0, 5).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { setStudioInput(p.id); setStudioProjectId(p.id); }}
+                          className="w-full flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm hover:border-amber-500/30 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs">{p.id.slice(0, 8)}</span>
+                            <PhaseBadge phase={p.phase} />
+                            <span className="text-xs text-muted">{p.roomCount} pièce{p.roomCount > 1 ? "s" : ""}</span>
+                          </div>
+                          <span className="text-xs text-muted">
+                            {p.userEmail || "invité"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
