@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -66,13 +67,14 @@ export default function FooterSection() {
         <div className="mx-auto max-w-7xl px-6 py-16">
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
             <div className="lg:col-span-1">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
-                  <Sparkles className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-                </div>
-                <span className="text-lg font-bold tracking-wide text-gradient-gold" style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}>
-                  VIMIMO
-                </span>
+              <div className="mb-4">
+                <Image
+                  src="/logo-vimimo.png"
+                  alt="VIMIMO"
+                  width={120}
+                  height={32}
+                  className="h-8 w-auto"
+                />
               </div>
               <p className="text-sm leading-relaxed text-muted max-w-xs">
                 Home staging virtuel par IA avec validation expert.

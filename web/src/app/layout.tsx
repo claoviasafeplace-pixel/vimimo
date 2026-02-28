@@ -19,23 +19,31 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://vimimo.fr"),
   title: {
-    default: "VIMIMO — Virtual Staging IA",
+    default: "VIMIMO — Home Staging Virtuel par IA",
     template: "%s | VIMIMO",
   },
   description:
-    "Transformez vos photos de pièces vides en vidéos de staging professionnel grâce à l'intelligence artificielle.",
+    "Transformez vos photos de biens immobiliers en présentations irrésistibles. Staging IA + vidéo + validation expert. Livraison sous 24h.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     type: "website",
     siteName: "VIMIMO",
-    title: "VIMIMO — Virtual Staging IA",
+    title: "VIMIMO — Home Staging Virtuel par IA",
     description:
-      "Transformez vos photos de pièces vides en vidéos de staging professionnel grâce à l'IA.",
+      "Transformez vos photos de biens immobiliers en présentations irrésistibles. Staging IA + vidéo + validation expert.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "VIMIMO — Virtual Staging IA",
+    title: "VIMIMO — Home Staging Virtuel par IA",
     description:
-      "Transformez vos photos de pièces vides en vidéos de staging professionnel grâce à l'IA.",
+      "Transformez vos photos de biens immobiliers en présentations irrésistibles. Staging IA + vidéo + validation expert.",
   },
 };
 

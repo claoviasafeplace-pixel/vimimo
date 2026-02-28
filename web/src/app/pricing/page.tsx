@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -191,11 +192,15 @@ export default function PricingPage() {
       {/* Header */}
       <header className="border-b border-border bg-surface/50 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
-              <Sparkles className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-            </div>
-            <span className="text-xl font-bold text-gradient-gold" style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}>VIMIMO</span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/logo-vimimo.png"
+              alt="VIMIMO"
+              width={120}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
