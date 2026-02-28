@@ -25,6 +25,15 @@ Be EXTREMELY specific and factual. Describe what you SEE, not what you imagine. 
 
 export const BATCH_VISION_SYSTEM_PROMPT = `Tu es un expert en analyse immobilière. Pour CHAQUE photo, analyse la pièce.
 
+RÈGLE CRITIQUE D'IDENTIFICATION — tu DOIS utiliser ces indices visuels :
+- Si tu vois un LIT, un SOMMIER, un MATELAS, ou des DRAPS → c'est une CHAMBRE (bedroom), JAMAIS un salon
+- Si tu vois un CANAPÉ, un FAUTEUIL, une TABLE BASSE, une TV → c'est un SALON (living_room)
+- Si tu vois un ÉVIER, un FOUR, des PLAQUES, un FRIGO → c'est une CUISINE (kitchen)
+- Si tu vois une DOUCHE, une BAIGNOIRE, un LAVABO, des WC → c'est une SALLE DE BAIN (bathroom)
+- Si tu vois un BUREAU, un ORDINATEUR → c'est un BUREAU (office)
+- Si tu vois une TABLE avec des CHAISES autour (pas un bureau) → c'est un COIN REPAS (dining_room)
+- En cas de doute sur un meuble retiré, observe la TAILLE de la pièce et la position des prises : une petite pièce ~10-15m² avec une seule fenêtre est probablement une chambre
+
 Réponds en JSON valide :
 {
   "propertyType": "apartment"|"house"|"commercial",
@@ -38,7 +47,7 @@ Réponds en JSON valide :
       "lighting": { "naturalLight": "good", "windowCount": 2, "lightDirection": "south" },
       "cameraAngle": { "perspective": "corner wide", "height": "eye level", "orientation": "landscape" },
       "stagingPriority": "high"|"medium"|"low",
-      "notes": "specific observations"
+      "notes": "specific observations — mention ANY remaining furniture clues (bed frame, sofa, appliances) even if partially removed"
     }
   ],
   "overallNotes": "general observations"
@@ -46,82 +55,54 @@ Réponds en JSON valide :
 
 photoIndex must match image order (1-based). One room per photo. Reply ONLY valid JSON, no markdown fences.`;
 
-export const STAGING_PROMPT_SYSTEM = `You are a WORLD-CLASS INTERIOR DESIGNER writing image editing prompts for Flux Kontext Pro. You stage empty rooms to look like they belong in Architectural Digest — the kind of staging that makes buyers emotionally fall in love with a property.
+export const STAGING_PROMPT_SYSTEM = `You write image-editing prompts for Flux Kontext Pro to stage empty rooms. Each prompt must be a SINGLE DENSE PARAGRAPH of 120-180 words listing ONLY objects to add.
 
-You will receive a PHOTO of an empty room. Analyze it carefully: the exact wall colors, floor material, window positions, door locations, ceiling type, lighting conditions, and camera perspective.
+FORMAT (follow EXACTLY):
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. [FURNITURE + DECOR — 120-180 words of items to add]. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
 
-Then write 5 EDITING prompts that add PREMIUM furniture and FULL decorator-level styling.
+MANDATORY ITEM CHECKLIST — every prompt MUST include ALL of these:
+□ PRIMARY FURNITURE: 2-3 main pieces with exact material + color + texture + position (e.g. "a deep-seated cognac distressed leather Chesterfield sofa with brass rivets along the back wall")
+□ SECONDARY FURNITURE: 1-2 accent pieces (armchair, bench, console, side table) with full description
+□ RUG: material + color + pattern + size (e.g. "a large 8x10 hand-knotted vintage Persian rug in faded rose and indigo")
+□ LIGHTING × 2: two different light sources with material + shade description
+□ ART ON WALLS: painting or prints with subject + frame + size
+□ PLANTS × 2: species + pot description
+□ STYLED SURFACES: every table/nightstand MUST have 3-4 objects ON it (books, candle, vase with flowers, tray, ceramics)
+□ TEXTILES: throw blanket + 3-4 cushions with fabric + color + curtains if windows visible
 
-CRITICAL — WHAT MAKES A GOOD vs BAD PROMPT:
+WHAT DESTROYS IMAGES (never do this):
+- Describing room structure (walls, floor, ceiling, windows) → CAUSES DISTORTION
+- Vague items ("a lamp", "a sofa", "a plant") → AI generates blobs
+- Too few items → room stays 80% empty, looks worse than unfurnished
 
-BAD (too generic, no design):
-"Edit this exact photo... Add a bed along the back wall with nightstands and a lamp. Add a rug on the floor. Keep all walls..."
+SPATIAL FILLING RULE (CRITICAL):
+Estimate the room size from the photo. The staging must FILL the room proportionally:
+- Small room (10-15m²): 1 primary + 1 secondary furniture piece, cover 60% of visible floor with rug + objects
+- Medium room (15-25m²): 2 primary + 1-2 secondary pieces, create a cohesive seating/sleeping area
+- Large room (25m²+): create 2 DISTINCT ZONES (e.g. seating area + reading nook, or seating + dining). A single sofa in a 40m² room is ALWAYS wrong.
 
-BAD (just furniture, no decoration):
-"Edit this exact photo... Add a gray sofa facing the window, a coffee table, and an armchair. Keep all walls..."
+ROOM TYPE RULES:
+- BEDROOM: primary = bed (always include headboard + bedding layers + pillows), secondary = nightstands + bench/chair
+- LIVING ROOM: primary = sofa + coffee table, secondary = armchair + side table. ALWAYS include a media/bookshelf area if wall space allows.
+- KITCHEN: only counter styling + bar stools + pendant lights + small appliances + herbs
+- BATHROOM: only towels + bath accessories + candles + small plants
+- HALLWAY: only console + mirror + runner rug + hooks
 
-GOOD (specific design, rich decoration, layered):
-"Edit this exact photo... Add a deep emerald velvet sofa with gold legs along the back wall, a round white marble coffee table with stacked Assouline books and a brass candle holder, a cream boucle armchair to the right, a large ivory hand-knotted wool rug anchoring the seating area, a tall brass arc floor lamp behind the sofa, a gallery wall of three framed black-and-white photography prints above the sofa, a fiddle leaf fig in a woven seagrass basket in the corner by the window, and sage green linen curtains softly pooling on the floor. Keep all walls..."
+ANTI-DISTORTION:
+1. NEVER mention walls, floor, windows, ceiling, or doors in the furniture section
+2. Reference positions from the photo ("along the back wall", "to the right of the window", "in the far-left corner")
+3. Furniture must obey gravity — feet flat on floor, no floating, no clipping through pillars/islands
+4. If fixed structures exist (pillars, islands, built-in units), place furniture AROUND them
 
-GOOD (bedroom example):
-"Edit this exact photo... Add a king-size bed with an upholstered sand linen headboard centered on the back wall, layered bedding with white linen duvet, camel cashmere throw folded at the foot, and four textured cushions in ivory and terracotta, matching oak nightstands on each side with ceramic table lamps with linen drum shades, a large abstract warm-toned oil painting above the headboard, a plush cream wool rug under the bed, a small olive tree in a ribbed ceramic pot by the window, and a rattan bench at the foot of the bed with a folded herringbone blanket. Keep all walls..."
+VARIETY across 5 prompts:
+- Prompt 1: SIGNATURE hero shot — balanced, premium
+- Prompt 2: ALTERNATIVE layout — different furniture arrangement
+- Prompt 3: EDITORIAL — maximum density, styled to the inch
+- Prompt 4: WARM & LIVABLE — cozy textiles, warm tones, personal touches
+- Prompt 5: SHOWROOM LUXE — statement art, sculptural pieces, marble/brass/velvet
 
-YOUR RULES:
-- EVERY prompt must be as detailed as the GOOD examples above — list EVERY item with its material, color, and texture
-- NEVER just say "a sofa" — say "a deep-seated cognac distressed leather sofa with brass rivets"
-- NEVER just say "a lamp" — say "a sculptural brass arc floor lamp with a white linen drum shade"
-- NEVER just say "a rug" — say "a large hand-knotted vintage Persian rug in faded rose and indigo"
-- ALWAYS include ALL of these in every prompt: main furniture + rug + lighting (2 sources) + art on walls + plants + decorative objects on surfaces + textiles (throws, cushions, curtains)
-- Describe surfaces: coffee tables must have objects ON them (books, candle, vase with flowers, decorative tray)
-- Nightstands must have objects ON them (lamp, small plant, book, ceramic dish)
-- Shelves must be STYLED (books, ceramics, small art, plant)
-
-DIRECTIONAL LIGHTING MASTERY (for rooms with natural light):
-If the room has visible windows, large glass doors, or is an exterior/balcony/terrace, you MUST use the lighting data from the STRUCTURAL INVENTORY (visionData.lighting) to craft physically accurate lighting. Apply this rule:
-- Read the "lightDirection" or "orientation" field (e.g., "south", "west", "east").
-- For Prompt 1 (GOLDEN HOUR) and Prompt 5 (SHOWROOM LUXE), add a TWILIGHT LIGHTING SENTENCE using this exact formula:
-  "Change the scene to early twilight. The sun appears to the [LEFT/RIGHT/CENTER] side of the frame based on original window orientation, casting warm-orange highlights on furniture surfaces and long gentle shadows across the floor. Well-exposed sky visible through windows, balanced interior-exterior exposure."
-- Determine LEFT vs RIGHT: if light comes from the left side of the photo, sun is LEFT. If from the right, sun is RIGHT. If the photo faces the windows directly, sun is CENTER-BEHIND.
-- For interior rooms WITHOUT visible windows or natural light (bathrooms, hallways, basements), do NOT add twilight — use warm artificial lighting instead.
-- NEVER invent a light direction. ONLY use what visionData.lighting tells you.
-
-ROOM CONTEXT LOCK (CRITICAL — violating this produces absurd results):
-You MUST respect the physical reality and function of the room type. NEVER place furniture that contradicts the room's purpose.
-- GARAGE: Do NOT add living room furniture, beds, or dining tables. Only add garage-appropriate items: luxury car, organized wall-mounted tools, sleek metal storage cabinets, epoxy-coated floor, bike rack, workbench.
-- KITCHEN: Do NOT add office chairs, beds, or sofas. Only add kitchen-appropriate items: bar stools around islands/counters, fruit bowls, cutting boards, modern small appliances, pendant lights over island, herbs in pots.
-- BATHROOM: Do NOT add sofas, desks, or bookshelves. Only add bathroom-appropriate items: fluffy towels, bath accessories, candles, small plants, bath tray, soap dispensers, vanity mirror accessories.
-- BALCONY/TERRACE: Do NOT add indoor furniture like beds or office desks. Only add outdoor-appropriate items: weather-resistant lounge chairs, outdoor dining set, planters, string lights, outdoor rug, lanterns.
-- HALLWAY/ENTRANCE: Do NOT fill with large furniture. Only add: console table, mirror, coat hooks, umbrella stand, small bench, runner rug.
-- NEVER place ANY object floating in mid-air, clipping through fixed structures (kitchen islands, pillars, countertops), or blocking doors/windows.
-- If a fixed structure occupies floor space (kitchen island, pillar, built-in bench), furniture must be placed AROUND it, never ON TOP of it or through it.
-
-ANTI-DISTORTION RULES (HIGHEST PRIORITY — violating these ruins the image):
-1. NEVER describe the room itself (walls, floor, windows, ceiling). Describing structure CAUSES DISTORTION.
-2. Walls, floor, ceiling, windows, doors must remain PIXEL-PERFECT — zero modifications.
-3. Start every prompt with: "Edit this exact photo, keep camera angle, perspective, and room structure 100% identical."
-4. End every prompt with: "Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."
-5. Reference spatial positions from the photo (e.g., "along the back wall", "in the corner by the window").
-6. Only mention furniture, rugs, artwork, plants, lamps, curtains, decorative objects. NO structural changes.
-7. ALL furniture must obey gravity — feet flat on the floor, no floating objects, no clipping through walls or fixed structures.
-8. Shadows and reflections must be CONSISTENT with existing light sources in the photo.
-9. Each prompt: 3-5 sentences between start/end. Pack maximum design detail. Specificity = quality.
-10. Generate exactly 5 prompts:
-   - Prompt 1: SIGNATURE — The hero "cover shot" staging with complete decoration
-   - Prompt 2: ALTERNATIVE — Different furniture layout, same richness of decoration
-   - Prompt 3: EDITORIAL — Maximum decor density: styled surfaces everywhere, gallery wall, abundant plants, curated objects
-   - Prompt 4: WARM & LIVABLE — Cozy premium with plush textiles, warm lighting, personal touches
-   - Prompt 5: SHOWROOM LUXE — Ultra-premium: statement art, sculptural furniture, marble/brass/velvet, dramatic lighting
-
-GLOBAL COHERENCE RULE (CRITICAL):
-You will receive a "GLOBAL PROPERTY DNA" block. This is the visual DNA of the ENTIRE property. You MUST:
-- Use the EXACT same flooring material/color described in the DNA
-- Maintain the EXACT same exterior view through windows
-- Keep the SAME architectural style and wall treatment
-- Match the SAME lighting character
-- NEVER contradict the DNA
-
-Respond in JSON: { "analysis": "Brief 1-line description of what you see", "prompts": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"] }
-No markdown, ONLY valid JSON.`;
+Respond in JSON: { "analysis": "1-line room description", "prompts": ["prompt1", "prompt2", "prompt3", "prompt4", "prompt5"] }
+ONLY valid JSON, no markdown.`;
 
 const STYLE_GUIDES: Record<string, string> = {
   scandinavian: `SCANDINAVIAN DESIGN GUIDE:
@@ -191,33 +172,37 @@ export function stagingPromptUser(
   const styleGuide = STYLE_GUIDES[style] || "";
 
   const globalBlock = globalContext
-    ? `\nGLOBAL PROPERTY DNA (STRICT — apply to this room):\n${globalContext}\nYou MUST ensure visual continuity with all other rooms: same flooring material, same wall treatment, same exterior view through windows, same lighting character. Do NOT invent different materials or exterior scenery.\n`
+    ? `\nGLOBAL PROPERTY DNA (STRICT — apply to this room):\n${globalContext}\nYou MUST ensure visual continuity: same flooring, same wall treatment, same exterior view. Do NOT invent different materials.\n`
     : "";
 
-  return `Room: ${roomType} (${roomLabel}). Style to apply: ${style} (${styleLabel}).
+  // Pick the right example based on room type
+  const isBedroomType = ["bedroom", "studio"].includes(roomType);
+  const fewShotExample = isBedroomType
+    ? `EXAMPLE of a CORRECT prompt (match this density):
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a king-size bed with an upholstered oatmeal Belgian linen headboard centered on the back wall, layered with a white stonewashed linen duvet, a folded camel cashmere throw at the foot, and four textured cushions — two in ivory boucle and two in burnt sienna velvet. Place matching solid oak nightstands on each side, each with a ceramic table lamp with a warm linen drum shade, a small potted succulent in a ribbed terracotta pot, a hardcover book, and a ceramic trinket dish. Hang a large 100x80cm abstract warm-toned oil painting in a thin black metal frame above the headboard. Lay a plush 200x300cm cream wool rug under the bed extending past the nightstands. Place a woven rattan bench at the foot of the bed with a folded herringbone wool blanket. Add a tall fiddle leaf fig in a woven seagrass basket in the corner by the window, and sheer ivory linen curtains framing the window, softly pooling on the floor. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`
+    : `EXAMPLE of a CORRECT prompt (match this density):
+"Edit this exact photo, keep camera angle, perspective, and room structure 100% identical. Add a deep-seated emerald velvet three-seater sofa with brushed brass legs along the back wall, with four cushions — two in ivory linen and two in mustard velvet. Place a round white Carrara marble coffee table with a matte brass base in front of the sofa, styled with three stacked Assouline coffee-table books, a brass candle holder with a cream pillar candle, and a small ceramic vase with dried pampas grass. Add a cream boucle accent armchair with walnut legs to the right of the sofa, angled inward. Lay a large 250x350cm hand-knotted vintage Persian rug in faded rose and indigo anchoring the entire seating area. Place a sculptural brass arc floor lamp with a white linen drum shade behind the left side of the sofa, and a ceramic table lamp with a fluted base on a slim walnut side table next to the armchair. Hang a gallery wall of three framed black-and-white photography prints in thin oak frames above the sofa. Add a large fiddle leaf fig in a woven seagrass basket in the corner by the window, and a trailing pothos on a floating shelf if wall space allows. Drape a chunky cream knit throw over one arm of the sofa, and hang sage green linen curtains softly pooling on the floor by the windows. Keep all walls, floor, windows, doors, ceiling, radiators, outlets, and light switches exactly unchanged. Photorealistic interior photography, exact room proportions, no distortion, no lens warping, camera locked."`;
+
+  const dimensions = visionData.dimensions as Record<string, string> | undefined;
+  const estimatedArea = dimensions?.estimatedArea || "unknown";
+
+  return `Room: ${roomType} (${roomLabel}). Style: ${style} (${styleLabel}). Estimated size: ${estimatedArea}.
 
 ${styleGuide}
 ${globalBlock}
-STRUCTURAL INVENTORY (from prior analysis — DO NOT modify these):
+STRUCTURAL INVENTORY (DO NOT modify these):
 ${JSON.stringify(visionData, null, 2)}
 
-Generate 5 editing prompts for this ${roomLabel}.
+${fewShotExample}
 
-MANDATORY CHECKLIST — every prompt MUST include ALL of these:
-✅ Main furniture with exact material/color/texture description
-✅ Rug with material, color, and pattern
-✅ 2 lighting sources (floor lamp + table lamp, or pendant + sconce, etc.) with material description
-✅ Art on walls (painting, prints, or mirror) with frame and subject description
-✅ At least 1 plant with exact species and pot description
-✅ Decorative objects on every surface (books, candles, vases with flowers, trays, ceramics)
-✅ Textiles: throw blanket + cushions with fabric/color + curtains if windows are visible
-✅ Every item must have: material + color + texture (never just "a lamp" or "a sofa")
-✅ For Prompt 1 and Prompt 5: if the room has windows/natural light, add a TWILIGHT SENTENCE (see Directional Lighting rules)
+YOUR TASK: Generate 5 prompts for this ${roomLabel}, each 120-180 words between the start/end markers.
 
-LIGHTING DATA FOR THIS ROOM (use this for sun direction in twilight prompts):
-${JSON.stringify(visionData.lighting || "no lighting data available", null, 2)}
-
-Use the style guide above for the exact aesthetic. Place furniture logically (avoid blocking windows/doors).`;
+HARD RULES:
+1. Each prompt MUST list 10+ distinct items with material + color + texture
+2. EVERY surface (coffee table, nightstand, shelf, console) MUST have 3-4 objects ON it
+3. Room is ~${estimatedArea} — ${parseInt(estimatedArea) > 25 ? "CREATE 2 DISTINCT ZONES (e.g. seating + reading, or seating + dining)" : "fill at least 60% of visible floor with rug + furniture"}
+4. Follow the ${styleLabel} style guide strictly
+5. Use spatial references from the photo ("along the back wall", "in the far-left corner", "between the two windows")`;
 }
 
 // ─── Video generation constants (Kling v2.1 Pro) ───
