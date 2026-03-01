@@ -201,12 +201,12 @@ export default function OrderDetailPanel({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex gap-1">
+              <div className="flex gap-1 overflow-x-auto">
                 {rooms.map((room, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveRoomIndex(idx)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                       activeRoomIndex === idx
                         ? "gradient-gold text-zinc-900"
                         : "text-muted hover:text-foreground hover:bg-surface-hover"

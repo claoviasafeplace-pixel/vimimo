@@ -7,7 +7,7 @@ import {
   generateVideo,
 } from "@/lib/services/replicate";
 import { generateStagingPrompts, analyzePhotos, analyzeGlobalProperty } from "@/lib/services/openai";
-import { startRender, startStudioRender, startSocialRender, getRenderStatus, downloadRender } from "@/lib/services/remotion";
+import { startRender, startStudioRender, getRenderStatus, downloadRender } from "@/lib/services/remotion";
 import {
   pipelinePreCheck,
   CircuitOpenError,

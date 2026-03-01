@@ -328,7 +328,7 @@ export async function addCredits(
   }
 
   // Atomic increment
-  const { data: user, error } = await db.rpc("increment_credits", {
+  const { error } = await db.rpc("increment_credits", {
     user_id: userId,
     delta: amount,
   });
