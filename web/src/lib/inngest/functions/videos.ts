@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject, refundCredits } from "@/lib/store";
+import { getProject, saveProject, autoRefundProject as autoRefund } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { startRender } from "@/lib/services/remotion";
 import { uploadFromUrl, persistFromUrl } from "@/lib/services/storage";
@@ -7,7 +7,24 @@ import { getRenderStatus } from "@/lib/services/remotion";
 import { pipelinePreCheck } from "@/lib/circuit-breaker";
 
 export const videosPoll = inngest.createFunction(
-  { id: "videos-poll", retries: 0 },
+  {
+    id: "videos-poll",
+    retries: 2,
+    onFailure: async ({ event }) => {
+      const { projectId } = event.data.event.data;
+      try {
+        const project = await getProject(projectId);
+        if (project && project.phase !== "error") {
+          project.phase = "error";
+          project.error = "Pipeline vidéo échoué après 3 tentatives";
+          await autoRefund(project);
+          await saveProject(project);
+        }
+      } catch (e) {
+        console.error("[videos-poll] onFailure handler error:", e);
+      }
+    },
+  },
   { event: "project/videos.start" },
   async ({ event, step }) => {
     const { projectId } = event.data;
@@ -82,13 +99,7 @@ export const videosPoll = inngest.createFunction(
           } else {
             proj.phase = "error";
             proj.error = "Aucune vidéo n'a pu être générée";
-            if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
-              try {
-                await refundCredits(proj.userId, proj.creditsUsed, proj.id,
-                  `Remboursement automatique — projet ${proj.id} en erreur`);
-                proj.creditsRefunded = true;
-              } catch (e) { console.error("Auto-refund failed:", e); }
-            }
+            await autoRefund(proj);
           }
         }
         await saveProject(proj);
@@ -124,12 +135,7 @@ export const videosPoll = inngest.createFunction(
             console.error(`Remotion render ${proj.remotionRenderId} failed:`, renderStatus.error);
             proj.phase = "error";
             proj.error = `Échec du rendu vidéo: ${renderStatus.error || "erreur inconnue"}`;
-            if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
-              try {
-                await refundCredits(proj.userId, proj.creditsUsed, proj.id, `Remboursement auto — rendu échoué`);
-                proj.creditsRefunded = true;
-              } catch (e) { console.error("[videos] Auto-refund failed:", e); }
-            }
+            await autoRefund(proj);
             await saveProject(proj);
             return true;
           }

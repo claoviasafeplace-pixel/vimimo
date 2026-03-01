@@ -1,34 +1,47 @@
 /**
- * AI Service — Google Gemini (Nano Banana) for images + Veo 3.1 for videos
+ * AI Service — Hybrid: Gemini (images) + Kling on Replicate (videos)
  *
- * SAME INTERFACE as the old Replicate service (replicate-lucie.ts).
- * Images are synchronous (Gemini returns result immediately) so we use
- * the "done:<url>" convention: getPredictionStatus("done:...") returns
- * succeeded instantly. Videos use Veo 3.1 async operations.
+ * Images: Gemini 2.5 Flash Image (Nano Banana) — synchronous, "done:<url>" convention.
+ * Videos: Kling v2.1 Pro on Replicate — async image-to-video with start_image + end_image.
  *
- * To revert to Replicate/Kling: copy replicate-lucie.ts back to replicate.ts
+ * This hybrid approach gives us the best of both worlds:
+ * - Fast, cheap image generation via Gemini (~6s, $0.07)
+ * - Faithful video generation via Kling (image-to-video matches the staged photo)
  */
 
+import Replicate from "replicate";
 import { nanoid } from "nanoid";
 import {
   CLEAN_PHOTO_PROMPT,
   CLEANING_QUALITY_SUFFIX,
   STAGING_QUALITY_SUFFIX,
-  veoVideoPrompt,
-  VEO_NEGATIVE_PROMPT,
-  veoSocialVideoPrompt,
-  SOCIAL_VEO_NEGATIVE_PROMPT,
+  klingVideoPrompt,
+  KLING_NEGATIVE_PROMPT,
+  klingSocialVideoPrompt,
+  SOCIAL_NEGATIVE_PROMPT,
 } from "../prompts";
 import type { ProjectMode } from "../types";
 import { withRetry, REPLICATE_RETRY } from "../retry";
 import { getSupabase } from "../supabase";
+import { savePredictionMap } from "../store";
 import { withCircuitBreaker, costGuard, trackCost } from "../circuit-breaker";
 
 // ─── Config ────────────────────────────────────────────────────────
 const GEMINI_API_KEY = () => process.env.GEMINI_API_KEY || "";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const IMAGE_MODEL = "gemini-2.5-flash-image";
-const VIDEO_MODEL = "veo-3.1-generate-preview";
+
+// ─── Replicate (Kling videos) ──────────────────────────────────────
+function getReplicateClient() {
+  return new Replicate();
+}
+
+function getWebhookUrl(): string | undefined {
+  if (process.env.USE_INNGEST !== "true") return undefined;
+  const base = (process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL)?.trim();
+  if (!base) return undefined;
+  return `${base}/api/webhook/replicate`;
+}
 
 // ─── Mock ──────────────────────────────────────────────────────────
 function isMock(): boolean {
@@ -44,6 +57,7 @@ const MOCK_CLEANED = ["cleaned-1.jpg", "cleaned-2.jpg", "cleaned-3.jpg"];
 const MOCK_STAGED = ["staged-1.jpg", "staged-2.jpg", "staged-3.jpg", "staged-4.jpg"];
 const MOCK_VIDEO = "video.mov";
 
+// Acceptable in mock mode — not used in production
 let mockIdCounter = 0;
 function mockPredictionId(prefix: string): string {
   return `mock-${prefix}-${Date.now()}-${++mockIdCounter}`;
@@ -69,8 +83,30 @@ export interface PredictionContext {
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
+const ALLOWED_IMAGE_DOMAINS = [
+  ".supabase.co",
+  ".supabase.in",
+  "public.blob.vercel-storage.com",
+];
+
+/** Validate that an image URL points to a trusted domain (SSRF protection) */
+function validateImageUrl(url: string): void {
+  const parsed = new URL(url);
+  if (parsed.protocol !== "https:") {
+    throw new Error(`Image URL must use HTTPS (got ${parsed.protocol})`);
+  }
+  const hostname = parsed.hostname.toLowerCase();
+  const allowed = ALLOWED_IMAGE_DOMAINS.some(
+    (domain) => hostname === domain || hostname.endsWith(domain),
+  );
+  if (!allowed) {
+    throw new Error(`Image URL domain not allowed: ${hostname}`);
+  }
+}
+
 /** Download image from URL → base64 string */
 async function imageUrlToBase64(url: string): Promise<{ data: string; mimeType: string }> {
+  validateImageUrl(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to download image: ${res.status}`);
   const buffer = Buffer.from(await res.arrayBuffer());
@@ -78,7 +114,8 @@ async function imageUrlToBase64(url: string): Promise<{ data: string; mimeType: 
   return { data: buffer.toString("base64"), mimeType: contentType };
 }
 
-/** Upload base64 image to Supabase Storage, return public URL */
+/** Upload base64 image to Supabase Storage, return public URL.
+ *  NOTE: The "photos" bucket also stores AI-generated videos and staged images. */
 async function uploadBase64ToStorage(base64: string, prefix: string): Promise<string> {
   const db = getSupabase();
   const id = nanoid(10);
@@ -116,6 +153,7 @@ async function geminiImageEdit(imageUrl: string, prompt: string): Promise<string
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     },
   );
 
@@ -140,103 +178,6 @@ async function geminiImageEdit(imageUrl: string, prompt: string): Promise<string
   }
 
   return imagePart.inlineData.data; // base64
-}
-
-/** Submit Veo 3.1 video generation, return operation name */
-async function veoSubmit(
-  prompt: string,
-  firstFrameUrl: string,
-  lastFrameUrl?: string,
-  aspectRatio: string = "16:9",
-): Promise<string> {
-  const firstFrame = await imageUrlToBase64(firstFrameUrl);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const requestBody: any = {
-    instances: [{
-      prompt,
-      image: {
-        inlineData: { mimeType: firstFrame.mimeType, data: firstFrame.data },
-      },
-    }],
-    parameters: {
-      aspectRatio,
-      sampleCount: 1,
-      durationSeconds: 5,
-      personGeneration: "allow_all",
-      enhancePrompt: false,
-    },
-  };
-
-  // Add last frame if provided
-  if (lastFrameUrl) {
-    const lastFrame = await imageUrlToBase64(lastFrameUrl);
-    requestBody.parameters.lastFrame = {
-      inlineData: { mimeType: lastFrame.mimeType, data: lastFrame.data },
-    };
-  }
-
-  const res = await fetch(
-    `${GEMINI_BASE}/models/${VIDEO_MODEL}:predictLongRunning?key=${GEMINI_API_KEY()}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    },
-  );
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Veo API error ${res.status}: ${err}`);
-  }
-
-  const json = await res.json();
-  // Returns { "name": "operations/xxx" }
-  const operationName = json.name;
-  if (!operationName) throw new Error("Veo returned no operation name");
-  return operationName;
-}
-
-/** Poll a Veo operation */
-async function veoPoll(operationName: string): Promise<PredictionStatus> {
-  const res = await fetch(
-    `${GEMINI_BASE}/${operationName}?key=${GEMINI_API_KEY()}`,
-    { headers: { "Content-Type": "application/json" } },
-  );
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Veo poll error ${res.status}: ${err}`);
-  }
-
-  const json = await res.json();
-
-  if (json.done) {
-    // Extract video URI
-    const video = json.response?.generateVideoResponse?.generatedSamples?.[0]?.video;
-    if (video?.uri) {
-      return {
-        id: operationName,
-        status: "succeeded",
-        output: video.uri,
-      };
-    }
-    // Check for error
-    const error = json.error?.message || json.response?.error;
-    return {
-      id: operationName,
-      status: "failed",
-      output: null,
-      error: error || "Veo returned no video",
-    };
-  }
-
-  // Still processing
-  return {
-    id: operationName,
-    status: json.metadata?.state === "ACTIVE" ? "processing" : "starting",
-    output: null,
-  };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -313,8 +254,9 @@ export async function generateStagingOption(
 }
 
 /**
- * Generate a video using Veo 3.1 (first frame → last frame interpolation).
- * Returns a Veo operation name — async, needs polling via getPredictionStatus.
+ * Generate a video using Kling v2.1 Pro on Replicate (image-to-video).
+ * Uses start_image (original room) + end_image (staged room) for faithful results.
+ * Returns a Replicate prediction ID — async, needs polling via getPredictionStatus.
  */
 export async function generateVideo(
   originalUrl: string,
@@ -323,41 +265,66 @@ export async function generateVideo(
   roomType: string,
   ctx?: PredictionContext,
   projectMode?: ProjectMode,
+  aspectRatio?: "16:9" | "9:16" | "1:1",
 ): Promise<string> {
   if (isMock()) {
     const id = mockPredictionId("video");
-    console.log(`[MOCK_AI] generateVideo → ${id} (skipped Veo 3.1)`);
+    console.log(`[MOCK_AI] generateVideo → ${id} (skipped Kling v2.1 Pro)`);
     return id;
   }
-  if (ctx?.projectId) await costGuard(ctx.projectId, "veo-3.1");
+  if (ctx?.projectId) await costGuard(ctx.projectId, "kling-v2.1-pro");
 
-  const isSocial = projectMode === "social_reel";
+  const isSocial = projectMode === "social_reel" || aspectRatio === "9:16";
   const prompt = isSocial
-    ? veoSocialVideoPrompt(style, roomType)
-    : veoVideoPrompt(style, roomType);
+    ? klingSocialVideoPrompt(style, roomType)
+    : klingVideoPrompt(style, roomType);
+  const negativePrompt = isSocial
+    ? SOCIAL_NEGATIVE_PROMPT
+    : KLING_NEGATIVE_PROMPT;
 
-  const result = await withCircuitBreaker("google_video", () =>
+  const resolvedAspectRatio = aspectRatio || (isSocial ? "9:16" : "16:9");
+
+  const result = await withCircuitBreaker("replicate_video", () =>
     withRetry(async () => {
-      const operationName = await veoSubmit(
-        prompt,
-        originalUrl,
-        stagedUrl,
-        isSocial ? "9:16" : "16:9",
-      );
-      console.log(`[Veo] Video submitted → ${operationName}`);
-      return operationName;
+      const webhookUrl = getWebhookUrl();
+      const prediction = await getReplicateClient().predictions.create({
+        model: "kwaivgi/kling-v2.1",
+        input: {
+          prompt,
+          start_image: originalUrl,
+          end_image: stagedUrl,
+          mode: "pro",
+          duration: 5,
+          aspect_ratio: resolvedAspectRatio,
+          cfg_scale: isSocial ? 0.7 : 0.8,
+          negative_prompt: negativePrompt,
+        },
+        ...(webhookUrl ? { webhook: webhookUrl, webhook_events_filter: ["completed"] } : {}),
+      });
+
+      if (ctx) {
+        await savePredictionMap({
+          predictionId: prediction.id,
+          projectId: ctx.projectId,
+          predictionType: ctx.predictionType,
+          roomIndex: ctx.roomIndex,
+        });
+      }
+
+      console.log(`[Kling] Video submitted → ${prediction.id} (${resolvedAspectRatio})`);
+      return prediction.id;
     }, REPLICATE_RETRY),
   );
 
-  if (ctx?.projectId) await trackCost(ctx.projectId, "veo-3.1");
+  if (ctx?.projectId) await trackCost(ctx.projectId, "kling-v2.1-pro");
   return result;
 }
 
 /**
  * Get prediction status.
  * - "done:..." IDs → return succeeded immediately (Gemini sync results)
- * - "operations/..." IDs → poll Veo operation
  * - "mock-..." IDs → return mock succeeded
+ * - Other IDs → poll Replicate prediction (Kling videos)
  */
 export async function getPredictionStatus(id: string): Promise<PredictionStatus> {
   // Gemini sync results (images)
@@ -382,9 +349,18 @@ export async function getPredictionStatus(id: string): Promise<PredictionStatus>
     return { id, status: "succeeded", output: mockUrl };
   }
 
-  // Veo operation polling
-  return withCircuitBreaker("google_video", () =>
-    withRetry(async () => veoPoll(id), REPLICATE_RETRY),
+  // Replicate prediction polling (Kling videos)
+  return withCircuitBreaker("replicate_video", () =>
+    withRetry(async () => {
+      const prediction = await getReplicateClient().predictions.get(id);
+      const output = prediction.output as string | string[] | null;
+      return {
+        id: prediction.id,
+        status: prediction.status as PredictionStatus["status"],
+        output,
+        error: prediction.error ? String(prediction.error) : undefined,
+      };
+    }, REPLICATE_RETRY),
   );
 }
 

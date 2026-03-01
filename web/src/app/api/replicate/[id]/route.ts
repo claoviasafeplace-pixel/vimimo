@@ -23,11 +23,20 @@ export async function GET(
 
     const { id } = await params;
 
-    // SEC-1.1: Verify prediction belongs to a project owned by the user
+    // SEC-1.1 + SEC-2.4: Verify prediction belongs to a project owned by the user
+    const isAdmin = (authResult.session.user as { isAdmin?: boolean }).isAdmin === true;
     const mapping = await getPredictionMap(id);
-    if (mapping) {
+    if (!mapping) {
+      // SEC-2.4: Block access when no mapping exists (unless admin)
+      if (!isAdmin) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+    } else {
       const project = await getProject(mapping.projectId);
-      if (project && project.userId && project.userId !== authResult.session.user.id) {
+      if (project && !project.userId && !isAdmin) {
+        return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
+      }
+      if (project && project.userId && project.userId !== authResult.session.user.id && !isAdmin) {
         return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
       }
     }

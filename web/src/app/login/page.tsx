@@ -1,12 +1,13 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import Card from "@/components/ui/Card";
 
-export default function LoginPage() {
+function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,7 +20,7 @@ export default function LoginPage() {
   if (status === "loading" || session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-spinner border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-spinner border-t-transparent" role="status" aria-label="Chargement" />
       </div>
     );
   }
@@ -59,5 +60,19 @@ export default function LoginPage() {
         notre politique de confidentialité.
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-spinner border-t-transparent" role="status" aria-label="Chargement" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

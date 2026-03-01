@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
 import { Sparkles, ArrowRight, Play, Check, Camera, Wand2, Film } from "lucide-react";
 
@@ -9,12 +9,13 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 
 export default function HeroSection() {
   const heroRef = useRef<HTMLDivElement>(null);
+  const prefersReduced = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
   });
-  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.96]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 1], prefersReduced ? [1, 1] : [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 1], prefersReduced ? [1, 1] : [1, 0.96]);
 
   return (
     <motion.section

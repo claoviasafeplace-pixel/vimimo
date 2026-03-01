@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireProjectOwner } from "@/lib/api-auth";
 
-const RENDER_SECRET = process.env.RENDER_SECRET || "vimimo-dev-secret";
+const RENDER_SECRET = process.env.RENDER_SECRET || "";
 
 /**
  * Proxy for Remotion render downloads.

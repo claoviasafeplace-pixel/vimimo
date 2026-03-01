@@ -78,13 +78,33 @@ export function checkRateLimit(
   return { limited: false, remaining: config.max - entry.count, resetAt: entry.resetAt };
 }
 
+// Simple IPv4 validation pattern
+const IPV4_REGEX = /^\d{1,3}(\.\d{1,3}){3}$/;
+// IPv6 (simplified: hex groups separated by colons, or ::)
+const IPV6_REGEX = /^[0-9a-fA-F:]+$/;
+
+function isValidIp(ip: string): boolean {
+  return IPV4_REGEX.test(ip) || IPV6_REGEX.test(ip);
+}
+
 /**
  * Extract IP from request for rate limiting.
+ * On Vercel, x-forwarded-for is set by the platform and is trustworthy.
+ * We take only the first IP (leftmost = original client) and validate its format.
  */
 export function getClientIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const firstIp = forwarded.split(",")[0]?.trim();
+    if (firstIp && isValidIp(firstIp)) {
+      return firstIp;
+    }
+  }
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp && isValidIp(realIp)) {
+    return realIp;
+  }
+
+  return "unknown";
 }

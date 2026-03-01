@@ -88,10 +88,10 @@ function BeforeAfterSlider({ before, after, label, beforeText, afterText }: {
         }}
       >
         {/* After (background) */}
-        <img src={after} alt={`Après staging IA — ${afterText}`} width={800} height={600} loading="lazy" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+        <img src={after} alt={`Après staging IA — ${afterText}`} width={800} height={600} loading="eager" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         {/* Before (clipped) */}
         <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
-          <img src={before} alt={`Avant — ${beforeText}`} width={800} height={600} loading="lazy" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+          <img src={before} alt={`Avant — ${beforeText}`} width={800} height={600} loading="eager" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
         </div>
         {/* Divider */}
         <div

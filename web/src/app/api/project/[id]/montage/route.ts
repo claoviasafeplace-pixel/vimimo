@@ -100,7 +100,7 @@ export async function POST(
 
     project.phase = "rendering_montage";
     project.studioMontageRenderId = renderId;
-    project.montageConfig = body;
+    project.montageConfig = montageConfig;
 
     await saveProject(project);
 

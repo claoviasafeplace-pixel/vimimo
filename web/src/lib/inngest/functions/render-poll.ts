@@ -52,6 +52,25 @@ export const renderPoll = inngest.createFunction(
       await step.sleep(`wait-render-${attempt}`, "5s");
     }
 
+    // If we exhausted all 120 attempts without completing, mark as error + refund
+    await step.run("check-render-timeout", async () => {
+      const proj = await getProject(projectId);
+      if (!proj || proj.phase !== "rendering") return;
+
+      console.error(`[render-poll] Render timed out after 120 attempts for project ${projectId}`);
+      proj.phase = "error";
+      proj.error = "Render timed out after 10 minutes";
+      if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
+        try {
+          await refundCredits(proj.userId, proj.creditsUsed, proj.id, "Remboursement auto — render timeout");
+          proj.creditsRefunded = true;
+        } catch (e) {
+          console.error("[render-poll] Auto-refund failed:", e);
+        }
+      }
+      await saveProject(proj);
+    });
+
     return { projectId, status: "render-done" };
   },
 );

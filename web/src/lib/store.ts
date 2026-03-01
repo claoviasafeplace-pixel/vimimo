@@ -73,7 +73,7 @@ export async function updateProjectStatus(
   const db = getSupabase();
 
   // Update indexed columns
-  await db
+  const { error } = await db
     .from("projects")
     .update({
       order_status: orderStatus,
@@ -81,6 +81,8 @@ export async function updateProjectStatus(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
+
+  if (error) console.error("[updateProjectStatus] DB error:", error.message);
 
   // Merge into JSONB data
   const jsonbUpdates: Partial<Project> = {
@@ -90,6 +92,25 @@ export async function updateProjectStatus(
   };
 
   return updateProject(id, jsonbUpdates);
+}
+
+/** Extract thumbnail URL from project JSONB data: first room's selected option, or first photo */
+function extractThumbnailUrl(
+  rooms: Array<Record<string, unknown>> | undefined,
+  photos: Array<Record<string, unknown>> | undefined,
+): string | null {
+  if (rooms?.length) {
+    const room = rooms[0];
+    const options = room.options as Array<Record<string, unknown>> | undefined;
+    const selectedIdx = (room.selectedOptionIndex as number) ?? 0;
+    if (options?.[selectedIdx]?.url) {
+      return options[selectedIdx].url as string;
+    }
+  }
+  if (photos?.length) {
+    return (photos[0].originalUrl as string) || null;
+  }
+  return null;
 }
 
 // Get orders grouped by kanban status (for admin Kanban board)
@@ -118,18 +139,7 @@ export async function getOrdersByKanbanStatus(): Promise<
     const photos = data?.photos as Array<Record<string, unknown>> | undefined;
     const kanbanStatus = (data?.kanbanStatus as AdminKanbanStatus) || "a_traiter";
 
-    let thumbnailUrl: string | null = null;
-    if (rooms?.length) {
-      const room = rooms[0];
-      const options = room.options as Array<Record<string, unknown>> | undefined;
-      const selectedIdx = (room.selectedOptionIndex as number) ?? 0;
-      if (options?.[selectedIdx]?.url) {
-        thumbnailUrl = options[selectedIdx].url as string;
-      }
-    }
-    if (!thumbnailUrl && photos?.length) {
-      thumbnailUrl = (photos[0].originalUrl as string) || null;
-    }
+    const thumbnailUrl = extractThumbnailUrl(rooms, photos);
 
     const summary: ProjectSummary = {
       id: row.id,
@@ -191,19 +201,7 @@ export async function getUserProjects(userId: string, limit = 50): Promise<Proje
     const rooms = data?.rooms as Array<Record<string, unknown>> | undefined;
     const photos = data?.photos as Array<Record<string, unknown>> | undefined;
 
-    // Get thumbnail: first room's selected option, or first photo
-    let thumbnailUrl: string | null = null;
-    if (rooms?.length) {
-      const room = rooms[0];
-      const options = room.options as Array<Record<string, unknown>> | undefined;
-      const selectedIdx = (room.selectedOptionIndex as number) ?? 0;
-      if (options?.[selectedIdx]?.url) {
-        thumbnailUrl = options[selectedIdx].url as string;
-      }
-    }
-    if (!thumbnailUrl && photos?.length) {
-      thumbnailUrl = (photos[0].originalUrl as string) || null;
-    }
+    const thumbnailUrl = extractThumbnailUrl(rooms, photos);
 
     return {
       id: row.id,
@@ -323,7 +321,9 @@ export async function addCredits(
       .single();
 
     if (existing) {
-      return (await getUserById(userId))!;
+      const user = await getUserById(userId);
+      if (!user) throw new Error(`User ${userId} not found`);
+      return user;
     }
   }
 
@@ -340,7 +340,9 @@ export async function addCredits(
     if (!current) throw new Error(`User ${userId} not found`);
     updatedUser = await updateUser(userId, { credits: current.credits + amount });
   } else {
-    updatedUser = (await getUserById(userId))!;
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    updatedUser = user;
   }
 
   await recordTransaction(userId, "purchase", amount, updatedUser.credits, description, {
@@ -368,7 +370,9 @@ export async function deductCredits(
     .single();
 
   if (existingTx) {
-    return (await getUserById(userId))!;
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    return user;
   }
 
   // Atomic decrement via RPC
@@ -379,15 +383,26 @@ export async function deductCredits(
 
   let updatedUser: DbUser;
   if (rpcError) {
-    // Fallback: read-check-write (less safe but functional)
+    // Fallback: read-check-write — RACE CONDITION RISK: concurrent requests
+    // may pass the check simultaneously. The RPC path (above) is atomic and
+    // preferred. This fallback exists only for envs where the RPC isn't deployed.
+    console.warn("decrement_credits RPC failed, falling back to read-check-write:", rpcError.message);
     const user = await getUserById(userId);
     if (!user) throw new Error(`User ${userId} not found`);
     if (user.credits < amount) throw new Error("Insufficient credits");
     updatedUser = await updateUser(userId, { credits: user.credits - amount });
+    // Post-update safety check: verify credits didn't go negative due to race
+    if (updatedUser.credits < 0) {
+      console.error(`CRITICAL: credits went negative for user ${userId} (${updatedUser.credits}). Reverting.`);
+      await updateUser(userId, { credits: updatedUser.credits + amount });
+      throw new Error("Insufficient credits (race condition detected)");
+    }
   } else {
     // RPC returns new balance, -1 means insufficient
     if (rpcResult === -1) throw new Error("Insufficient credits");
-    updatedUser = (await getUserById(userId))!;
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    updatedUser = user;
   }
 
   await recordTransaction(userId, "deduction", -amount, updatedUser.credits, description, {
@@ -416,7 +431,9 @@ export async function refundCredits(
 
   if (existingRefund) {
     console.warn(`Refund already exists for project ${projectId}, skipping`);
-    return (await getUserById(userId))!;
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    return user;
   }
 
   // Atomic increment via RPC
@@ -431,7 +448,9 @@ export async function refundCredits(
     if (!user) throw new Error(`User ${userId} not found`);
     updatedUser = await updateUser(userId, { credits: user.credits + amount });
   } else {
-    updatedUser = (await getUserById(userId))!;
+    const user = await getUserById(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    updatedUser = user;
   }
 
   try {
@@ -444,6 +463,31 @@ export async function refundCredits(
   }
 
   return updatedUser;
+}
+
+// =============================================
+// Auto-Refund helper (shared by Inngest functions)
+// =============================================
+
+export async function autoRefundProject(project: {
+  userId?: string;
+  creditsUsed?: number;
+  creditsRefunded?: boolean;
+  id: string;
+}) {
+  if (project.userId && project.creditsUsed && !project.creditsRefunded) {
+    try {
+      await refundCredits(
+        project.userId,
+        project.creditsUsed,
+        project.id,
+        `Remboursement automatique — projet ${project.id} en erreur`,
+      );
+      project.creditsRefunded = true;
+    } catch (e) {
+      console.error("Auto-refund failed:", e);
+    }
+  }
 }
 
 export async function getUserTransactions(

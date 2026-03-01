@@ -4,6 +4,14 @@ export const metadata: Metadata = {
   title: "Tarifs — VIMIMO",
   description:
     "1 Bien = staging IA complet + vidéo cinématique. Packs et abonnements sans engagement.",
+  openGraph: {
+    title: "Tarifs — VIMIMO",
+    description:
+      "1 Bien = staging IA complet + vidéo cinématique. Packs et abonnements sans engagement.",
+    url: "https://vimimo.fr/pricing",
+    siteName: "VIMIMO",
+    type: "website",
+  },
 };
 
 export default function PricingLayout({

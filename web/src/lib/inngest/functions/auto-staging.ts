@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject, refundCredits, updateProjectStatus } from "@/lib/store";
+import { getProject, saveProject, updateProjectStatus, autoRefundProject as autoRefund } from "@/lib/store";
 import {
   getPredictionStatus,
   extractOutputUrl,
@@ -7,14 +7,14 @@ import {
   generateVideo,
 } from "@/lib/services/replicate";
 import { generateStagingPrompts, analyzePhotos, analyzeGlobalProperty } from "@/lib/services/openai";
-import { startRender, startStudioRender, startSocialRender } from "@/lib/services/remotion";
+import { startRender, startStudioRender, startSocialRender, getRenderStatus, downloadRender } from "@/lib/services/remotion";
 import {
   pipelinePreCheck,
   CircuitOpenError,
   CostThresholdError,
   type ServiceName,
 } from "@/lib/circuit-breaker";
-import { persistFromUrl } from "@/lib/services/storage";
+import { persistFromUrl, uploadBuffer } from "@/lib/services/storage";
 
 /** Number of staging variants per room. Default 1 to minimize AI costs. Set STAGING_VARIANTS=5 for full variety. */
 const NB_VARIANTS = Math.min(
@@ -22,29 +22,25 @@ const NB_VARIANTS = Math.min(
   5,
 );
 
-async function autoRefund(project: {
-  userId?: string;
-  creditsUsed?: number;
-  creditsRefunded?: boolean;
-  id: string;
-}) {
-  if (project.userId && project.creditsUsed && !project.creditsRefunded) {
-    try {
-      await refundCredits(
-        project.userId,
-        project.creditsUsed,
-        project.id,
-        `Remboursement automatique — projet ${project.id} en erreur`,
-      );
-      project.creditsRefunded = true;
-    } catch (e) {
-      console.error("Auto-refund failed:", e);
-    }
-  }
-}
-
 export const autoStaging = inngest.createFunction(
-  { id: "auto-staging", retries: 0 },
+  {
+    id: "auto-staging",
+    retries: 2,
+    onFailure: async ({ event }) => {
+      const { projectId } = event.data.event.data;
+      try {
+        const project = await getProject(projectId);
+        if (project && project.phase !== "error") {
+          project.phase = "error";
+          project.error = "Pipeline échoué après 3 tentatives";
+          await autoRefund(project);
+          await saveProject(project);
+        }
+      } catch (e) {
+        console.error("[auto-staging] onFailure handler error:", e);
+      }
+    },
+  },
   { event: "project/triage.confirmed" },
   async ({ event, step }) => {
     const { projectId } = event.data;
@@ -53,7 +49,7 @@ export const autoStaging = inngest.createFunction(
     const preCheck = await step.run("pre-check", async () => {
       const required: ServiceName[] = [
         "openai",
-        "replicate",
+        "gemini",
         "replicate_video",
         "remotion",
       ];
@@ -211,64 +207,111 @@ export const autoStaging = inngest.createFunction(
     });
 
     // Step 3: Poll staging predictions
-    for (let attempt = 0; attempt < 120; attempt++) {
-      const done = await step.run(`check-staging-${attempt}`, async () => {
-        const proj = await getProject(projectId);
-        if (!proj || proj.phase !== "auto_staging") return true;
+    // Quick-resolve for Gemini sync results (all "done:..." IDs skip polling)
+    const allPredictionIds = await step.run("collect-prediction-ids", async () => {
+      const proj = await getProject(projectId);
+      if (!proj) return [];
+      return proj.rooms.flatMap((r) => r.optionPredictionIds || []);
+    });
 
-        let allDone = true;
+    const allSyncDone = allPredictionIds.length > 0 &&
+      allPredictionIds.every((id) => id.startsWith("done:"));
+
+    if (allSyncDone) {
+      // Gemini returns "done:<url>" synchronously — resolve all immediately without polling
+      await step.run("resolve-sync-staging", async () => {
+        const proj = await getProject(projectId);
+        if (!proj || proj.phase !== "auto_staging") return;
+
         for (const room of proj.rooms) {
           if (!room.optionPredictionIds?.length) continue;
-          // Check if all predictions for this room are resolved
           if (room.options.length >= room.optionPredictionIds.length) continue;
 
           const resolvedIds = new Set(room.options.map((o) => o.predictionId));
-          let pendingCount = 0;
           for (const predId of room.optionPredictionIds) {
             if (resolvedIds.has(predId)) continue;
-            try {
-              const status = await getPredictionStatus(predId);
-              if (status.status === "succeeded") {
-                const url = extractOutputUrl(status.output);
-                if (url) {
-                  // Persist to Supabase (Replicate URLs expire)
-                  let persistedUrl = url;
-                  try {
-                    persistedUrl = await persistFromUrl(url, "staging", "image/webp");
-                  } catch (e) {
-                    console.error(`[auto-staging] Failed to persist staging image:`, e);
-                  }
-                  room.options.push({ url: persistedUrl, predictionId: predId });
+            const status = await getPredictionStatus(predId);
+            if (status.status === "succeeded") {
+              const url = extractOutputUrl(status.output);
+              if (url) {
+                let persistedUrl = url;
+                try {
+                  persistedUrl = await persistFromUrl(url, "staging", "image/webp");
+                } catch (e) {
+                  console.error(`[auto-staging] Failed to persist staging image:`, e);
                 }
-              } else if (status.status === "failed" || status.status === "canceled") {
-                // Skip failed predictions
-              } else {
-                pendingCount++;
+                room.options.push({ url: persistedUrl, predictionId: predId });
               }
-            } catch (error) {
-              console.error(`Staging prediction check failed for room ${room.index}:`, error);
-              pendingCount++;
             }
           }
 
-          if (pendingCount > 0) allDone = false;
-
-          // If all predictions resolved and at least one succeeded, set selection
           if (room.options.length > 0 && room.selectedOptionIndex === undefined) {
             room.selectedOptionIndex = 0;
           }
-          // If all predictions resolved but none succeeded, use fallback
-          if (pendingCount === 0 && room.options.length === 0) {
+          if (room.options.length === 0) {
             room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
             room.selectedOptionIndex = 0;
           }
         }
         await saveProject(proj);
-        return allDone;
       });
+    } else {
+      // Async predictions (Replicate or mixed) — poll with retries
+      for (let attempt = 0; attempt < 120; attempt++) {
+        const done = await step.run(`check-staging-${attempt}`, async () => {
+          const proj = await getProject(projectId);
+          if (!proj || proj.phase !== "auto_staging") return true;
 
-      if (done) break;
-      await step.sleep(`wait-staging-${attempt}`, "5s");
+          let allDone = true;
+          for (const room of proj.rooms) {
+            if (!room.optionPredictionIds?.length) continue;
+            if (room.options.length >= room.optionPredictionIds.length) continue;
+
+            const resolvedIds = new Set(room.options.map((o) => o.predictionId));
+            let pendingCount = 0;
+            for (const predId of room.optionPredictionIds) {
+              if (resolvedIds.has(predId)) continue;
+              try {
+                const status = await getPredictionStatus(predId);
+                if (status.status === "succeeded") {
+                  const url = extractOutputUrl(status.output);
+                  if (url) {
+                    let persistedUrl = url;
+                    try {
+                      persistedUrl = await persistFromUrl(url, "staging", "image/webp");
+                    } catch (e) {
+                      console.error(`[auto-staging] Failed to persist staging image:`, e);
+                    }
+                    room.options.push({ url: persistedUrl, predictionId: predId });
+                  }
+                } else if (status.status === "failed" || status.status === "canceled") {
+                  // Skip failed predictions
+                } else {
+                  pendingCount++;
+                }
+              } catch (error) {
+                console.error(`Staging prediction check failed for room ${room.index}:`, error);
+                pendingCount++;
+              }
+            }
+
+            if (pendingCount > 0) allDone = false;
+
+            if (room.options.length > 0 && room.selectedOptionIndex === undefined) {
+              room.selectedOptionIndex = 0;
+            }
+            if (pendingCount === 0 && room.options.length === 0) {
+              room.options = [{ url: room.cleanedPhotoUrl, predictionId: "fallback" }];
+              room.selectedOptionIndex = 0;
+            }
+          }
+          await saveProject(proj);
+          return allDone;
+        });
+
+        if (done) break;
+        await step.sleep(`wait-staging-${attempt}`, "5s");
+      }
     }
 
     // Order flow: after options generated, go to admin quality check instead of auto-selecting
@@ -285,12 +328,17 @@ export const autoStaging = inngest.createFunction(
       return { projectId, status: "order-awaiting-admin" };
     }
 
-    // Step 4: Launch all videos (skip if replicate_video is down)
+    // Step 4: Launch all videos (re-check replicate_video circuit breaker — may have changed since pre-check)
     await step.run("launch-videos", async () => {
       const proj = await getProject(projectId);
       if (!proj || proj.phase !== "auto_staging") return;
 
-      if (preCheck.skipVideo) {
+      // Re-check circuit breaker for replicate_video right before launching videos
+      // (the pre-check value may be stale if the circuit opened during staging)
+      const { degraded: currentDegraded } = await pipelinePreCheck(["replicate_video"]);
+      const skipVideo = currentDegraded.includes("replicate_video");
+
+      if (skipVideo) {
         // Mark all rooms as no-video and finish
         for (const room of proj.rooms) {
           room.videoUrl = "";
@@ -373,6 +421,26 @@ export const autoStaging = inngest.createFunction(
       await step.sleep(`wait-auto-videos-${attempt}`, "5s");
     }
 
+    // Step 5b: Mark timed-out video predictions as failed
+    await step.run("check-video-timeouts", async () => {
+      const proj = await getProject(projectId);
+      if (!proj || proj.phase !== "auto_staging") return;
+
+      const timedOut = proj.rooms.filter(
+        (r) => r.videoPredictionId && !r.videoUrl,
+      );
+      if (timedOut.length === 0) return;
+
+      for (const room of timedOut) {
+        console.warn(
+          `[auto-staging] Video polling timed out for room ${room.index} (prediction ${room.videoPredictionId})`,
+        );
+        room.videoUrl = ""; // mark as resolved (no video)
+        room.videoError = `Video generation timed out after 15 minutes (prediction ${room.videoPredictionId})`;
+      }
+      await saveProject(proj);
+    });
+
     // Step 6: Launch render (PropertyShowcase / StudioMontage / SocialMontage depending on mode)
     const renderResult = await step.run("launch-render", async () => {
       const proj = await getProject(projectId);
@@ -380,7 +448,7 @@ export const autoStaging = inngest.createFunction(
 
       const roomsWithVideo = proj.rooms.filter((r) => r.videoUrl && r.videoUrl !== "");
 
-      // social_reel mode: skip Remotion — user edits raw Kling videos in CapCut
+      // social_reel mode: skip Remotion — user edits raw AI-generated videos in CapCut
       if (proj.mode === "social_reel") {
         proj.phase = "done";
         await saveProject(proj);
@@ -436,15 +504,12 @@ export const autoStaging = inngest.createFunction(
           if (!renderId) return true;
 
           try {
-            const { getRenderStatus } = await import("@/lib/services/remotion");
             const status = await getRenderStatus(renderId);
 
             if (status.status === "done") {
               // Download and upload to Supabase
               try {
-                const { downloadRender } = await import("@/lib/services/remotion");
                 const videoBuffer = await downloadRender(renderId);
-                const { uploadBuffer } = await import("@/lib/services/storage");
                 const prefix = renderResult.type === "montage" ? "montages" : "renders";
                 const videoUrl = await uploadBuffer(videoBuffer, prefix);
                 if (renderResult.type === "montage") {
@@ -482,6 +547,19 @@ export const autoStaging = inngest.createFunction(
         if (done) break;
         await step.sleep(`wait-render-${attempt}`, "5s");
       }
+
+      // If we exhausted all 120 attempts without completing, mark as error + refund
+      await step.run("check-render-timeout", async () => {
+        const proj = await getProject(projectId);
+        if (!proj) return;
+        if (proj.phase !== "rendering" && proj.phase !== "rendering_montage") return;
+
+        console.error(`[auto-staging] Render timed out after 120 attempts for project ${projectId}`);
+        proj.phase = "error";
+        proj.error = "Render timed out after 10 minutes";
+        await autoRefund(proj);
+        await saveProject(proj);
+      });
     }
 
     return { projectId, status: "auto-staging-done" };

@@ -1,16 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Star } from "lucide-react";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay: 0.08 * i, ease: [0.16, 1, 0.3, 1] as const },
-  }),
-};
 
 const TESTIMONIALS = [
   {
@@ -40,12 +28,8 @@ export default function TestimonialsSection() {
   return (
     <section className="py-24 px-6 lg:py-32 border-t border-border bg-surface/30">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
-          className="mx-auto max-w-3xl text-center mb-16"
+        <div
+          className="mx-auto max-w-3xl text-center mb-16 animate-fade-in-up"
         >
           <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-badge-gold-border bg-badge-gold-bg px-3 py-1 text-xs font-medium tracking-wide text-badge-gold-text uppercase">
             Témoignages
@@ -56,37 +40,39 @@ export default function TestimonialsSection() {
           <p className="mt-5 text-lg leading-relaxed text-muted">
             Ce que disent les professionnels de l&apos;immobilier qui utilisent VIMIMO au quotidien.
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {TESTIMONIALS.map((t, i) => (
-            <motion.div
+            <div
               key={t.name}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              custom={i}
-              variants={fadeUp}
-              className="rounded-2xl border border-border bg-background p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[rgba(28,25,23,0.04)]"
+              itemScope
+              itemType="https://schema.org/Review"
+              className={`rounded-2xl border border-border bg-background p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[rgba(28,25,23,0.04)] animate-fade-in-up ${
+                i === 0 ? "animate-delay-100" : i === 1 ? "animate-delay-200" : "animate-delay-300"
+              }`}
             >
-              <div className="flex gap-0.5 mb-4" aria-label={`${t.stars} étoiles sur 5`}>
+              <div className="flex gap-0.5 mb-4" aria-label={`${t.stars} étoiles sur 5`} itemProp="reviewRating" itemScope itemType="https://schema.org/Rating">
+                <meta itemProp="ratingValue" content={String(t.stars)} />
+                <meta itemProp="bestRating" content="5" />
                 {Array.from({ length: t.stars }).map((_, j) => (
                   <Star key={j} className="h-4 w-4 fill-amber-500 text-amber-500" aria-hidden="true" />
                 ))}
               </div>
-              <p className="text-sm leading-relaxed text-feature-text italic">
+              <p className="text-sm leading-relaxed text-feature-text italic" itemProp="reviewBody">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <div className="mt-6 flex items-center gap-3">
+              <div className="mt-6 flex items-center gap-3" itemProp="author" itemScope itemType="https://schema.org/Person">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full gradient-gold text-sm font-bold text-white">
                   {t.name[0]}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <p className="text-xs text-muted">{t.role}</p>
+                  <p className="text-sm font-semibold" itemProp="name">{t.name}</p>
+                  <p className="text-xs text-muted" itemProp="jobTitle">{t.role}</p>
                 </div>
               </div>
-            </motion.div>
+              <meta itemProp="itemReviewed" content="VIMIMO Virtual Staging" />
+            </div>
           ))}
         </div>
       </div>

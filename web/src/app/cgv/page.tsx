@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Conditions Générales de Vente",
+  robots: { index: false, follow: true },
 };
 
 export default function CGVPage() {

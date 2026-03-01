@@ -14,6 +14,11 @@ export default function NotFound() {
       >
         Retour à l&apos;accueil
       </Link>
+      <div className="mt-6 flex gap-4">
+        <Link href="/" className="text-sm text-amber-400 hover:underline">Accueil</Link>
+        <Link href="/pricing" className="text-sm text-amber-400 hover:underline">Tarifs</Link>
+        <Link href="/commander" className="text-sm text-amber-400 hover:underline">Commander</Link>
+      </div>
     </div>
   );
 }

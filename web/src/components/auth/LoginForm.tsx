@@ -168,7 +168,7 @@ export default function LoginForm() {
 
       {/* Error message */}
       {error && (
-        <p className="text-sm text-red-500 text-center">{error}</p>
+        <p role="alert" className="text-sm text-red-500 text-center">{error}</p>
       )}
 
       {/* LOGIN view */}
@@ -180,6 +180,7 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.com"
+              aria-label="Adresse email"
               required
               className={inputClass}
             />
@@ -189,6 +190,7 @@ export default function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mot de passe"
+                aria-label="Mot de passe"
                 required
                 className={inputClass}
               />
@@ -245,6 +247,7 @@ export default function LoginForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Votre nom"
+              aria-label="Votre nom"
               required
               minLength={2}
               className={inputClass}
@@ -254,6 +257,7 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.com"
+              aria-label="Adresse email"
               required
               className={inputClass}
             />
@@ -263,6 +267,7 @@ export default function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mot de passe (min 8 caractères)"
+                aria-label="Mot de passe"
                 required
                 minLength={8}
                 className={inputClass}
@@ -280,6 +285,7 @@ export default function LoginForm() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirmer le mot de passe"
+              aria-label="Confirmer le mot de passe"
               required
               minLength={8}
               className={inputClass}
@@ -316,6 +322,7 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="votre@email.com"
+              aria-label="Adresse email"
               required
               className={inputClass}
             />

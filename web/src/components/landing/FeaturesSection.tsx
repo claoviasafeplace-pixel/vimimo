@@ -1,16 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Camera, Wand2, Rocket, Shield, Eye, Clock, Building2, Users, Briefcase, TrendingUp } from "lucide-react";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay: 0.07 * i, ease: [0.16, 1, 0.3, 1] as const },
-  }),
-};
 
 const FEATURES = [
   {
@@ -69,17 +57,29 @@ const USE_CASES = [
   },
 ];
 
+/* Delay classes indexed by position for staggered fade-in */
+const FEATURE_DELAYS = [
+  "",
+  "animate-delay-100",
+  "animate-delay-150",
+  "animate-delay-200",
+  "animate-delay-250",
+  "animate-delay-300",
+] as const;
+
+const USE_CASE_DELAYS = [
+  "",
+  "animate-delay-100",
+  "animate-delay-200",
+] as const;
+
 export default function FeaturesSection() {
   return (
     <section id="features" className="py-24 px-6 lg:py-32 border-t border-border">
       <div className="mx-auto max-w-6xl">
         {/* Section header */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
-          className="mx-auto max-w-3xl text-center mb-16"
+        <div
+          className="mx-auto max-w-3xl text-center mb-16 animate-fade-in-up"
         >
           <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-badge-gold-border bg-badge-gold-bg px-3 py-1 text-xs font-medium tracking-wide text-badge-gold-text uppercase">
             Fonctionnalités
@@ -91,36 +91,27 @@ export default function FeaturesSection() {
             Vous envoyez vos photos brutes. Nous livrons une présentation complète du bien :
             images et vidéos prêtes pour vos annonces.
           </p>
-        </motion.div>
+        </div>
 
         {/* Feature cards */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feat, i) => (
-            <motion.div
+            <div
               key={feat.title}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              custom={i}
-              variants={fadeUp}
-              className="group relative rounded-2xl border border-border bg-surface/40 p-7 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-badge-gold-border/50 hover:bg-surface/70 hover:-translate-y-1 hover:shadow-lg hover:shadow-[rgba(196,122,90,0.06)]"
+              className={`group relative rounded-2xl border border-border bg-surface/40 p-7 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-badge-gold-border/50 hover:bg-surface/70 hover:-translate-y-1 hover:shadow-lg hover:shadow-[rgba(196,122,90,0.06)] animate-fade-in-up ${FEATURE_DELAYS[i] ?? ""}`}
             >
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-badge-gold-bg border border-badge-gold-border/30 transition-transform duration-300 group-hover:scale-110">
                 <feat.icon className="h-6 w-6 text-icon-accent" aria-hidden="true" />
               </div>
               <h3 className="text-lg font-semibold">{feat.title}</h3>
               <p className="mt-2.5 text-sm leading-relaxed text-muted">{feat.description}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* For whom + use cases */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-60px" }}
-          variants={fadeUp}
-          className="mt-20"
+        <div
+          className="mt-20 animate-fade-in-up"
         >
           <div className="text-center mb-10">
             <h3 className="text-2xl font-bold sm:text-3xl">
@@ -133,14 +124,9 @@ export default function FeaturesSection() {
 
           <div className="grid gap-5 sm:grid-cols-3">
             {USE_CASES.map((uc, i) => (
-              <motion.div
+              <div
                 key={uc.title}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                custom={i}
-                variants={fadeUp}
-                className="flex items-start gap-4 rounded-xl border border-border bg-surface/30 p-5 transition-all duration-300 hover:bg-surface/60"
+                className={`flex items-start gap-4 rounded-xl border border-border bg-surface/30 p-5 transition-all duration-300 hover:bg-surface/60 animate-fade-in-up ${USE_CASE_DELAYS[i] ?? ""}`}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-badge-blue-bg border border-badge-blue-border/30">
                   <uc.icon className="h-5 w-5 text-badge-blue-text" aria-hidden="true" />
@@ -149,18 +135,14 @@ export default function FeaturesSection() {
                   <p className="font-semibold">{uc.title}</p>
                   <p className="mt-1 text-sm text-muted leading-relaxed">{uc.description}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Business benefit callout */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          className="mt-14 mx-auto max-w-3xl rounded-2xl border border-badge-gold-border/30 bg-badge-gold-bg/30 p-8 text-center"
+        <div
+          className="mt-14 mx-auto max-w-3xl rounded-2xl border border-badge-gold-border/30 bg-badge-gold-bg/30 p-8 text-center animate-fade-in-up"
         >
           <TrendingUp className="mx-auto h-8 w-8 text-icon-accent mb-4" aria-hidden="true" />
           <p className="text-lg font-semibold">
@@ -170,7 +152,7 @@ export default function FeaturesSection() {
             Les biens avec staging virtuel se vendent 73% plus rapidement et génèrent 20% d&apos;offres en plus.
             Démarquez-vous sur les portails immobiliers avec des visuels qui attirent les contacts qualifiés.
           </p>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

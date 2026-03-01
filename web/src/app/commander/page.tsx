@@ -105,6 +105,8 @@ export default function CommanderPage() {
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-8">
+        <h1 className="sr-only">Commander un staging virtuel</h1>
+
         {/* Step indicator */}
         <div className="mb-10">
           <StepIndicator current={tunnel.step} />
@@ -115,6 +117,7 @@ export default function CommanderPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            role="alert"
             className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400"
           >
             {tunnel.error}
@@ -135,9 +138,9 @@ export default function CommanderPage() {
               className="space-y-6"
             >
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold sm:text-3xl">
+                <h2 className="text-2xl font-bold sm:text-3xl">
                   Vos photos de <span className="text-gradient-gold">pièces vides</span>
-                </h1>
+                </h2>
                 <p className="mt-2 text-muted">
                   Importez jusqu&apos;à 6 photos d&apos;un même bien immobilier
                 </p>
@@ -170,9 +173,9 @@ export default function CommanderPage() {
               className="space-y-8"
             >
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold sm:text-3xl">
+                <h2 className="text-2xl font-bold sm:text-3xl">
                   Vos <span className="text-gradient-gold">préférences</span>
-                </h1>
+                </h2>
                 <p className="mt-2 text-muted">
                   Choisissez le style et l&apos;ambiance pour votre staging
                 </p>
@@ -202,9 +205,9 @@ export default function CommanderPage() {
               className="space-y-8"
             >
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold sm:text-3xl">
+                <h2 className="text-2xl font-bold sm:text-3xl">
                   Choisissez votre <span className="text-gradient-gold">pack</span>
-                </h1>
+                </h2>
                 <p className="mt-2 text-muted">
                   Sélectionnez le nombre de biens à traiter
                 </p>

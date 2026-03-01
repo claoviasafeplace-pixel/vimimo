@@ -29,7 +29,7 @@ export const createProjectSchema = z.object({
       rooms: z.string().max(50).optional(),
       highlights: z.array(z.string().max(200)).max(10).optional(),
       agencyName: z.string().max(200).optional(),
-      agencyLogoUrl: z.string().url().optional().or(z.literal("")),
+      agencyLogoUrl: z.string().url().refine(u => u.startsWith("https://"), { message: "HTTPS required" }).optional().or(z.literal("")),
     })
     .optional(),
   music: z
@@ -65,10 +65,10 @@ export const montageSchema = z.object({
     rooms: z.string().max(50).optional(),
     highlights: z.array(z.string().max(200)).max(10).optional(),
     agencyName: z.string().max(200).optional(),
-    agencyLogoUrl: z.string().url().optional().or(z.literal("")),
+    agencyLogoUrl: z.string().url().refine(u => u.startsWith("https://"), { message: "HTTPS required" }).optional().or(z.literal("")),
   }),
   music: z.enum(["none", "elegant", "energetic", "minimal", "dramatic", "custom"]),
-  customMusicUrl: z.string().url().optional().or(z.literal("")),
+  customMusicUrl: z.string().url().refine(u => u.startsWith("https://"), { message: "HTTPS required" }).optional().or(z.literal("")),
   selectedRoomIndices: z.array(z.number().int().min(0)).min(2).optional(),
 });
 

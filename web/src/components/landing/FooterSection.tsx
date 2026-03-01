@@ -1,17 +1,5 @@
-"use client";
-
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const },
-  },
-};
 
 export default function FooterSection() {
   return (
@@ -27,12 +15,8 @@ export default function FooterSection() {
           />
         </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          className="relative z-10 mx-auto max-w-3xl text-center"
+        <div
+          className="relative z-10 mx-auto max-w-3xl text-center animate-fade-in-up"
         >
           <h2 className="text-3xl font-bold sm:text-4xl lg:text-5xl">
             Prêt à transformer vos{" "}
@@ -58,7 +42,7 @@ export default function FooterSection() {
               Voir les tarifs
             </Link>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Footer */}

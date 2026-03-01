@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             {error && (
-              <p className="mb-4 text-sm text-red-500 text-center">{error}</p>
+              <p role="alert" className="mb-4 text-sm text-red-500 text-center">{error}</p>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -77,6 +77,7 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="votre@email.com"
+                aria-label="Adresse email"
                 required
                 className="w-full rounded-xl border border-input-border bg-input-bg px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-accent-from focus:outline-none focus:ring-1 focus:ring-accent-from/30"
               />

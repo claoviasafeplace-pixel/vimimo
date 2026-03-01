@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
+  robots: { index: false, follow: true },
 };
 
 export default function MentionsLegalesPage() {

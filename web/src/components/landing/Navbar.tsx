@@ -9,11 +9,11 @@ import AuthButton from "@/components/auth/AuthButton";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const NAV_LINKS = [
-  { label: "Avant / Après", href: "#demo" },
-  { label: "Fonctionnalités", href: "#features" },
-  { label: "Comment ça marche", href: "#how" },
-  { label: "Tarifs", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Avant / Après", href: "/#demo" },
+  { label: "Fonctionnalités", href: "/#features" },
+  { label: "Comment ça marche", href: "/#how" },
+  { label: "Tarifs", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
 export default function Navbar() {

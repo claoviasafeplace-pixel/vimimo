@@ -88,6 +88,10 @@ html.dark {
   --ease-luxury: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+html {
+  scroll-padding-top: 72px;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -168,6 +172,38 @@ html.dark .glass {
   border: 3px solid var(--background);
   box-shadow: 0 0 20px rgba(196, 122, 90, 0.3);
   cursor: pointer;
+}
+
+/* ── Fade-in-up animation (replaces framer-motion fadeUp) ── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  opacity: 0;
+}
+
+/* Stagger delay utilities for child elements */
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-150 { animation-delay: 0.15s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-250 { animation-delay: 0.25s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-500 { animation-delay: 0.5s; }
+.animate-delay-600 { animation-delay: 0.6s; }
+.animate-delay-700 { animation-delay: 0.7s; }
+
+/* Reduced motion: disable animations for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Animated gradient border custom property */

@@ -4,6 +4,8 @@
 -- ============================================
 
 -- Users (NextAuth compatible + custom fields)
+-- NOTE: users.id is TEXT (not UUID) because NextAuth adapter generates nanoid IDs.
+-- OAuth-linked accounts may also produce UUID-format IDs. Both formats are valid.
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT,
@@ -77,6 +79,11 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- FK on projects.user_id → users(id) with SET NULL on delete
+-- (don't cascade-delete projects — just nullify user_id so project data is preserved)
+-- Run manually if column already exists:
+-- ALTER TABLE projects ADD CONSTRAINT fk_projects_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
 
 -- Admin column
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
@@ -159,6 +166,28 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
+-- RPC: Atomic cost increment for projects (PIPE-1.4)
+-- Atomically increments apiCostUsd inside the JSONB data column
+-- ============================================
+CREATE OR REPLACE FUNCTION increment_project_cost(p_project_id TEXT, p_cost_delta NUMERIC)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE projects
+  SET data = jsonb_set(
+        data,
+        '{apiCostUsd}',
+        to_jsonb(COALESCE((data->>'apiCostUsd')::numeric, 0) + p_cost_delta)
+      ),
+      updated_at = NOW()
+  WHERE id = p_project_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Project % not found', p_project_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
 -- Unique index for refund idempotency (PAY-05)
 -- Prevents double refund for the same project
 -- ============================================
@@ -187,3 +216,38 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_email TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_projects_order_status ON projects (order_status) WHERE order_status IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_projects_kanban_status ON projects (kanban_status) WHERE kanban_status IS NOT NULL;
+
+-- Index on credit_transactions(project_id) for refund lookups (PIPE-3.4)
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_project ON credit_transactions(project_id);
+
+-- ============================================
+-- Circuit Breaker State (PIPE-4.5)
+-- Tracks per-service circuit breaker state for pipeline resilience.
+-- Columns match web/src/lib/circuit-breaker.ts CircuitBreakerRow interface.
+-- ============================================
+CREATE TABLE IF NOT EXISTS circuit_breaker_state (
+  service TEXT PRIMARY KEY,
+  state TEXT NOT NULL DEFAULT 'closed',
+  consecutive_failures INTEGER NOT NULL DEFAULT 0,
+  last_failure_at TIMESTAMPTZ,
+  last_success_at TIMESTAMPTZ,
+  opened_at TIMESTAMPTZ,
+  last_alert_at TIMESTAMPTZ,
+  failure_reason TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE circuit_breaker_state ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='circuit_breaker_state' AND policyname='Service role full access') THEN
+    CREATE POLICY "Service role full access" ON circuit_breaker_state FOR ALL USING (true);
+  END IF;
+END $$;
+
+-- ============================================
+-- Cleanup old prediction_map entries (PIPE-3.3)
+-- prediction_map already has created_at DEFAULT NOW().
+-- Run periodically via cron or manual to prevent unbounded growth:
+-- DELETE FROM prediction_map WHERE created_at < NOW() - INTERVAL '7 days';
+-- ============================================

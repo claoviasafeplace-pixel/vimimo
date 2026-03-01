@@ -83,7 +83,7 @@ export default function ProjectPage({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center" role="status" aria-label="Chargement">
         <Loader2 className="h-8 w-8 text-icon-accent animate-spin" />
       </div>
     );
@@ -125,7 +125,7 @@ export default function ProjectPage({
       {/* Content */}
       <main className="mx-auto max-w-5xl px-6 py-8">
         {actionError && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+          <div role="alert" className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
             <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
             <p className="text-sm text-red-400">{actionError}</p>
             <button

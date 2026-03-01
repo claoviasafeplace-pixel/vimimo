@@ -8,11 +8,11 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md rounded-2xl bg-surface p-8 text-center shadow-lg border border-border">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
           <svg
-            className="h-8 w-8 text-red-600"
+            className="h-8 w-8 text-red-500"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
@@ -26,30 +26,30 @@ export default function Error({
           </svg>
         </div>
 
-        <h2 className="mb-2 text-xl font-semibold text-gray-900">
+        <h2 className="mb-2 text-xl font-semibold text-foreground">
           Une erreur est survenue
         </h2>
-        <p className="mb-6 text-sm text-gray-500">
-          {error.message || "Quelque chose s'est mal passé. Veuillez réessayer."}
+        <p className="mb-6 text-sm text-muted">
+          {process.env.NODE_ENV === 'development' ? error.message : "Une erreur inattendue s'est produite. Veuillez réessayer."}
         </p>
 
         <div className="flex flex-col gap-3">
           <button
             onClick={reset}
-            className="w-full rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+            className="w-full rounded-lg gradient-gold px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90"
           >
             Réessayer
           </button>
           <a
             href="/"
-            className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+            className="text-sm font-medium text-muted transition-colors hover:text-foreground"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </a>
         </div>
 
         {error.digest && (
-          <p className="mt-4 text-xs text-gray-400">
+          <p className="mt-4 text-xs text-muted">
             Réf: {error.digest}
           </p>
         )}

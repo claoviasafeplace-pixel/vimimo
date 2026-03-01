@@ -102,13 +102,38 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const projects = (rows || []).map((row) => ({
-    id: row.id,
-    user_id: row.user_id,
-    userEmail: row.user_id ? userEmailMap[row.user_id] || null : null,
-    data: row.data,
-    created_at: row.created_at,
-  }));
+  const projects = (rows || []).map((row) => {
+    const data = row.data as Record<string, unknown> | null;
+    const rooms = data?.rooms as Array<Record<string, unknown>> | undefined;
+    const photos = data?.photos as Array<Record<string, unknown>> | undefined;
+
+    // SEC-3.8: Strip sensitive JSONB fields — only expose summary data in list view
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      userEmail: row.user_id ? userEmailMap[row.user_id] || null : null,
+      data: {
+        phase: data?.phase ?? null,
+        style: data?.style ?? null,
+        styleLabel: data?.styleLabel ?? null,
+        mode: data?.mode ?? null,
+        createdAt: data?.createdAt ?? null,
+        updatedAt: data?.updatedAt ?? null,
+        userId: data?.userId ?? null,
+        roomCount: Array.isArray(rooms) ? rooms.length : 0,
+        photoCount: Array.isArray(photos) ? photos.length : 0,
+        apiCostUsd: data?.apiCostUsd ?? null,
+        error: data?.error ?? null,
+        finalVideoUrl: data?.finalVideoUrl ?? null,
+        studioMontageUrl: data?.studioMontageUrl ?? null,
+        orderStatus: data?.orderStatus ?? null,
+        kanbanStatus: data?.kanbanStatus ?? null,
+        clientEmail: data?.clientEmail ?? null,
+        ambiance: data?.ambiance ?? null,
+      },
+      created_at: row.created_at,
+    };
+  });
 
   const totalCount = total || 0;
   const totalPages = Math.ceil(totalCount / limit);

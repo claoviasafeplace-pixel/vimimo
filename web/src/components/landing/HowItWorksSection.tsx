@@ -1,16 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Camera, Palette, ShieldCheck, Download } from "lucide-react";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay: 0.1 * i, ease: [0.16, 1, 0.3, 1] as const },
-  }),
-};
 
 const STEPS = [
   {
@@ -43,16 +31,19 @@ const STEPS = [
   },
 ];
 
+const STEP_DELAYS = [
+  "",
+  "animate-delay-100",
+  "animate-delay-200",
+  "animate-delay-300",
+] as const;
+
 export default function HowItWorksSection() {
   return (
     <section id="how" className="py-24 px-6 lg:py-32 border-t border-border bg-surface/30">
       <div className="mx-auto max-w-5xl">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
-          className="mx-auto max-w-3xl text-center mb-16"
+        <div
+          className="mx-auto max-w-3xl text-center mb-16 animate-fade-in-up"
         >
           <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-badge-gold-border bg-badge-gold-bg px-3 py-1 text-xs font-medium tracking-wide text-badge-gold-text uppercase">
             4 étapes simples
@@ -63,21 +54,16 @@ export default function HowItWorksSection() {
           <p className="mt-5 text-lg leading-relaxed text-muted">
             Du smartphone à l&apos;annonce en 24h. Aucun logiciel, aucune compétence technique requise.
           </p>
-        </motion.div>
+        </div>
 
         <div className="relative grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Connector line */}
           <div className="absolute top-14 left-[12.5%] right-[12.5%] hidden h-px bg-gradient-to-r from-transparent via-border to-transparent lg:block" />
 
           {STEPS.map((step, i) => (
-            <motion.div
+            <div
               key={step.step}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-              custom={i}
-              variants={fadeUp}
-              className="relative text-center group"
+              className={`relative text-center group animate-fade-in-up ${STEP_DELAYS[i] ?? ""}`}
             >
               <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl gradient-gold text-white shadow-lg shadow-[rgba(196,122,90,0.15)] transition-transform duration-300 group-hover:scale-110">
                 <step.icon className="h-6 w-6" aria-hidden="true" />
@@ -87,7 +73,7 @@ export default function HowItWorksSection() {
               </div>
               <h3 className="text-lg font-semibold">{step.title}</h3>
               <p className="mt-3 text-sm leading-relaxed text-muted">{step.description}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

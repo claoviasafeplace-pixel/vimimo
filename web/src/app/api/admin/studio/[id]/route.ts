@@ -1,11 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
+import { z } from "zod";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getProject, saveProject } from "@/lib/store";
 import { getSupabase } from "@/lib/supabase";
 import { cleanPhoto, generateStagingOption, generateVideo, getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { generateStagingPrompts, analyzePhotos } from "@/lib/services/openai";
 import type { Room } from "@/lib/types";
+
+// CODE-2.6: Zod schema for studio action validation
+const studioActionSchema = z.object({
+  action: z.enum([
+    "clean_photos", "check_cleaning", "analyze_rooms",
+    "generate_staging", "check_staging", "select_option",
+    "generate_video", "check_video",
+  ]),
+  roomIndex: z.number().int().min(0).optional(),
+  optionIndex: z.number().int().min(0).optional(),
+  customPrompt: z.string().max(2000).optional(),
+  aspectRatio: z.enum(["16:9", "9:16", "1:1"]).optional(),
+});
+
+// SEC-2.6: Sanitize custom prompts to mitigate prompt injection
+function sanitizePrompt(input: string): string {
+  return input
+    .replace(/ignore\s+(all\s+)?previous\s+instructions?/gi, '')
+    .replace(/system\s*:/gi, '')
+    .replace(/\bDAN\b/gi, '')
+    .slice(0, 2000); // max length
+}
 
 // GET — Full project data for studio
 export async function GET(
@@ -108,13 +131,21 @@ export async function POST(
     return NextResponse.json({ error: "Projet introuvable" }, { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let body: any;
+  let rawBody: unknown;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch {
     return NextResponse.json({ error: "Corps de requête invalide" }, { status: 400 });
   }
+
+  const parsed = studioActionSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: `Validation error: ${parsed.error.issues.map(i => i.message).join(", ")}` },
+      { status: 400 },
+    );
+  }
+  const body = parsed.data;
   const { action } = body;
 
   try {
@@ -196,6 +227,9 @@ export async function POST(
     // ─── Generate staging for a room ───
     case "generate_staging": {
       const { roomIndex, customPrompt } = body;
+      if (roomIndex === undefined) {
+        return NextResponse.json({ error: "roomIndex requis" }, { status: 400 });
+      }
       const room = project.rooms[roomIndex];
       if (!room) {
         return NextResponse.json({ error: "Pièce introuvable" }, { status: 400 });
@@ -203,7 +237,7 @@ export async function POST(
 
       let prompts: string[];
       if (customPrompt) {
-        prompts = [customPrompt];
+        prompts = [sanitizePrompt(customPrompt)];
       } else {
         const result = await generateStagingPrompts(
           room.cleanedPhotoUrl,
@@ -232,6 +266,9 @@ export async function POST(
     // ─── Poll staging predictions for a room ───
     case "check_staging": {
       const { roomIndex } = body;
+      if (roomIndex === undefined) {
+        return NextResponse.json({ error: "roomIndex requis" }, { status: 400 });
+      }
       const room = project.rooms[roomIndex];
       if (!room) {
         return NextResponse.json({ error: "Pièce introuvable" }, { status: 400 });
@@ -240,7 +277,7 @@ export async function POST(
       let allDone = true;
       const ids = room.optionPredictionIds || [];
       for (const predId of ids) {
-        if (room.options.some((o) => o.predictionId === predId)) continue;
+        if (room.options.some((o: { predictionId?: string }) => o.predictionId === predId)) continue;
         const status = await getPredictionStatus(predId);
         if (status.status === "succeeded") {
           const url = extractOutputUrl(status.output);
@@ -262,6 +299,9 @@ export async function POST(
     // ─── Select staging option for a room ───
     case "select_option": {
       const { roomIndex, optionIndex } = body;
+      if (roomIndex === undefined) {
+        return NextResponse.json({ error: "roomIndex requis" }, { status: 400 });
+      }
       const room = project.rooms[roomIndex];
       if (!room) {
         return NextResponse.json({ error: "Pièce introuvable" }, { status: 400 });
@@ -273,7 +313,10 @@ export async function POST(
 
     // ─── Generate video for a room ───
     case "generate_video": {
-      const { roomIndex } = body;
+      const { roomIndex, aspectRatio } = body;
+      if (roomIndex === undefined) {
+        return NextResponse.json({ error: "roomIndex requis" }, { status: 400 });
+      }
       const room = project.rooms[roomIndex];
       if (!room || room.selectedOptionIndex === undefined) {
         return NextResponse.json({ error: "Sélectionnez d'abord une option de staging" }, { status: 400 });
@@ -286,6 +329,7 @@ export async function POST(
         room.roomType,
         { projectId: id, predictionType: "video", roomIndex },
         project.mode,
+        aspectRatio,
       );
       room.videoPredictionId = predId;
       room.videoUrl = undefined;
@@ -297,6 +341,9 @@ export async function POST(
     // ─── Poll video status for a room ───
     case "check_video": {
       const { roomIndex } = body;
+      if (roomIndex === undefined) {
+        return NextResponse.json({ error: "roomIndex requis" }, { status: 400 });
+      }
       const room = project.rooms[roomIndex];
       if (!room?.videoPredictionId) {
         return NextResponse.json({ error: "Pas de vidéo en cours" }, { status: 400 });

@@ -54,11 +54,36 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "VIMIMO",
+              url: "https://vimimo.fr",
+              logo: "https://vimimo.fr/logo.png",
+              description:
+                "Virtual staging IA pour l'immobilier — photos meublées et vidéos cinématiques",
+              sameAs: [],
+            }),
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${playfair.variable} antialiased bg-background text-foreground`}
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:bg-amber-500 focus:px-4 focus:py-2 focus:text-black focus:font-medium"
+        >
+          Aller au contenu principal
+        </a>
         <SessionProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <div id="main-content">{children}</div>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>

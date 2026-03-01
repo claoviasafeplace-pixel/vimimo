@@ -1,5 +1,5 @@
 import { inngest } from "../client";
-import { getProject, saveProject, refundCredits, updateProjectStatus } from "@/lib/store";
+import { getProject, saveProject, updateProjectStatus, autoRefundProject as autoRefund } from "@/lib/store";
 import { getPredictionStatus, extractOutputUrl } from "@/lib/services/replicate";
 import { analyzePhotos, triagePhotos, generateStagingPrompts } from "@/lib/services/openai";
 import { generateStagingOption } from "@/lib/services/replicate";
@@ -16,36 +16,32 @@ const NB_VARIANTS = Math.min(
   5,
 );
 
-async function autoRefund(project: {
-  userId?: string;
-  creditsUsed?: number;
-  creditsRefunded?: boolean;
-  id: string;
-}) {
-  if (project.userId && project.creditsUsed && !project.creditsRefunded) {
-    try {
-      await refundCredits(
-        project.userId,
-        project.creditsUsed,
-        project.id,
-        `Remboursement automatique — projet ${project.id} en erreur`,
-      );
-      project.creditsRefunded = true;
-    } catch (e) {
-      console.error("Auto-refund failed:", e);
-    }
-  }
-}
-
 export const cleaningPoll = inngest.createFunction(
-  { id: "cleaning-poll", retries: 0 },
+  {
+    id: "cleaning-poll",
+    retries: 2,
+    onFailure: async ({ event }) => {
+      const { projectId } = event.data.event.data;
+      try {
+        const project = await getProject(projectId);
+        if (project && project.phase !== "error") {
+          project.phase = "error";
+          project.error = "Pipeline nettoyage échoué après 3 tentatives";
+          await autoRefund(project);
+          await saveProject(project);
+        }
+      } catch (e) {
+        console.error("[cleaning-poll] onFailure handler error:", e);
+      }
+    },
+  },
   { event: "project/created" },
   async ({ event, step }) => {
     const { projectId } = event.data;
 
     // Pre-check: verify critical services before starting
     const preCheckOk = await step.run("pre-check", async () => {
-      const { degraded } = await pipelinePreCheck(["openai", "replicate"]);
+      const { degraded } = await pipelinePreCheck(["openai", "gemini"]);
       if (degraded.length > 0) {
         const proj = await getProject(projectId);
         if (proj) {
@@ -156,7 +152,8 @@ export const cleaningPoll = inngest.createFunction(
 
     if (project.mode === "video_visite") {
       await step.run("triage-photos", async () => {
-        const proj = (await getProject(projectId))!;
+        const proj = await getProject(projectId);
+        if (!proj) throw new Error(`Project ${projectId} not found`);
         try {
           const photoUrls = proj.photos.map((p, i) => ({
             index: i + 1,
@@ -186,7 +183,8 @@ export const cleaningPoll = inngest.createFunction(
     } else {
       // staging_piece: analyze + generate options
       await step.run("analyze-photos", async () => {
-        const proj = (await getProject(projectId))!;
+        const proj = await getProject(projectId);
+        if (!proj) throw new Error(`Project ${projectId} not found`);
         proj.phase = "analyzing";
         await saveProject(proj);
 
@@ -268,37 +266,40 @@ export const cleaningPoll = inngest.createFunction(
       });
 
       // Poll staging options with step.sleep()
-      for (let attempt = 0; attempt < 120; attempt++) {
-        const done = await step.run(`check-options-${attempt}`, async () => {
-          const proj = await getProject(projectId);
-          if (!proj || proj.phase !== "generating_options") return true;
+      // Quick-resolve for Gemini sync results (all "done:..." IDs skip polling)
+      const allOptionIds = await step.run("collect-option-ids", async () => {
+        const proj = await getProject(projectId);
+        if (!proj) return [];
+        return proj.rooms.flatMap((r) => r.optionPredictionIds || []);
+      });
 
-          let allDone = true;
+      const allOptionsSyncDone = allOptionIds.length > 0 &&
+        allOptionIds.every((id) => id.startsWith("done:"));
+
+      if (allOptionsSyncDone) {
+        // Gemini returns "done:<url>" synchronously — resolve all immediately without polling
+        await step.run("resolve-sync-options", async () => {
+          const proj = await getProject(projectId);
+          if (!proj || proj.phase !== "generating_options") return;
+
           for (const room of proj.rooms) {
             if (!room.optionPredictionIds?.length) continue;
             if (room.options.length >= room.optionPredictionIds.length) continue;
 
             const resolvedOptions = room.options.length ? [...room.options] : [];
             for (let i = resolvedOptions.length; i < room.optionPredictionIds.length; i++) {
-              try {
-                const status = await getPredictionStatus(room.optionPredictionIds[i]);
-                if (status.status === "succeeded") {
-                  const replicateUrl = extractOutputUrl(status.output);
-                  if (replicateUrl) {
-                    // Persist to Supabase (Replicate URLs expire)
-                    let persistedUrl = replicateUrl;
-                    try {
-                      persistedUrl = await persistFromUrl(replicateUrl, "staging", "image/webp");
-                    } catch (e) {
-                      console.error(`[cleaning-poll] Failed to persist staging image:`, e);
-                    }
-                    resolvedOptions.push({ url: persistedUrl, predictionId: room.optionPredictionIds[i] });
+              const status = await getPredictionStatus(room.optionPredictionIds[i]);
+              if (status.status === "succeeded") {
+                const url = extractOutputUrl(status.output);
+                if (url) {
+                  let persistedUrl = url;
+                  try {
+                    persistedUrl = await persistFromUrl(url, "staging", "image/webp");
+                  } catch (e) {
+                    console.error(`[cleaning-poll] Failed to persist staging image:`, e);
                   }
-                } else if (status.status !== "failed" && status.status !== "canceled") {
-                  allDone = false;
+                  resolvedOptions.push({ url: persistedUrl, predictionId: room.optionPredictionIds[i] });
                 }
-              } catch (error) {
-                console.error(`Option prediction check failed for room ${room.index}, prediction ${i}:`, error);
               }
             }
             if (resolvedOptions.length !== room.options.length) {
@@ -306,28 +307,82 @@ export const cleaningPoll = inngest.createFunction(
             }
           }
 
-          if (allDone) {
-            const allRoomsHaveOptions = proj.rooms.every((r) => r.options.length > 0);
-            if (!allRoomsHaveOptions) {
-              proj.phase = "error";
-              proj.error = "Certaines pièces n'ont aucune option de staging";
-              await autoRefund(proj);
-            } else if (proj.orderStatus) {
-              // Order flow: skip client selection, go to admin quality check
-              proj.phase = "selecting"; // keep phase for compat
-              await saveProject(proj);
-              await updateProjectStatus(proj.id, "quality_check", "a_valider");
-              return true;
-            } else {
-              proj.phase = "selecting";
-            }
+          const allRoomsHaveOptions = proj.rooms.every((r) => r.options.length > 0);
+          if (!allRoomsHaveOptions) {
+            proj.phase = "error";
+            proj.error = "Certaines pièces n'ont aucune option de staging";
+            await autoRefund(proj);
+          } else if (proj.orderStatus) {
+            proj.phase = "selecting";
+            await saveProject(proj);
+            await updateProjectStatus(proj.id, "quality_check", "a_valider");
+            return;
+          } else {
+            proj.phase = "selecting";
           }
           await saveProject(proj);
-          return allDone;
         });
+      } else {
+        // Async predictions (Replicate or mixed) — poll with retries
+        for (let attempt = 0; attempt < 120; attempt++) {
+          const done = await step.run(`check-options-${attempt}`, async () => {
+            const proj = await getProject(projectId);
+            if (!proj || proj.phase !== "generating_options") return true;
 
-        if (done) break;
-        await step.sleep(`wait-options-${attempt}`, "5s");
+            let allDone = true;
+            for (const room of proj.rooms) {
+              if (!room.optionPredictionIds?.length) continue;
+              if (room.options.length >= room.optionPredictionIds.length) continue;
+
+              const resolvedOptions = room.options.length ? [...room.options] : [];
+              for (let i = resolvedOptions.length; i < room.optionPredictionIds.length; i++) {
+                try {
+                  const status = await getPredictionStatus(room.optionPredictionIds[i]);
+                  if (status.status === "succeeded") {
+                    const replicateUrl = extractOutputUrl(status.output);
+                    if (replicateUrl) {
+                      let persistedUrl = replicateUrl;
+                      try {
+                        persistedUrl = await persistFromUrl(replicateUrl, "staging", "image/webp");
+                      } catch (e) {
+                        console.error(`[cleaning-poll] Failed to persist staging image:`, e);
+                      }
+                      resolvedOptions.push({ url: persistedUrl, predictionId: room.optionPredictionIds[i] });
+                    }
+                  } else if (status.status !== "failed" && status.status !== "canceled") {
+                    allDone = false;
+                  }
+                } catch (error) {
+                  console.error(`Option prediction check failed for room ${room.index}, prediction ${i}:`, error);
+                }
+              }
+              if (resolvedOptions.length !== room.options.length) {
+                room.options = resolvedOptions;
+              }
+            }
+
+            if (allDone) {
+              const allRoomsHaveOptions = proj.rooms.every((r) => r.options.length > 0);
+              if (!allRoomsHaveOptions) {
+                proj.phase = "error";
+                proj.error = "Certaines pièces n'ont aucune option de staging";
+                await autoRefund(proj);
+              } else if (proj.orderStatus) {
+                proj.phase = "selecting";
+                await saveProject(proj);
+                await updateProjectStatus(proj.id, "quality_check", "a_valider");
+                return true;
+              } else {
+                proj.phase = "selecting";
+              }
+            }
+            await saveProject(proj);
+            return allDone;
+          });
+
+          if (done) break;
+          await step.sleep(`wait-options-${attempt}`, "5s");
+        }
       }
     }
 

@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import Replicate from "replicate";
 import { getSupabase } from "./supabase";
 
 // =============================================
@@ -11,14 +10,14 @@ const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const ALERT_DEBOUNCE_MS = 15 * 60 * 1000; // 15 minutes
 const COST_THRESHOLD_USD = parseFloat(process.env.COST_THRESHOLD_USD || "10.0");
 const REMOTION_URL = process.env.REMOTION_SERVER_URL || "http://localhost:8000";
-const RENDER_SECRET = process.env.RENDER_SECRET || "vimimo-dev-secret";
-const ADMIN_EMAIL = "claoviasafeplace@gmail.com";
+const RENDER_SECRET = process.env.RENDER_SECRET || "";
+const ADMIN_EMAIL = process.env.ADMIN_ALERT_EMAIL || "claoviasafeplace@gmail.com";
 
 // =============================================
 // Types
 // =============================================
 
-export type ServiceName = "openai" | "replicate" | "replicate_video" | "remotion" | "gemini" | "google_video";
+export type ServiceName = "openai" | "replicate" | "replicate_video" | "remotion" | "gemini";
 
 export type CircuitState = "closed" | "open" | "half_open";
 
@@ -58,10 +57,9 @@ export interface PreCheckResult {
 const COST_MAP: Record<string, number> = {
   "gpt-4o-vision": 0.03,
   "gpt-4o-text": 0.01,
-  "flux-kontext-pro": 0.05,
+  "flux-kontext-pro": 0.05, // Used by replicate-lucie.ts backup service
   "kling-v2.1-pro": 0.50,
-  "gemini-image": 0.07,    // Nano Banana 1K
-  "veo-3.1": 0.75,         // Veo 3.1 Fast 5s
+  "gemini-image": 0.07,     // Gemini 2.5 Flash image generation
 };
 
 // =============================================
@@ -289,11 +287,54 @@ async function probeOpenAI(): Promise<ServiceHealth> {
   }
 }
 
-async function probeReplicate(): Promise<ServiceHealth> {
-  const service = "replicate" as const;
+async function probeGemini(): Promise<ServiceHealth> {
+  const service = "gemini" as const;
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    return {
+      service,
+      healthy: false,
+      circuitState: "open",
+      consecutiveFailures: 0,
+      lastFailureAt: new Date().toISOString(),
+      error: "GEMINI_API_KEY not set",
+    };
+  }
   try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image?key=${key}`,
+      { method: "GET", signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return { service, healthy: true, circuitState: "closed", consecutiveFailures: 0, lastFailureAt: null };
+  } catch (e) {
+    return {
+      service,
+      healthy: false,
+      circuitState: "open",
+      consecutiveFailures: 0,
+      lastFailureAt: new Date().toISOString(),
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+async function probeReplicateVideo(): Promise<ServiceHealth> {
+  const service = "replicate_video" as const;
+  if (!process.env.REPLICATE_API_TOKEN) {
+    return {
+      service,
+      healthy: false,
+      circuitState: "open",
+      consecutiveFailures: 0,
+      lastFailureAt: new Date().toISOString(),
+      error: "REPLICATE_API_TOKEN not set",
+    };
+  }
+  try {
+    const Replicate = (await import("replicate")).default;
     const client = new Replicate();
-    await client.collections.get("text-to-image");
+    await client.models.get("kwaivgi", "kling-v2.1");
     return { service, healthy: true, circuitState: "closed", consecutiveFailures: 0, lastFailureAt: null };
   } catch (e) {
     return {
@@ -348,18 +389,19 @@ async function probeSupabase(): Promise<ServiceHealth> {
 }
 
 export async function runHealthCheck(): Promise<HealthReport> {
-  const [openai, replicate, remotion, supabase] = await Promise.allSettled([
+  const [openai, gemini, replicateVideo, remotion, supabase] = await Promise.allSettled([
     probeOpenAI(),
-    probeReplicate(),
+    probeGemini(),
+    probeReplicateVideo(),
     probeRemotion(),
     probeSupabase(),
   ]);
 
   // Also read circuit breaker state from DB
-  const [cbOpenai, cbReplicate, cbReplicateVideo, cbRemotion] =
+  const [cbOpenai, cbGemini, cbReplicateVideo, cbRemotion] =
     await Promise.allSettled([
       getCircuitState("openai"),
-      getCircuitState("replicate"),
+      getCircuitState("gemini"),
       getCircuitState("replicate_video"),
       getCircuitState("remotion"),
     ]);
@@ -393,24 +435,8 @@ export async function runHealthCheck(): Promise<HealthReport> {
 
   const services: Record<string, ServiceHealth> = {
     openai: mergeHealth(openai, cbOpenai, "openai"),
-    replicate: mergeHealth(replicate, cbReplicate, "replicate"),
-    replicate_video: {
-      service: "replicate_video",
-      healthy:
-        replicate.status === "fulfilled" ? replicate.value.healthy : false,
-      circuitState:
-        cbReplicateVideo.status === "fulfilled"
-          ? cbReplicateVideo.value.state
-          : "closed",
-      consecutiveFailures:
-        cbReplicateVideo.status === "fulfilled"
-          ? cbReplicateVideo.value.consecutive_failures
-          : 0,
-      lastFailureAt:
-        cbReplicateVideo.status === "fulfilled"
-          ? cbReplicateVideo.value.last_failure_at
-          : null,
-    },
+    gemini: mergeHealth(gemini, cbGemini, "gemini"),
+    replicate_video: mergeHealth(replicateVideo, cbReplicateVideo, "replicate_video"),
     remotion: mergeHealth(remotion, cbRemotion, "remotion"),
     supabase:
       supabase.status === "fulfilled"
@@ -504,13 +530,26 @@ export async function trackCost(
   projectId: string,
   operation: string,
 ): Promise<void> {
-  const { getProject, saveProject } = await import("./store");
-  const project = await getProject(projectId);
-  if (!project) return;
-
   const cost = COST_MAP[operation] || 0;
-  project.apiCostUsd = (project.apiCostUsd || 0) + cost;
-  await saveProject(project);
+  if (cost === 0) return;
+
+  const db = getSupabase();
+
+  // Atomic increment via RPC — no read-modify-write race condition
+  const { error: rpcError } = await db.rpc("increment_project_cost", {
+    p_project_id: projectId,
+    p_cost_delta: cost,
+  });
+
+  if (rpcError) {
+    // Fallback to non-atomic read-modify-write (for envs where RPC isn't deployed yet)
+    console.warn("[trackCost] RPC failed, falling back to read-modify-write:", rpcError.message);
+    const { getProject, saveProject } = await import("./store");
+    const project = await getProject(projectId);
+    if (!project) return;
+    project.apiCostUsd = (project.apiCostUsd || 0) + cost;
+    await saveProject(project);
+  }
 }
 
 // =============================================

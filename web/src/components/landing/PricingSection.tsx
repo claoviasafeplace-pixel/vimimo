@@ -16,6 +16,9 @@ const fadeUp = {
 
 type Tab = "packs" | "abonnements";
 
+// NOTE: These prices are for landing page display only.
+// Actual checkout prices are defined in B2C_PACKS / B2B_PACKS / SUBSCRIPTION_PLANS
+// in src/lib/types.ts. Keep both in sync when updating pricing.
 const PACKS = [
   {
     name: "Découverte",
@@ -116,8 +119,12 @@ export default function PricingSection() {
 
         {/* Tabs */}
         <div className="mb-10 flex justify-center">
-          <div className="inline-flex rounded-xl border border-border bg-surface p-1">
+          <div className="inline-flex rounded-xl border border-border bg-surface p-1" role="tablist" aria-label="Type de tarification">
             <button
+              role="tab"
+              aria-selected={tab === "packs"}
+              aria-controls="tabpanel-packs"
+              id="tab-packs"
               onClick={() => setTab("packs")}
               className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all cursor-pointer ${
                 tab === "packs"
@@ -129,6 +136,10 @@ export default function PricingSection() {
               Packs par bien
             </button>
             <button
+              role="tab"
+              aria-selected={tab === "abonnements"}
+              aria-controls="tabpanel-abonnements"
+              id="tab-abonnements"
               onClick={() => setTab("abonnements")}
               className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all cursor-pointer ${
                 tab === "abonnements"
@@ -147,6 +158,9 @@ export default function PricingSection() {
           {tab === "packs" ? (
             <motion.div
               key="packs"
+              role="tabpanel"
+              id="tabpanel-packs"
+              aria-labelledby="tab-packs"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
@@ -219,6 +233,9 @@ export default function PricingSection() {
           ) : (
             <motion.div
               key="abonnements"
+              role="tabpanel"
+              id="tabpanel-abonnements"
+              aria-labelledby="tab-abonnements"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}

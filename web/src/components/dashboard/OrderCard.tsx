@@ -30,25 +30,25 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; badgeColor: string; icon: React.ReactNode }
 > = {
   pending: {
-    label: "Commande recue",
+    label: "Commande reçue",
     color: "text-amber-400",
     badgeColor: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     icon: <Clock className="h-3.5 w-3.5" />,
   },
   processing: {
-    label: "En cours de creation",
+    label: "En cours de création",
     color: "text-blue-400",
     badgeColor: "bg-blue-500/20 text-blue-400 border-blue-500/30",
     icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
   },
   quality_check: {
-    label: "Controle qualite",
+    label: "Contrôle qualité",
     color: "text-purple-400",
     badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30",
     icon: <Eye className="h-3.5 w-3.5" />,
   },
   delivered: {
-    label: "Pret !",
+    label: "Prêt !",
     color: "text-green-400",
     badgeColor: "bg-green-500/20 text-green-400 border-green-500/30",
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
@@ -97,7 +97,7 @@ export default function OrderCard({ project }: OrderCardProps) {
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
                 <span className="text-xs font-medium text-white">
-                  En cours de creation...
+                  En cours de création...
                 </span>
               </div>
             </div>
@@ -115,7 +115,7 @@ export default function OrderCard({ project }: OrderCardProps) {
           {/* Mode badge */}
           <div className="absolute left-2 top-2 flex gap-1.5">
             <Badge variant={project.mode === "video_visite" ? "gold" : "muted"}>
-              {project.mode === "video_visite" ? "Video" : "Staging"}
+              {project.mode === "video_visite" ? "Vidéo" : "Staging"}
             </Badge>
           </div>
         </div>
@@ -129,7 +129,7 @@ export default function OrderCard({ project }: OrderCardProps) {
               </p>
               <p className="mt-0.5 text-xs text-muted">
                 {project.roomCount}{" "}
-                {project.roomCount > 1 ? "pieces" : "piece"} &middot;{" "}
+                {project.roomCount > 1 ? "pièces" : "pièce"} &middot;{" "}
                 {new Date(project.createdAt).toLocaleDateString("fr-FR", {
                   day: "numeric",
                   month: "short",
@@ -159,7 +159,7 @@ export default function OrderCard({ project }: OrderCardProps) {
                   >
                     <Button variant="primary" size="sm" className="text-xs">
                       <Download className="mr-1 h-3 w-3" />
-                      Video
+                      Vidéo
                     </Button>
                   </a>
                 )}

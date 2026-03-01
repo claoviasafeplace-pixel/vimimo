@@ -77,8 +77,8 @@ export async function analyzeGlobalProperty(
       });
 
       const raw = response.choices[0].message.content?.trim() || "";
-      const parsed = parseGptJson<{ globalContext: string }>(raw);
-      return parsed.globalContext;
+      const parsed = parseGptJson<{ globalContext?: string }>(raw);
+      return parsed.globalContext || "";
     }, OPENAI_RETRY),
   );
 

@@ -52,7 +52,7 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("photos");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervals = useRef<NodeJS.Timeout[]>([]);
 
   // Load project
   const loadProject = useCallback(async () => {
@@ -76,7 +76,7 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
 
   useEffect(() => {
     loadProject();
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => { pollIntervals.current.forEach(clearInterval); };
   }, [loadProject]);
 
   // ─── Action: Clean Photos ───
@@ -95,20 +95,22 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
       await loadProject();
       if (!data.done) {
         // Fallback polling for any async predictions still in flight
-        pollRef.current = setInterval(async () => {
+        const poll = setInterval(async () => {
           try {
             const d = await api(projectId, "check_cleaning");
             await loadProject();
             if (d.done) {
-              if (pollRef.current) clearInterval(pollRef.current);
-              pollRef.current = null;
+              clearInterval(poll);
+              pollIntervals.current = pollIntervals.current.filter(p => p !== poll);
               setActionLoading(null);
             }
           } catch {
-            if (pollRef.current) clearInterval(pollRef.current);
+            clearInterval(poll);
+            pollIntervals.current = pollIntervals.current.filter(p => p !== poll);
             setActionLoading(null);
           }
         }, 4000);
+        pollIntervals.current.push(poll);
       } else {
         setActionLoading(null);
       }
@@ -144,13 +146,16 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
           await loadProject();
           if (data.done) {
             clearInterval(poll);
+            pollIntervals.current = pollIntervals.current.filter(p => p !== poll);
             setActionLoading(null);
           }
         } catch {
           clearInterval(poll);
+          pollIntervals.current = pollIntervals.current.filter(p => p !== poll);
           setActionLoading(null);
         }
       }, 4000);
+      pollIntervals.current.push(poll);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
       setActionLoading(null);
@@ -168,10 +173,10 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
   };
 
   // ─── Action: Generate Video ───
-  const handleGenerateVideo = async (roomIndex: number) => {
+  const handleGenerateVideo = async (roomIndex: number, aspectRatio?: string) => {
     setActionLoading(`video-${roomIndex}`);
     try {
-      await api(projectId, "generate_video", { roomIndex });
+      await api(projectId, "generate_video", { roomIndex, aspectRatio });
       // Poll
       const poll = setInterval(async () => {
         try {
@@ -179,13 +184,16 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
           await loadProject();
           if (data.done) {
             clearInterval(poll);
+            pollIntervals.current = pollIntervals.current.filter(p => p !== poll);
             setActionLoading(null);
           }
         } catch {
           clearInterval(poll);
+          pollIntervals.current = pollIntervals.current.filter(p => p !== poll);
           setActionLoading(null);
         }
       }, 5000);
+      pollIntervals.current.push(poll);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
       setActionLoading(null);
@@ -220,7 +228,7 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
   // ─── Render ───
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="flex items-center justify-center py-16" role="status" aria-label="Chargement">
         <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
       </div>
     );
@@ -431,7 +439,7 @@ export default function StudioPanel({ projectId, onClose }: { projectId: string;
                 room={room}
                 roomIndex={ri}
                 actionLoading={actionLoading}
-                onGenerate={() => handleGenerateVideo(ri)}
+                onGenerate={(aspectRatio) => handleGenerateVideo(ri, aspectRatio)}
               />
             ))
           )}
@@ -547,6 +555,13 @@ function RoomStagingCard({
   );
 }
 
+// ─── Aspect Ratio options ───
+const ASPECT_RATIOS = [
+  { value: "16:9", label: "Paysage", icon: "▬" },
+  { value: "9:16", label: "Reel", icon: "▮" },
+  { value: "1:1", label: "Carré", icon: "■" },
+] as const;
+
 // ─── Room Video Card ───
 function RoomVideoCard({
   room, roomIndex, actionLoading, onGenerate,
@@ -554,8 +569,9 @@ function RoomVideoCard({
   room: Room;
   roomIndex: number;
   actionLoading: string | null;
-  onGenerate: () => void;
+  onGenerate: (aspectRatio?: string) => void;
 }) {
+  const [aspectRatio, setAspectRatio] = useState<string>("16:9");
   const isLoading = actionLoading === `video-${roomIndex}`;
   const hasSelection = room.selectedOptionIndex !== undefined;
   const stagedUrl = hasSelection ? room.options[room.selectedOptionIndex!]?.url : null;
@@ -573,6 +589,24 @@ function RoomVideoCard({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Aspect Ratio Selector */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            {ASPECT_RATIOS.map((ar) => (
+              <button
+                key={ar.value}
+                onClick={() => setAspectRatio(ar.value)}
+                className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                  aspectRatio === ar.value
+                    ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                    : "text-muted hover:text-foreground hover:bg-surface-hover"
+                }`}
+                title={ar.label}
+              >
+                <span className="mr-1">{ar.icon}</span>
+                {ar.label}
+              </button>
+            ))}
+          </div>
           {room.videoUrl && (
             <a href={room.videoUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="secondary" size="sm">
@@ -584,7 +618,7 @@ function RoomVideoCard({
             variant="primary"
             size="sm"
             disabled={isLoading || !hasSelection}
-            onClick={onGenerate}
+            onClick={() => onGenerate(aspectRatio)}
           >
             {isLoading ? (
               <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
@@ -621,7 +655,7 @@ function RoomVideoCard({
 
           {/* Video */}
           <div className="space-y-2">
-            <p className="text-xs text-muted">Vidéo IA</p>
+            <p className="text-xs text-muted">Vidéo IA (Kling v2.1 — {aspectRatio})</p>
             {room.videoUrl ? (
               <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-black">
                 <video

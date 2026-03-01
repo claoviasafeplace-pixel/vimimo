@@ -250,7 +250,7 @@ export default function PricingPage() {
         </div>
 
         {checkoutError && (
-          <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-50 px-4 py-3">
+          <div role="alert" className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-50 px-4 py-3">
             <AlertCircle className="h-4 w-4 text-red-500 shrink-0" aria-hidden="true" />
             <p className="text-sm text-red-600">{checkoutError}</p>
           </div>

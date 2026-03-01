@@ -64,6 +64,7 @@ export interface Room {
   selectedOptionIndex?: number;
   videoUrl?: string;
   videoPredictionId?: string;
+  videoError?: string;
 }
 
 export type ProjectMode = "staging_piece" | "video_visite" | "social_reel";

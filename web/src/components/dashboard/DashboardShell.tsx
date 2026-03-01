@@ -78,7 +78,7 @@ export default function DashboardShell({
                     : "text-muted hover:text-foreground hover:bg-surface-hover border border-transparent"
                 }`}
               >
-                <item.icon className={`h-4.5 w-4.5 ${isActive ? "text-icon-accent" : ""}`} />
+                <item.icon className={`h-5 w-5 ${isActive ? "text-icon-accent" : ""}`} />
                 {item.label}
               </El>
             );

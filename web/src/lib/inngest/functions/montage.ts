@@ -52,6 +52,25 @@ export const montagePoll = inngest.createFunction(
       await step.sleep(`wait-montage-${attempt}`, "5s");
     }
 
+    // If we exhausted all 120 attempts without completing, mark as error + refund
+    await step.run("check-montage-timeout", async () => {
+      const proj = await getProject(projectId);
+      if (!proj || proj.phase !== "rendering_montage") return;
+
+      console.error(`[montage-poll] Montage render timed out after 120 attempts for project ${projectId}`);
+      proj.phase = "error";
+      proj.error = "Montage render timed out after 10 minutes";
+      if (proj.userId && proj.creditsUsed && !proj.creditsRefunded) {
+        try {
+          await refundCredits(proj.userId, proj.creditsUsed, proj.id, "Remboursement auto — montage timeout");
+          proj.creditsRefunded = true;
+        } catch (e) {
+          console.error("[montage-poll] Auto-refund failed:", e);
+        }
+      }
+      await saveProject(proj);
+    });
+
     return { projectId, status: "montage-done" };
   },
 );
